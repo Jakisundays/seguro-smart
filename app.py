@@ -13,27 +13,45 @@ import io
 from jsonschema import validate, ValidationError
 import json
 import pandas as pd
+from typing import Optional, List, TypedDict, cast
 
-# from dotenv import load_dotenv
 
-# load_dotenv()
+from typing import Optional, List, TypedDict
 
-from typing import TypedDict, Optional
+
+class CoberturaConMontoYObservacion(TypedDict, total=False):
+    monto: Optional[str]
+    observaciones: Optional[str]
+
+
+class CoberturaConMontoYObservacionesList(TypedDict, total=False):
+    monto: Optional[str]
+    observaciones: Optional[List[str]]
+
+
+class CoberturaSimpleConObservacion(TypedDict, total=False):
+    monto: Optional[str]
+    observaciones: Optional[str]
 
 
 class CoberturasAmparoBasico(TypedDict, total=False):
-    muerte_accidental: Optional[str]
-    incapacidad_total_y_permanente: Optional[str]
-    desmembracion_accidental: Optional[str]
-    gastos_medicos_por_accidente: Optional[str]
-    auxilio_funerario_muerte_accidental: Optional[str]
-    rehabilitacion_integral_por_accidente: Optional[str]
-    ambulancia_para_eventos: Optional[str]
+    muerte_accidental: Optional[CoberturaSimpleConObservacion]
+    incapacidad_total_y_permanente: Optional[CoberturaSimpleConObservacion]
+    desmembracion_accidental: Optional[CoberturaSimpleConObservacion]
+    auxilio_funerario_muerte_accidental: Optional[CoberturaSimpleConObservacion]
+    gastos_medicos_por_accidente: Optional[CoberturaConMontoYObservacion]
+    rehabilitacion_integral_por_accidente: Optional[CoberturaConMontoYObservacion]
+    ambulancia_para_eventos: Optional[CoberturaConMontoYObservacionesList]
 
 
-class PlazosDelSiniestro(TypedDict):
-    plazo_aviso_siniestro: str
-    plazo_pago_siniestro: str
+class Plazo(TypedDict, total=False):
+    plazo: Optional[str]
+    observaciones: Optional[str]
+
+
+class PlazosDelSiniestro(TypedDict, total=False):
+    plazo_aviso_siniestro: Optional[Plazo]
+    plazo_pago_siniestro: Optional[Plazo]
 
 
 class InfoArchivo(TypedDict):
@@ -59,7 +77,7 @@ class SeguroOrchestrator:
         self.model = model
 
     def format_docs(self, respuestas: List[dict]) -> List[InfoArchivo]:
-        result = []
+        result: List[InfoArchivo] = []
 
         for r in respuestas:
             filename = r.get("file_name", "desconocido.pdf")
@@ -72,12 +90,43 @@ class SeguroOrchestrator:
                     input_data = item.get("input", {})
 
                     if name == "coberturas_amparo_basico":
-                        coberturas.update(input_data)
+                        for k, v in input_data.items():
+                            if isinstance(v, dict):
+                                # Caso especial: ambulancia con lista de observaciones
+                                if k == "ambulancia_para_eventos":
+                                    obs = v.get("observaciones")
+                                    if isinstance(obs, str):
+                                        v["observaciones"] = [obs]
+                                    elif obs is None:
+                                        v["observaciones"] = []
+                                    coberturas[k] = v
+
+                                else:
+                                    coberturas[k] = {
+                                        "monto": v.get("monto"),
+                                        "observaciones": v.get("observaciones"),
+                                    }
+                            else:
+                                # Campos simples: wrap en objeto con solo monto
+                                coberturas[k] = {
+                                    "monto": v,
+                                    "observaciones": None,
+                                }
+
                     elif name == "plazos_del_siniestro":
-                        plazos.update(input_data)
+                        for pk, pv in input_data.items():
+                            if isinstance(pv, dict):
+                                plazos[pk] = {
+                                    "plazo": pv.get("plazo"),
+                                    "observaciones": pv.get("observaciones"),
+                                }
 
             result.append(
-                {"filename": filename, "coberturas": coberturas, "plazos": plazos}
+                {
+                    "filename": filename,
+                    "coberturas": cast(CoberturasAmparoBasico, coberturas),
+                    "plazos": cast(PlazosDelSiniestro, plazos),
+                }
             )
 
         return result
@@ -165,7 +214,7 @@ class SeguroOrchestrator:
 
                 usage = response["usage"]
 
-                print(f"Response for {tool_name}: {response}")
+                # print(f"Response for {tool_name}: {response}")
 
                 validate(instance=tool_output, schema=schema)
                 print("✅ Validation passed.")
@@ -295,7 +344,7 @@ class SeguroOrchestrator:
         return file_path
 
 
-def show_comparador_table(docs):
+def show_comparador_table(docs: List[dict]):
     st.subheader("📊 Comparador de Documentos")
 
     desired_order = [
@@ -310,6 +359,29 @@ def show_comparador_table(docs):
         "plazo_pago_siniestro",
     ]
 
+    def format_value(value):
+        if isinstance(value, dict):
+            monto = value.get("monto") or value.get("plazo")
+            observaciones = value.get("observaciones")
+
+            if isinstance(observaciones, list):
+                obs = " / ".join(observaciones)
+            elif isinstance(observaciones, str):
+                obs = observaciones
+            else:
+                obs = None
+
+            if monto and obs:
+                return f"{monto} ({obs})"
+            elif monto:
+                return monto
+            elif obs:
+                return f"({obs})"
+            else:
+                return "—"
+        return str(value) if value else "—"
+
+    # Unificamos datos por documento
     data = {}
     for doc in docs:
         col = {}
@@ -320,11 +392,11 @@ def show_comparador_table(docs):
     # Construir filas ordenadas
     rows = {}
     for key in desired_order:
-        rows[key] = [data[file].get(key, "—") for file in data]
+        rows[key] = [format_value(data[file].get(key)) for file in data]
 
     df = pd.DataFrame(rows, index=data.keys()).T
     df.index.name = "Cobertura / Plazo"
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df)
 
 
 async def main():
@@ -375,8 +447,11 @@ async def main():
                     tasks.append(task)
 
                 respuestas = await asyncio.gather(*tasks)
+                with st.expander("Respuestas Raw"):
+                    st.write(respuestas)
                 docs = comparador.format_docs(respuestas)
-                # st.write(docs)
+                with st.expander("Respuestas Formateadas"):
+                    st.write(docs)
                 show_comparador_table(docs)
 
 
