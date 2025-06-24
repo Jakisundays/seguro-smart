@@ -427,32 +427,48 @@ async def main():
             )
         else:
             if st.sidebar.button("Iniciar Proceso", use_container_width=True):
-                comparador = SeguroOrchestrator(
-                    api_key=os.getenv("GOOGLE_API_KEY"),
-                    model="gemini-2.5-flash",
-                )
+                try:
+                    comparador = SeguroOrchestrator(
+                        api_key=os.getenv("GOOGLE_API_KEY"),
+                        model="gemini-2.5-flash",
+                    )
 
-                st.sidebar.write("Proceso iniciado con los archivos:")
-                tasks = []
-                for file in uploaded_files:
-                    saved_file_path = comparador.save_uploaded_file(file, "./downloads")
-                    item = {
-                        "file_name": file.name,
-                        "file_extension": "pdf",
-                        "file_path": saved_file_path,
-                        "media_type": file.type,
-                        "process_id": file.file_id,
-                    }
-                    task = comparador.run_pdf_toolchain(item)
-                    tasks.append(task)
+                    with st.spinner("Procesando archivos..."):
+                        tasks = []
+                        file_paths = []
 
-                respuestas = await asyncio.gather(*tasks)
-                with st.expander("Respuestas Raw"):
-                    st.write(respuestas)
-                docs = comparador.format_docs(respuestas)
-                with st.expander("Respuestas Formateadas"):
-                    st.write(docs)
-                show_comparador_table(docs)
+                        for file in uploaded_files:
+                            saved_file_path = comparador.save_uploaded_file(
+                                file, "./downloads"
+                            )
+                            file_paths.append(saved_file_path)
+                            item = {
+                                "file_name": file.name,
+                                "file_extension": "pdf",
+                                "file_path": saved_file_path,
+                                "media_type": file.type,
+                                "process_id": file.file_id,
+                            }
+                            task = comparador.run_pdf_toolchain(item)
+                            tasks.append(task)
+
+                        respuestas = await asyncio.gather(*tasks)
+                        with st.expander("Respuestas Raw"):
+                            st.write(respuestas)
+                        docs = comparador.format_docs(respuestas)
+                        with st.expander("Respuestas Formateadas"):
+                            st.write(docs)
+                        show_comparador_table(docs)
+                except Exception as e:
+                    st.error(f"Ocurrió un error: {e}")
+                finally:
+                    # Clean up downloaded files
+                    for file_path in file_paths:
+                        try:
+                            if os.path.exists(file_path):
+                                os.remove(file_path)
+                        except Exception as e:
+                            print(f"Error deleting file {file_path}: {e}")
 
 
 if __name__ == "__main__":
