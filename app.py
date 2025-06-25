@@ -14,7 +14,9 @@ from jsonschema import validate, ValidationError
 import json
 import pandas as pd
 from typing import Optional, List, TypedDict, cast
+from dotenv import load_dotenv
 
+load_dotenv()
 
 class CoberturaConMontoYObservacion(TypedDict, total=False):
     monto: Optional[str]
