@@ -15,8 +15,12 @@ import json
 import pandas as pd
 from typing import Optional, List, TypedDict, cast
 from dotenv import load_dotenv
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment
+
 
 load_dotenv()
+
 
 class CoberturaConMontoYObservacion(TypedDict, total=False):
     monto: Optional[str]
@@ -321,7 +325,7 @@ class SeguroOrchestrator:
         # Procesa con resto de herramientas en paralelo
         tasks = []
         for tool in tools_standard[1:]:
-            print(tool['data']['function']['name'])
+            print(tool["data"]["function"]["name"])
             tool_res = self.tool_handler(
                 tools=[tool["data"] for tool in tools_standard],
                 messages=[
@@ -436,6 +440,111 @@ def show_comparador_table(docs: List[dict]):
     st.dataframe(df)
 
 
+def generate_excel_table(docs: List[dict]):
+    desired_order = [
+        "muerte_accidental",
+        "incapacidad_total_y_permanente",
+        "desmembracion_accidental",
+        "gastos_medicos_por_accidente",
+        "auxilio_funerario_muerte_accidental",
+        "rehabilitacion_integral_por_accidente",
+        "ambulancia_para_eventos",
+        "plazo_aviso_siniestro",
+        "plazo_pago_siniestro",
+        "prima_por_asegurado",
+        "plazo_pago_primas",
+        "forma_pago",
+        "reporte_novedades",
+        "requisitos_asegurabilidad",
+        "subjetividades",
+        "clausulados_aplicables",
+    ]
+
+    def format_value(value):
+        if isinstance(value, dict):
+            amount = value.get("monto") or value.get("plazo")
+            obs = value.get("observaciones")
+            obs_str = "\n".join(obs) if isinstance(obs, list) else obs or None
+
+            if amount and obs_str:
+                return f"{amount}\n({obs_str})"
+            elif amount:
+                return str(amount)
+            elif obs_str:
+                return f"({obs_str})"
+            else:
+                return "—"
+        elif isinstance(value, list):
+            return "\n".join(str(v) for v in value) if value else "—"
+        elif value:
+            return str(value)
+        else:
+            return "—"
+
+    data = {}
+    for doc in docs:
+        combined_fields = {}
+        combined_fields.update(doc.get("coberturas", {}))
+        combined_fields.update(doc.get("plazos", {}))
+        combined_fields.update(doc.get("condiciones", {}))
+        data[doc["filename"]] = combined_fields
+
+    header = ["Coberturas Amparo Basico"] + list(data.keys())
+    table_data = []
+
+    for key in desired_order:
+        row = [key.replace("_", " ").title()]
+        for filename in data:
+            row.append(format_value(data[filename].get(key)))
+        table_data.append(row)
+
+    df = pd.DataFrame(table_data, columns=header)
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Comparador")
+        worksheet = writer.sheets["Comparador"]
+
+        # Ajustar ancho columnas y wrap text
+        max_col_width = 40
+        for col_idx, col in enumerate(df.columns, 1):
+            col_letter = get_column_letter(col_idx)
+            # Ancho máximo de contenido en la columna
+            max_length = max(df[col].astype(str).map(len).max(), len(str(col)))
+            width = min(max_length + 2, max_col_width)
+            worksheet.column_dimensions[col_letter].width = width
+
+            # Aplicar wrap text para toda la columna (incluyendo header)
+            for row_idx in range(
+                1, len(df) + 2
+            ):  # +1 para encabezado y otro +1 porque Excel empieza en 1
+                cell = worksheet[f"{col_letter}{row_idx}"]
+                cell.alignment = Alignment(wrap_text=True, vertical="top")
+
+        # Ajustar altura de filas para que se vean saltos de línea
+        for row_idx in range(1, len(df) + 2):
+            # La altura base puede variar, aquí se multiplica por cantidad de líneas más 1 para espacio extra
+            max_lines = 1
+            for col_idx in range(1, len(df.columns) + 1):
+                cell = worksheet[f"{get_column_letter(col_idx)}{row_idx}"]
+                if cell.value:
+                    # Contar líneas por saltos de línea
+                    lines = str(cell.value).count("\n") + 1
+                    if lines > max_lines:
+                        max_lines = lines
+            worksheet.row_dimensions[row_idx].height = max(15, max_lines * 15)
+
+    output.seek(0)
+    return output.getvalue()
+
+
+def show_excel_download(docs: List[dict]):
+    excel_bytes = generate_excel_table(docs)
+    b64_excel = base64.b64encode(excel_bytes).decode("utf-8")
+    href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64_excel}" download="comparador_table.xlsx" target="_blank">📄 Descargar Excel</a>'
+    st.markdown(href, unsafe_allow_html=True)
+
+
 async def main():
     # Configuración de la página
     st.set_page_config(page_title="SeguroSmart", page_icon="🛡️", layout="wide")
@@ -496,6 +605,8 @@ async def main():
                         with st.expander("Respuestas Formateadas"):
                             st.write(docs)
                         show_comparador_table(docs)
+                        show_excel_download(docs)
+
                 except Exception as e:
                     st.error(f"Ocurrió un error: {e}")
                 finally:
