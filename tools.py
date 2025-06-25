@@ -81,7 +81,7 @@ tools = [
                                 },
                                 "observaciones": {
                                     "type": "array",
-                                    "description": "Lista de observaciones relevantes asociadas a esta cobertura, como condiciones, exclusiones o modalidades de uso.",
+                                    "description": "Extrae únicamente las observaciones o condiciones asociadas a la cobertura de ambulancia para eventos. Enfócate en restricciones de uso (por ejemplo, 'una vez al año', 'máximo 2 usos'), modalidades de activación (como 'requiere autorización previa') y exclusiones específicas. No repitas el texto completo, solo extrae los fragmentos que describen estas limitaciones o condiciones.",
                                     "items": {"type": "string"},
                                     "nullable": True,
                                 },
@@ -230,7 +230,7 @@ tools = [
                         },
                         "clausulados_aplicables": {
                             "type": "array",
-                            "description": "Lista de cláusulas o condiciones contractuales específicas que aplican a la póliza.",
+                            "description": "Lista exclusiva de cláusulas o condiciones contractuales que aplican a la póliza. Cada elemento debe ser únicamente el nombre, número o título de la cláusula, sin descripciones ni explicaciones adicionales.",
                             "items": {"type": "string"},
                             "nullable": True,
                         },
