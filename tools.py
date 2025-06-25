@@ -148,8 +148,99 @@ tools = [
                             "required": ["plazo"],
                             "additionalProperties": False,
                         },
+                        "prima_por_asegurado": {
+                            "type": "string",
+                            "description": "Monto de la prima que corresponde a cada asegurado. Ejemplo: 'USD 10', 'AR$ 1.200'.",
+                            "nullable": True,
+                        },
+                        "plazo_pago_primas": {
+                            "type": "object",
+                            "description": "Plazo establecido para el pago de primas.",
+                            "properties": {
+                                "plazo": {
+                                    "type": "string",
+                                    "description": "Plazo explícito para realizar el pago de la prima. Ejemplo: '30 días corridos', '15 días desde emisión'.",
+                                    "nullable": True,
+                                },
+                                "observaciones": {
+                                    "type": "string",
+                                    "description": "Condiciones adicionales relacionadas con el plazo de pago de primas.",
+                                    "nullable": True,
+                                },
+                            },
+                            "required": ["plazo"],
+                            "additionalProperties": False,
+                        },
+                        "forma_pago": {
+                            "type": "string",
+                            "description": "Método mediante el cual se debe pagar la prima. Ejemplo: 'Transferencia bancaria', 'Débito automático', 'Mercado Pago'.",
+                            "nullable": True,
+                        },
                     },
-                    "required": ["plazo_aviso_siniestro", "plazo_pago_siniestro"],
+                    "required": [
+                        "plazo_aviso_siniestro",
+                        "plazo_pago_siniestro",
+                        "prima_por_asegurado",
+                        "plazo_pago_primas",
+                        "forma_pago",
+                    ],
+                    "additionalProperties": False,
+                },
+            },
+        },
+    },
+    {
+        "prompt": "Extrae solo si están expresamente escritos en el texto los siguientes datos: 1) el reporte de novedades (cómo, cuándo o con qué frecuencia deben notificarse novedades del asegurado), 2) los requisitos de asegurabilidad (condiciones que debe cumplir una persona para ser asegurada, como edad, permanencia, salud, etc.), 3) las subjetividades (condiciones previas o requisitos que deben cumplirse para que la cobertura entre en vigencia), y 4) los clausulados aplicables (cláusulas contractuales específicas mencionadas como parte del contrato). No infieras, no completes por deducción, y no inventes información. Si alguno de estos puntos no se encuentra explícitamente en el texto, responde con: 'No se encontró información explícita'.",
+        "data": {
+            "type": "function",
+            "function": {
+                "name": "extraer_condiciones_y_clausulados",
+                "description": "Identifica y extrae condiciones adicionales que afectan la validez o ejecución del seguro, como requisitos del asegurado, reportes obligatorios, cláusulas y restricciones sujetas al contrato.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "reporte_novedades": {
+                            "type": "object",
+                            "description": "Condiciones relacionadas al reporte de novedades durante la vigencia del seguro.",
+                            "properties": {
+                                "reporte": {
+                                    "type": "string",
+                                    "description": "Texto que indique explícitamente las condiciones del reporte de novedades, como periodicidad u obligación de notificación.",
+                                    "nullable": True,
+                                },
+                                "observaciones": {
+                                    "type": "string",
+                                    "description": "Notas adicionales, condiciones especiales o plazos asociados al reporte de novedades.",
+                                    "nullable": True,
+                                },
+                            },
+                            "required": [],
+                            "additionalProperties": False,
+                        },
+                        "requisitos_asegurabilidad": {
+                            "type": "string",
+                            "description": "Requisitos que debe cumplir una persona para poder ser asegurada (por ejemplo, edad, salud, condiciones específicas).",
+                            "nullable": True,
+                        },
+                        "subjetividades": {
+                            "type": "array",
+                            "description": "Lista de condiciones o requerimientos que deben cumplirse para que la cobertura esté completamente vigente.",
+                            "items": {"type": "string"},
+                            "nullable": True,
+                        },
+                        "clausulados_aplicables": {
+                            "type": "array",
+                            "description": "Lista de cláusulas o condiciones contractuales específicas que aplican a la póliza.",
+                            "items": {"type": "string"},
+                            "nullable": True,
+                        },
+                    },
+                    "required": [
+                        "reporte_novedades",
+                        "requisitos_asegurabilidad",
+                        "subjetividades",
+                        "clausulados_aplicables",
+                    ],
                     "additionalProperties": False,
                 },
             },

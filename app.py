@@ -16,9 +16,6 @@ import pandas as pd
 from typing import Optional, List, TypedDict, cast
 
 
-from typing import Optional, List, TypedDict
-
-
 class CoberturaConMontoYObservacion(TypedDict, total=False):
     monto: Optional[str]
     observaciones: Optional[str]
@@ -29,16 +26,11 @@ class CoberturaConMontoYObservacionesList(TypedDict, total=False):
     observaciones: Optional[List[str]]
 
 
-class CoberturaSimpleConObservacion(TypedDict, total=False):
-    monto: Optional[str]
-    observaciones: Optional[str]
-
-
 class CoberturasAmparoBasico(TypedDict, total=False):
-    muerte_accidental: Optional[CoberturaSimpleConObservacion]
-    incapacidad_total_y_permanente: Optional[CoberturaSimpleConObservacion]
-    desmembracion_accidental: Optional[CoberturaSimpleConObservacion]
-    auxilio_funerario_muerte_accidental: Optional[CoberturaSimpleConObservacion]
+    muerte_accidental: Optional[CoberturaConMontoYObservacion]
+    incapacidad_total_y_permanente: Optional[CoberturaConMontoYObservacion]
+    desmembracion_accidental: Optional[CoberturaConMontoYObservacion]
+    auxilio_funerario_muerte_accidental: Optional[CoberturaConMontoYObservacion]
     gastos_medicos_por_accidente: Optional[CoberturaConMontoYObservacion]
     rehabilitacion_integral_por_accidente: Optional[CoberturaConMontoYObservacion]
     ambulancia_para_eventos: Optional[CoberturaConMontoYObservacionesList]
@@ -52,12 +44,28 @@ class Plazo(TypedDict, total=False):
 class PlazosDelSiniestro(TypedDict, total=False):
     plazo_aviso_siniestro: Optional[Plazo]
     plazo_pago_siniestro: Optional[Plazo]
+    prima_por_asegurado: Optional[str]
+    plazo_pago_primas: Optional[Plazo]
+    forma_pago: Optional[str]
+
+
+class ReporteNovedades(TypedDict, total=False):
+    reporte: Optional[str]
+    observaciones: Optional[str]
+
+
+class CondicionesYClausulados(TypedDict, total=False):
+    reporte_novedades: Optional[ReporteNovedades]
+    requisitos_asegurabilidad: Optional[str]
+    subjetividades: Optional[List[str]]
+    clausulados_aplicables: Optional[List[str]]
 
 
 class InfoArchivo(TypedDict):
     filename: str
     coberturas: CoberturasAmparoBasico
     plazos: PlazosDelSiniestro
+    condiciones: CondicionesYClausulados
 
 
 class QueueItem(TypedDict):
@@ -83,6 +91,7 @@ class SeguroOrchestrator:
             filename = r.get("file_name", "desconocido.pdf")
             coberturas = {}
             plazos = {}
+            condiciones = {}
 
             for entry in r.get("data", []):
                 for item in entry.get("content", []):
@@ -100,7 +109,6 @@ class SeguroOrchestrator:
                                     elif obs is None:
                                         v["observaciones"] = []
                                     coberturas[k] = v
-
                                 else:
                                     coberturas[k] = {
                                         "monto": v.get("monto"),
@@ -120,12 +128,19 @@ class SeguroOrchestrator:
                                     "plazo": pv.get("plazo"),
                                     "observaciones": pv.get("observaciones"),
                                 }
+                            else:
+                                plazos[pk] = pv
+
+                    elif name == "extraer_condiciones_y_clausulados":
+                        # Aquí asumimos que input_data es el dict con las 4 claves
+                        condiciones = input_data
 
             result.append(
                 {
                     "filename": filename,
                     "coberturas": cast(CoberturasAmparoBasico, coberturas),
                     "plazos": cast(PlazosDelSiniestro, plazos),
+                    "condiciones": cast(CondicionesYClausulados, condiciones),
                 }
             )
 
@@ -146,6 +161,9 @@ class SeguroOrchestrator:
                         if response.status == 200:
                             return await response.json()
                         elif response.status in [429, 529, 503]:
+                            print(response)
+                            x = await response.json()
+                            print(x)
                             sleep_time = 15 * (i + 1)  # Espera incremental en segundos
                             print(
                                 f"API request failed with status {response.status}. Retrying in {sleep_time} seconds..."
@@ -301,6 +319,7 @@ class SeguroOrchestrator:
         # Procesa con resto de herramientas en paralelo
         tasks = []
         for tool in tools_standard[1:]:
+            print(tool['data']['function']['name'])
             tool_res = self.tool_handler(
                 tools=[tool["data"] for tool in tools_standard],
                 messages=[
@@ -357,6 +376,13 @@ def show_comparador_table(docs: List[dict]):
         "ambulancia_para_eventos",
         "plazo_aviso_siniestro",
         "plazo_pago_siniestro",
+        "prima_por_asegurado",
+        "plazo_pago_primas",
+        "forma_pago",
+        "reporte_novedades",
+        "requisitos_asegurabilidad",
+        "subjetividades",
+        "clausulados_aplicables",
     ]
 
     def format_value(value):
@@ -379,7 +405,13 @@ def show_comparador_table(docs: List[dict]):
                 return f"({obs})"
             else:
                 return "—"
-        return str(value) if value else "—"
+        elif isinstance(value, list):
+            # Para listas simples (como subjetividades o clausulados)
+            return " / ".join(value) if value else "—"
+        elif value:
+            return str(value)
+        else:
+            return "—"
 
     # Unificamos datos por documento
     data = {}
@@ -387,6 +419,9 @@ def show_comparador_table(docs: List[dict]):
         col = {}
         col.update(doc.get("coberturas", {}))
         col.update(doc.get("plazos", {}))
+        condiciones = doc.get("condiciones", {})
+        if condiciones:
+            col.update(condiciones)
         data[doc["filename"]] = col
 
     # Construir filas ordenadas
