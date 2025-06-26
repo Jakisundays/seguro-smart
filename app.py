@@ -440,7 +440,12 @@ def show_comparador_table(docs: List[dict]):
     st.dataframe(df)
 
 
-def generate_excel_table(docs: List[dict]):
+def generate_excel_table(
+    docs: List[dict],
+    title: str = "CLUB DE PATINAJE ORION",
+    id: str = "NIT 891900262-8",
+    subtitle: str = "POLIZA COLECTIVA DE ACCIDENTES PERSONALES",
+):
     desired_order = [
         "muerte_accidental",
         "incapacidad_total_y_permanente",
@@ -460,10 +465,16 @@ def generate_excel_table(docs: List[dict]):
         "clausulados_aplicables",
     ]
 
+    print("generate excel table")
+
     def format_value(value):
+        print("Value: ", value)
         if isinstance(value, dict):
+            print("Valor es un dict")
             amount = value.get("monto") or value.get("plazo")
+            print("Amount: ", amount)
             obs = value.get("observaciones")
+            print("Obs: ", obs)
             obs_str = "\n".join(obs) if isinstance(obs, list) else obs or None
 
             if amount and obs_str:
@@ -475,21 +486,29 @@ def generate_excel_table(docs: List[dict]):
             else:
                 return "—"
         elif isinstance(value, list):
+            print("Value es una lista")
             return "\n".join(str(v) for v in value) if value else "—"
         elif value:
+            print("Value es un valor simple")
             return str(value)
         else:
+            print("Value es vacio")
             return "—"
 
     data = {}
     for doc in docs:
         combined_fields = {}
+        print(doc)
         combined_fields.update(doc.get("coberturas", {}))
+        print("Coberturas: ", combined_fields)
         combined_fields.update(doc.get("plazos", {}))
+        print("Plazos: ", combined_fields)
         combined_fields.update(doc.get("condiciones", {}))
+        print("Condiciones: ", combined_fields)
         data[doc["filename"]] = combined_fields
 
     header = ["Coberturas Amparo Basico"] + list(data.keys())
+    print("Header: ", header)
     table_data = []
 
     for key in desired_order:
@@ -502,11 +521,22 @@ def generate_excel_table(docs: List[dict]):
 
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Comparador")
+        # Create a dummy DataFrame to write the header information
+        header_df = pd.DataFrame([[""], [""], [""]])
+        header_df.to_excel(writer, index=False, header=False, sheet_name="Comparador")
         worksheet = writer.sheets["Comparador"]
 
+        # Write title and ID
+        worksheet["A1"] = title
+        worksheet["B1"] = id
+        # Write subtitle
+        worksheet["A2"] = subtitle
+
+        # Write the main DataFrame starting from row 4 (0-indexed, so row 3 in Excel)
+        df.to_excel(writer, startrow=3, index=False, sheet_name="Comparador")
+
         # Ajustar ancho columnas y wrap text
-        max_col_width = 40
+        max_col_width = 50
         for col_idx, col in enumerate(df.columns, 1):
             col_letter = get_column_letter(col_idx)
             # Ancho máximo de contenido en la columna
@@ -538,8 +568,15 @@ def generate_excel_table(docs: List[dict]):
     return output.getvalue()
 
 
-def show_excel_download(docs: List[dict]):
-    excel_bytes = generate_excel_table(docs)
+def show_excel_download(title: str, id: str, subtitle: str, docs: List[dict]):
+    print("SHow excelt Download")
+    excel_bytes = generate_excel_table(
+        docs,
+        title,
+        id,
+        subtitle,
+    )
+    print("TEnemos los excel bytes")
     b64_excel = base64.b64encode(excel_bytes).decode("utf-8")
     href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64_excel}" download="comparador_table.xlsx" target="_blank">📄 Descargar Excel</a>'
     st.markdown(href, unsafe_allow_html=True)
@@ -604,8 +641,11 @@ async def main():
                         docs = comparador.format_docs(respuestas)
                         with st.expander("Respuestas Formateadas"):
                             st.write(docs)
+                        title = "CLUB DE PATINAJE ORION"
+                        excel_id = "NIT 891900262-8"
+                        subtitle = "POLIZA COLECTIVA DE ACCIDENTES PERSONALES"
                         show_comparador_table(docs)
-                        show_excel_download(docs)
+                        show_excel_download(title, excel_id, subtitle, docs)
 
                 except Exception as e:
                     st.error(f"Ocurrió un error: {e}")
