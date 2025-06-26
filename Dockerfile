@@ -18,4 +18,5 @@ COPY . .
 EXPOSE 8888
 
 # Comando para ejecutar la aplicación Streamlit
-CMD ["streamlit", "run", "app.py", "--server.port=8888", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "app.py", "--server.port=8888", "--server.address=0.0.0.0", "--server.enableCORS=false"]
+
