@@ -465,16 +465,10 @@ def generate_excel_table(
         "clausulados_aplicables",
     ]
 
-    print("generate excel table")
-
     def format_value(value):
-        print("Value: ", value)
         if isinstance(value, dict):
-            print("Valor es un dict")
             amount = value.get("monto") or value.get("plazo")
-            print("Amount: ", amount)
             obs = value.get("observaciones")
-            print("Obs: ", obs)
             obs_str = "\n".join(obs) if isinstance(obs, list) else obs or None
 
             if amount and obs_str:
@@ -486,25 +480,18 @@ def generate_excel_table(
             else:
                 return "—"
         elif isinstance(value, list):
-            print("Value es una lista")
             return "\n".join(str(v) for v in value) if value else "—"
         elif value:
-            print("Value es un valor simple")
             return str(value)
         else:
-            print("Value es vacio")
             return "—"
 
     data = {}
     for doc in docs:
         combined_fields = {}
-        print(doc)
         combined_fields.update(doc.get("coberturas", {}))
-        print("Coberturas: ", combined_fields)
         combined_fields.update(doc.get("plazos", {}))
-        print("Plazos: ", combined_fields)
         combined_fields.update(doc.get("condiciones", {}))
-        print("Condiciones: ", combined_fields)
         data[doc["filename"]] = combined_fields
 
     header = ["Coberturas Amparo Basico"] + list(data.keys())
@@ -569,14 +556,12 @@ def generate_excel_table(
 
 
 def show_excel_download(title: str, id: str, subtitle: str, docs: List[dict]):
-    print("SHow excelt Download")
     excel_bytes = generate_excel_table(
         docs,
         title,
         id,
         subtitle,
     )
-    print("TEnemos los excel bytes")
     b64_excel = base64.b64encode(excel_bytes).decode("utf-8")
     href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64_excel}" download="comparador_table.xlsx" target="_blank">📄 Descargar Excel</a>'
     st.markdown(href, unsafe_allow_html=True)
