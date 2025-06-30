@@ -14,8 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia el resto de la aplicación
 COPY . . 
 
-# Expone los puertos que usan las aplicaciones Streamlit
-EXPOSE 8010 8011
+# Expone el puerto que usa Streamlit (por defecto es 8501)
+EXPOSE 8010
 
-# Comando por defecto (se puede sobrescribir en docker-compose)
+# Comando para ejecutar la aplicación Streamlit
 CMD ["streamlit", "run", "app.py", "--server.port=8010", "--server.address=0.0.0.0"]
