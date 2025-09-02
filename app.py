@@ -289,7 +289,7 @@ class SeguroOrchestrator:
         base64_images = []
         for page_num in range(len(doc)):
             page = doc.load_page(page_num)
-            pix = page.get_pixmap(dpi=150)  # convertimos a imagen
+            pix = page.get_pixmap(dpi=72)  # convertimos a imagen
 
             # Convertimos el pixmap a imagen PIL
             img = Image.open(io.BytesIO(pix.tobytes("png")))
