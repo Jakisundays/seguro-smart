@@ -282,264 +282,44 @@ class InvoiceOrchestrator:
                     raise ValueError(f"Request error: {str(e)}")
         raise ValueError("Max retries exceeded.")
 
-    async def tool_handler(
-        self,
-        tools: list,
-        messages: list,
-        tool_name: str,
-        process_id: str,
-        model: str = "gemini-2.5-flash-preview-05-20",
-        max_retries: int = 6,
-    ):
-        url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}",
-        }
-        data = {
-            "model": model,
-            "messages": messages,
-            "tools": tools,
-            "tool_choice": {
-                "type": "function",
-                "function": {"name": tool_name},
-            },
-        }
-        schema = next(
-            (
-                tool["function"]["parameters"]
-                for tool in tools
-                if tool["function"]["name"] == tool_name
-            ),
-            None,
-        )
-        tool_output = None
-        for attempt in range(0, max_retries):
-            try:
-                response = await self.make_api_request(
-                    url=url,
-                    headers=headers,
-                    data=data,
-                    process_id=process_id,
-                )
-                print(response)
-
-                if response["choices"][0]["message"]["tool_calls"][0]["function"][
-                    "arguments"
-                ]:
-                    tool_output = json.loads(
-                        response["choices"][0]["message"]["tool_calls"][0]["function"][
-                            "arguments"
-                        ]
-                    )
-                else:
-                    raise ValueError("No tool output")
-
-                usage = response["usage"]
-
-                validate(instance=tool_output, schema=schema)
-                app_logger.info("✅ Validation passed.")
-                return {
-                    "content": [
-                        {
-                            "name": tool_name,
-                            "input": tool_output,
-                        }
-                    ],
-                    "usage": {
-                        "input_tokens": usage["prompt_tokens"],
-                        "cache_creation_input_tokens": 0,
-                        "cache_read_input_tokens": 0,
-                        "output_tokens": usage["completion_tokens"],
-                        "service_tier": "standard",
-                    },
-                }
-                # return {"content": tool_output, "usage": usage, "tool_name": tool_name}
-            except ValidationError as e:
-                # Notifica error de validación
-                app_logger.error(f"❌ Validation error for '{tool_name}': {e.message}")
-                # error_message = {
-                #     "tool_name": tool_name,
-                #     "tool_output": tool_output,
-                #     "tool": next(
-                #         (tool for tool in tools if tool["name"] == tool_name), None
-                #     ),
-                #     "error": e.message,
-                # }
-                # error_response = requests.post(
-                #     self.WEBHOOK_URL,
-                #     json=error_message,
-                #     timeout=10,
-                # )
-                # app_logger.error(f"Webhook Status Code: {error_response.status_code}")
-                if attempt < max_retries:
-                    app_logger.warning("🔄 Retrying...")
-                    continue
-                else:
-                    app_logger.error("❌ Max retries exceeded.")
-                    raise ValueError(
-                        f"Max retries exceeded for '{tool_name}'. Last error: {e.message}"
-                    )
-            except Exception as e:
-                # Notifica error general
-                app_logger.error(f"❌ Unexpected error: {e}")
-                # error_message = {
-                #     "tool_name": tool_name,
-                #     "tool_output": tool_output,
-                #     "tool": next(
-                #         (tool for tool in tools if tool["name"] == tool_name), None
-                #     ),
-                #     "error": e.message,
-                # }
-                # error_response = requests.post(
-                #     self.WEBHOOK_URL,
-                #     json=error_message,
-                #     timeout=10,
-                # )
-                # app_logger.error(f"Webhook Status Code: {error_response.status_code}")
-                if attempt < max_retries:
-                    app_logger.warning("🔄 Retrying...")
-                    continue
-                else:
-                    app_logger.error("❌ Max retries exceeded.")
-                    raise ValueError(
-                        f"Max retries exceeded for '{tool_name}'. Last error: {e.message}"
-                    )
-
-    # Procesa imágenes con Claude Vision
-    async def run_image_toolchain(
-        self,
-        item: QueueItem,
-    ):
-        # Convierte imagen a base64
-        image_file = Path(item["file_path"])
-        base64_string = base64.b64encode(image_file.read_bytes()).decode()
-
-        response = await self.tool_handler(
-            tools=[tool["data"] for tool in tools_standard],
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": tools_standard[0]["prompt"]},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{item['media_type']};base64,{base64_string}"
-                            },
-                        },
-                    ],
-                }
-            ],
-            tool_name=tools_standard[0]["data"]["function"]["name"],
-            process_id=item["process_id"],
-        )
-
-        # Procesa con resto de herramientas en paralelo
-        tasks = []
-        for tool in tools_standard[1:]:
-            tool_res = self.tool_handler(
-                tools=[tool["data"] for tool in tools_standard],
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:{item['media_type']};base64,{base64_string}"
-                                },
-                            },
-                            {"type": "text", "text": tool["prompt"]},
-                        ],
-                    }
-                ],
-                tool_name=tool["data"]["function"]["name"],
-                process_id=item["process_id"],
-            )
-            tasks.append(tool_res)
-        results = await asyncio.gather(*tasks)
-        respuestas = [response] + results
-        item["data"] = respuestas
-        return item
-
-    # Procesa PDFs con Claude
-    async def run_pdf_toolchain(
-        self,
-        item: QueueItem,
-    ):
-        doc = fitz.open(item["file_path"])
-        base64_images = []
-        for page_num in range(len(doc)):
-            page = doc.load_page(page_num)
-            pix = page.get_pixmap(dpi=150)  # convertimos a imagen
-
-            # Convertimos el pixmap a imagen PIL
-            img = Image.open(io.BytesIO(pix.tobytes("png")))
-
-            # Guardamos en memoria y convertimos a base64
-            buffer = io.BytesIO()
-            img.save(buffer, format="PNG")
-            img_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-            base64_images.append(img_base64)
-
-        image_messages = [
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:image/png;base64,{img_b64}"},
-            }
-            for img_b64 in base64_images
-        ]
+    async def handle_pdf(self, item: QueueItem):
+        file_path = Path(item["file_path"])
+        encoded_pdf = base64.b64encode(file_path.read_bytes()).decode()
 
         prompt = (
             tools_standard[1]["prompt"]
             if item["doc_type"] == "adicional"
             else tools_standard[0]["prompt"]
         )
-        tool_name = (
-            tools_standard[1]["data"]["function"]["name"]
+        responseSchema = (
+            tools_standard[1]["data"]
             if item["doc_type"] == "adicional"
-            else tools_standard[0]["data"]["function"]["name"]
+            else tools_standard[0]["data"]
         )
-
-        response = await self.tool_handler(
-            tools=[tool["data"] for tool in tools_standard],
-            messages=[
+        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
+        payload = {
+            "contents": [
                 {
-                    "role": "user",
-                    "content": [
-                        *image_messages,
-                        {"type": "text", "text": prompt},
-                    ],
+                    "parts": [
+                        {
+                            "inline_data": {
+                                "mime_type": "application/pdf",
+                                "data": encoded_pdf,
+                            }
+                        },
+                        {"text": prompt},
+                    ]
                 }
             ],
-            tool_name=tool_name,
-            # tool_name=tools_standard[0]["data"]["function"]["name"],
-            process_id=item["process_id"],
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "responseSchema": responseSchema,
+            },
+        }
+        response = await self.make_api_request(
+            url, headers, payload, item["process_id"]
         )
-
-        # Hacer que cada archivo se procese en paralelo
-
-        # # Procesa con resto de herramientas en paralelo
-        # tasks = []
-        # for tool in tools_standard[1:]:
-        #     tool_res = self.tool_handler(
-        #         tools=[tool["data"] for tool in tools_standard],
-        #         messages=[
-        #             {
-        #                 "role": "user",
-        #                 "content": [
-        #                     *image_messages,
-        #                     {"type": "text", "text": tool["prompt"]},
-        #                 ],
-        #             }
-        #         ],
-        #         tool_name=tool["data"]["function"]["name"],
-        #         process_id=item["process_id"],
-        #     )
-        #     tasks.append(tool_res)
-        # results = await asyncio.gather(*tasks)
-        # respuestas = [response] + results
         item["data"] = response
         return item
 
@@ -640,30 +420,11 @@ if st.sidebar.button(
 
                 for item in queue_items:
                     if item["media_type"] == "application/pdf":
-                        result = asyncio.run(orchestrator.run_pdf_toolchain(item))
+                        result = asyncio.run(orchestrator.handle_pdf(item))
+
+                        # result = asyncio.run(orchestrator.run_pdf_toolchain(item))
 
                         st.write(result)
-
-                # # Mostrar información de cada archivo descargado
-                # for item in queue_items:
-                #     file_info = get_file_info(item["file_path"], item["file_name"])
-                #     st.markdown(file_info)
-                #     st.markdown(f"**Tipo:** {item['doc_type'].title()}")
-                #     st.markdown("---")
-
-                # # Mostrar ruta de la carpeta downloads
-                # downloads_path = os.path.join(os.getcwd(), "downloads")
-                # st.info(f"📂 **Carpeta de descargas:** `{downloads_path}`")
-
-                # # Guardar queue_items en session_state para uso posterior
-                # if "queue_items" not in st.session_state:
-                #     st.session_state.queue_items = []
-                # st.session_state.queue_items.extend(queue_items)
-
-                # # Mostrar resumen
-                # st.info(
-                #     f"💡 Se crearon {len(queue_items)} Queue Items. Los archivos se han descargado exitosamente en la carpeta downloads y están listos para procesamiento."
-                # )
 
             else:
                 st.error(
