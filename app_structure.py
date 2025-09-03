@@ -3,30 +3,58 @@ import pandas as pd
 from io import BytesIO
 import base64
 from typing import List, Optional
-import streamlit as st
-from typing import TypedDict, Dict, List, Optional, Union, Literal
+from typing import TypedDict, Dict, List, Optional, Literal
 import os
-import base64
 import certifi
 import aiohttp
 import ssl
 from polizas_tools import tools as tools_standard
 import asyncio
-import fitz  # PyMuPDF
-from PIL import Image
-import io
-from jsonschema import validate, ValidationError
-import json
-import pandas as pd
 from typing import Optional, List, TypedDict, cast
 import uuid
-import tempfile
-import shutil
 from dotenv import load_dotenv
-from openpyxl.utils import get_column_letter
-from openpyxl.styles import Alignment
 import logging
 from pathlib import Path
+from dataclasses import dataclass, field
+import json
+
+
+@dataclass
+class Prima:
+    """
+    Representa el valor de una prima individual.
+    """
+
+    prima: float
+
+
+@dataclass
+class DetalleCoberturaItem:
+    """
+    Representa un interés asegurado con su valor asegurado.
+    """
+
+    interes_asegurado: str  # Ejemplo: "Edificio", "Maquinaria"
+    valor_asegurado: float  # Valor monetario asegurado
+
+
+@dataclass
+class Cobertura:
+    """
+    Representa el detalle completo de la cobertura.
+    """
+
+    detalle_cobertura: List[DetalleCoberturaItem] = field(default_factory=list)
+    total_valores_asegurados: float = 0.0
+
+    def calcular_total(self) -> float:
+        """
+        Calcula y actualiza la suma total de los valores asegurados.
+        """
+        self.total_valores_asegurados = sum(
+            item.valor_asegurado for item in self.detalle_cobertura
+        )
+        return self.total_valores_asegurados
 
 
 load_dotenv()
@@ -417,16 +445,195 @@ if st.sidebar.button(
 
                 # Sección de archivos descargados
                 st.subheader("📁 Archivos Descargados")
+                
+                results = []
 
                 for item in queue_items:
                     if item["media_type"] == "application/pdf":
                         result = asyncio.run(orchestrator.handle_pdf(item))
-
-                        # result = asyncio.run(orchestrator.run_pdf_toolchain(item))
-
-                        st.write(result)
+                        results.append(result)
+                        # st.write(result)
+                        
+                # Procesar y mostrar resultados
+                if results:
+                    st.subheader("📊 Resultados del Análisis")
+                    
+                    # Función para convertir JSON a clases dataclass
+                    def procesar_resultados(results_list):
+                        polizas_data = []
+                        primas_data = []
+                        
+                        for result in results_list:
+                            if result and "data" in result:
+                                try:
+                                    # Extraer información del archivo
+                                    file_name = result.get("file_name", "Archivo desconocido")
+                                    doc_type = result.get("doc_type", "desconocido")
+                                    
+                                    # Extraer el texto JSON del resultado
+                                    candidates = result["data"].get("candidates", [])
+                                    if candidates and len(candidates) > 0:
+                                        content = candidates[0].get("content", {})
+                                        parts = content.get("parts", [])
+                                        if parts and len(parts) > 0:
+                                            json_text = parts[0].get("text", "")
+                                            
+                                            # Parsear el JSON
+                                            data = json.loads(json_text)
+                                            
+                                            # Procesar según el tipo de documento
+                                            if doc_type in ["actual", "renovacion"] and "detalle_cobertura" in data:
+                                                # Crear instancia de Cobertura
+                                                cobertura_items = []
+                                                for item_data in data["detalle_cobertura"]:
+                                                    cobertura_items.append(DetalleCoberturaItem(
+                                                        interes_asegurado=item_data["interes_asegurado"],
+                                                        valor_asegurado=item_data["valor_asegurado"]
+                                                    ))
+                                                
+                                                cobertura = Cobertura(
+                                                    detalle_cobertura=cobertura_items,
+                                                    total_valores_asegurados=data.get("total_valores_asegurados", 0)
+                                                )
+                                                
+                                                # Agregar a datos de pólizas
+                                                for item_cob in cobertura.detalle_cobertura:
+                                                    polizas_data.append({
+                                                        "Archivo": file_name,
+                                                        "Tipo de Documento": doc_type.title(),
+                                                        "Interés Asegurado": item_cob.interes_asegurado,
+                                                        "Valor Asegurado": item_cob.valor_asegurado,
+                                                        "Total Póliza": cobertura.total_valores_asegurados
+                                                    })
+                                                
+                                            elif doc_type == "adicional" and "prima" in data:
+                                                # Crear instancia de Prima
+                                                prima = Prima(prima=data["prima"])
+                                                
+                                                # Agregar a datos de primas
+                                                primas_data.append({
+                                                    "Archivo": file_name,
+                                                    "Tipo de Documento": doc_type.title(),
+                                                    "Prima": prima.prima
+                                                })
+                                                
+                                except Exception as e:
+                                    st.error(f"Error procesando {result.get('file_name', 'archivo')}: {str(e)}")
+                        
+                        return polizas_data, primas_data
+                    
+                    # Procesar todos los resultados
+                    polizas_data, primas_data = procesar_resultados(results)
+                    
+                    # Separar datos por tipo de documento
+                    if polizas_data:
+                        df_polizas = pd.DataFrame(polizas_data)
+                        
+                        # Filtrar por tipo de documento
+                        polizas_actuales = df_polizas[df_polizas["Tipo de Documento"] == "Actual"]
+                        polizas_renovacion = df_polizas[df_polizas["Tipo de Documento"] == "Renovacion"]
+                        
+                        # Tabla para Pólizas Actuales
+                        if not polizas_actuales.empty:
+                            st.subheader("📋 Pólizas Actuales")
+                            df_actuales_display = polizas_actuales.copy()
+                            df_actuales_display["Valor Asegurado"] = df_actuales_display["Valor Asegurado"].apply(lambda x: f"${x:,.0f}")
+                            df_actuales_display["Total Póliza"] = df_actuales_display["Total Póliza"].apply(lambda x: f"${x:,.0f}")
+                            st.dataframe(df_actuales_display, use_container_width=True)
+                            
+                            # Métrica del total
+                            total_actual = polizas_actuales["Total Póliza"].iloc[0] if len(polizas_actuales) > 0 else 0
+                            st.metric("💰 Total Póliza Actual", f"${total_actual:,.0f}")
+                            st.markdown("---")
+                        
+                        # Tabla para Pólizas de Renovación
+                        if not polizas_renovacion.empty:
+                            st.subheader("🔄 Pólizas de Renovación")
+                            df_renovacion_display = polizas_renovacion.copy()
+                            df_renovacion_display["Valor Asegurado"] = df_renovacion_display["Valor Asegurado"].apply(lambda x: f"${x:,.0f}")
+                            df_renovacion_display["Total Póliza"] = df_renovacion_display["Total Póliza"].apply(lambda x: f"${x:,.0f}")
+                            st.dataframe(df_renovacion_display, use_container_width=True)
+                            
+                            # Métrica del total
+                            total_renovacion = polizas_renovacion["Total Póliza"].iloc[0] if len(polizas_renovacion) > 0 else 0
+                            st.metric("💰 Total Póliza Renovación", f"${total_renovacion:,.0f}")
+                            
+                            # Comparación si hay ambas pólizas
+                            if not polizas_actuales.empty and not polizas_renovacion.empty:
+                                diferencia = total_renovacion - total_actual
+                                porcentaje_cambio = ((diferencia / total_actual) * 100) if total_actual > 0 else 0
+                                st.metric(
+                                    "📊 Diferencia (Renovación vs Actual)", 
+                                    f"${diferencia:,.0f}",
+                                    f"{porcentaje_cambio:+.1f}%"
+                                )
+                            st.markdown("---")
+                    
+                    # Tabla para Documentos Adicionales (Primas)
+                    if primas_data:
+                        st.subheader("📄 Documentos Adicionales (Primas)")
+                        df_primas = pd.DataFrame(primas_data)
+                        
+                        # Formatear valores monetarios para visualización
+                        df_primas_display = df_primas.copy()
+                        df_primas_display["Prima"] = df_primas_display["Prima"].apply(lambda x: f"${x:,.0f}")
+                        
+                        st.dataframe(df_primas_display, use_container_width=True)
+                        
+                        # Mostrar total de primas
+                        total_primas = df_primas["Prima"].sum()
+                        st.metric("💰 Total Primas Adicionales", f"${total_primas:,.0f}")
+                        st.markdown("---")
+                    
+                    # Generar archivo Excel para descarga
+                    if polizas_data or primas_data:
+                        st.subheader("📥 Descargar Resultados")
+                        
+                        # Crear archivo Excel en memoria
+                        output = BytesIO()
+                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                            if polizas_data:
+                                df_polizas.to_excel(writer, sheet_name='Coberturas', index=False)
+                            if primas_data:
+                                df_primas.to_excel(writer, sheet_name='Primas', index=False)
+                        
+                        excel_data = output.getvalue()
+                        
+                        # Botón de descarga
+                        # Crear enlace de descarga que abre en nueva ventana
+                        b64_excel = base64.b64encode(excel_data).decode()
+                        href = f'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64_excel}'
+                        
+                        # Botón con enlace que abre en nueva ventana y descarga automáticamente
+                        st.markdown(
+                            f'''
+                            <a href="{href}" download="analisis_polizas.xlsx" target="_blank" 
+                               style="display: inline-block; padding: 0.5rem 1rem; background-color: #ff4b4b; 
+                                      color: white; text-decoration: none; border-radius: 0.25rem; 
+                                      font-weight: 600; border: none; cursor: pointer;"
+                               onclick="setTimeout(function(){{window.close();}}, 1000);">
+                                📊 Descargar Excel (Nueva Ventana)
+                            </a>
+                            ''',
+                            unsafe_allow_html=True
+                        )
+                        
+                        # Mantener también el botón original como alternativa
+                        st.download_button(
+                            label="📊 Descarga Directa",
+                            data=excel_data,
+                            file_name="analisis_polizas.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            type="secondary",
+                            help="Descarga directa sin abrir nueva ventana"
+                        )
+                else:
+                    st.warning("No se encontraron resultados para mostrar.")
 
             else:
                 st.error(
                     "❌ No se pudieron procesar los archivos. Verifica que los archivos sean válidos."
                 )
+
+
+# TODO: Formatear la info para q RO la vea bien en un excel/pdf
