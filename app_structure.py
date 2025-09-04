@@ -22,10 +22,12 @@ import json
 @dataclass
 class Prima:
     """
-    Representa el valor de una prima individual.
+    Representa el valor de una prima individual con desglose de IVA.
     """
 
-    prima: float
+    prima_sin_iva: float
+    iva: float
+    prima_con_iva: float
 
 
 @dataclass
@@ -457,6 +459,8 @@ if st.sidebar.button(
                 # Procesar y mostrar resultados
                 if results:
                     st.subheader("📊 Resultados del Análisis")
+                    with st.expander("Results"):
+                        st.write(results)
 
                     # Función para convertir JSON a clases dataclass
                     def procesar_resultados(results_list):
@@ -527,17 +531,25 @@ if st.sidebar.button(
 
                                             elif (
                                                 doc_type == "adicional"
-                                                and "prima" in data
+                                                and "prima_sin_iva" in data
+                                                and "iva" in data
+                                                and "prima_con_iva" in data
                                             ):
                                                 # Crear instancia de Prima
-                                                prima = Prima(prima=data["prima"])
+                                                prima = Prima(
+                                                    prima_sin_iva=data["prima_sin_iva"],
+                                                    iva=data["iva"],
+                                                    prima_con_iva=data["prima_con_iva"]
+                                                )
 
                                                 # Agregar a datos de primas
                                                 primas_data.append(
                                                     {
                                                         "Archivo": file_name,
                                                         "Tipo de Documento": doc_type.title(),
-                                                        "Prima": prima.prima,
+                                                        "Prima Sin IVA": prima.prima_sin_iva,
+                                                        "IVA": prima.iva,
+                                                        "Prima Con IVA": prima.prima_con_iva,
                                                     }
                                                 )
 
@@ -664,7 +676,9 @@ if st.sidebar.button(
                         solo_primas = [
                             {
                                 "Archivo": item["Archivo"],
-                                "prima": item["Prima"],
+                                "Prima Sin IVA": item["Prima Sin IVA"],
+                                "IVA": item["IVA"],
+                                "Prima Con IVA": item["Prima Con IVA"],
                             }
                             for item in primas_data
                         ]
@@ -672,17 +686,30 @@ if st.sidebar.button(
 
                         # Formatear valores monetarios para visualización
                         df_primas_display = df_primas.copy()
-                        df_primas_display["Prima"] = df_primas_display["Prima"].apply(
+                        df_primas_display["Prima Sin IVA"] = df_primas_display["Prima Sin IVA"].apply(
+                            lambda x: f"${x:,.0f}"
+                        )
+                        df_primas_display["IVA"] = df_primas_display["IVA"].apply(
+                            lambda x: f"${x:,.0f}"
+                        )
+                        df_primas_display["Prima Con IVA"] = df_primas_display["Prima Con IVA"].apply(
                             lambda x: f"${x:,.0f}"
                         )
 
                         st.dataframe(solo_primas, use_container_width=True)
 
-                        # Mostrar total de primas
-                        total_primas = df_primas["Prima"].sum()
-                        st.metric(
-                            "💰 Total Primas Adicionales", f"${total_primas:,.0f}"
-                        )
+                        # Mostrar totales de primas
+                        total_prima_sin_iva = df_primas["Prima Sin IVA"].sum()
+                        total_iva = df_primas["IVA"].sum()
+                        total_prima_con_iva = df_primas["Prima Con IVA"].sum()
+                        
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("💰 Total Prima Sin IVA", f"${total_prima_sin_iva:,.0f}")
+                        with col2:
+                            st.metric("💰 Total IVA", f"${total_iva:,.0f}")
+                        with col3:
+                            st.metric("💰 Total Prima Con IVA", f"${total_prima_con_iva:,.0f}")
                         st.markdown("---")
 
                     # Generar archivo Excel para descarga

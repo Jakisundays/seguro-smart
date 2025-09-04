@@ -48,12 +48,24 @@ Devuelve solo el valor de la prima en el campo `prima`, sin agregar explicacione
         "data": {
             "type": "OBJECT",
             "properties": {
-                "prima": {
+                # "prima": {
+                #     "type": "NUMBER",
+                #     "description": "Valor de la prima del documento (puede incluir impuestos según el caso).",
+                # },
+                "prima_sin_iva": {
                     "type": "NUMBER",
-                    "description": "Valor de la prima del documento.",
-                }
+                    "description": "Valor de la prima sin aplicar IVA.",
+                },
+                "iva": {
+                    "type": "NUMBER",
+                    "description": "Monto correspondiente al IVA.",
+                },
+                "prima_con_iva": {
+                    "type": "NUMBER",
+                    "description": "Valor de la prima final con IVA incluido.",
+                },
             },
-            "required": ["prima"],
+            "required": ["prima_sin_iva", "iva", "prima_con_iva"],
         },
     },
 ]
