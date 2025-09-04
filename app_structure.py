@@ -461,6 +461,24 @@ if st.sidebar.button(
                     st.subheader("📊 Resultados del Análisis")
                     with st.expander("Results"):
                         st.write(results)
+                    
+                    # Función para limpiar archivos automáticamente después del procesamiento
+                    def cleanup_processed_files(queue_items_list):
+                        """Elimina automáticamente los archivos después del procesamiento exitoso"""
+                        deleted_files = []
+                        failed_deletions = []
+                        
+                        for item in queue_items_list:
+                            try:
+                                if os.path.exists(item["file_path"]):
+                                    os.remove(item["file_path"])
+                                    deleted_files.append(item["file_name"])
+                                    app_logger.info(f"Archivo eliminado automáticamente: {item['file_name']}")
+                            except Exception as e:
+                                failed_deletions.append((item["file_name"], str(e)))
+                                app_logger.error(f"Error al eliminar archivo {item['file_name']}: {str(e)}")
+                        
+                        return deleted_files, failed_deletions
 
                     # Función para convertir JSON a clases dataclass
                     def procesar_resultados(results_list):
@@ -828,9 +846,15 @@ if st.sidebar.button(
                             """,
                             unsafe_allow_html=True,
                         )
+                        
+                        # Limpieza automática de archivos procesados
+                        cleanup_processed_files(queue_items)
 
                 else:
                     st.warning("No se encontraron resultados para mostrar.")
+                    # Limpieza automática incluso si no hay resultados
+                    cleanup_processed_files(queue_items)
+                    st.info("🧹 Archivos eliminados automáticamente del directorio downloads.")
 
             else:
                 st.error(
