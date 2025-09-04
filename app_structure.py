@@ -720,20 +720,93 @@ if st.sidebar.button(
                     if polizas_data or primas_data:
                         st.subheader("📥 Descargar Resultados")
 
-                        # Crear archivo Excel en memoria con datos filtrados
+                        # Crear archivo Excel en memoria con datos filtrados y formato profesional
                         output = BytesIO()
                         with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                            from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+                            from openpyxl.utils.dataframe import dataframe_to_rows
+                            from openpyxl.utils import get_column_letter
+                            
+                            # Definir estilos
+                            header_font = Font(name='Calibri', size=12, bold=True, color='FFFFFF')
+                            header_fill = PatternFill(start_color='2E75B6', end_color='2E75B6', fill_type='solid')
+                            data_font = Font(name='Calibri', size=11)
+                            border = Border(
+                                left=Side(style='thin', color='D0D0D0'),
+                                right=Side(style='thin', color='D0D0D0'),
+                                top=Side(style='thin', color='D0D0D0'),
+                                bottom=Side(style='thin', color='D0D0D0')
+                            )
+                            center_alignment = Alignment(horizontal='center', vertical='center')
+                            currency_alignment = Alignment(horizontal='right', vertical='center')
+                            
+                            def format_worksheet(ws, df, sheet_type):
+                                # Aplicar formato a encabezados
+                                for col_num in range(1, len(df.columns) + 1):
+                                    cell = ws.cell(row=1, column=col_num)
+                                    cell.font = header_font
+                                    cell.fill = header_fill
+                                    cell.border = border
+                                    cell.alignment = center_alignment
+                                
+                                # Aplicar formato a datos
+                                for row_num in range(2, len(df) + 2):
+                                    for col_num in range(1, len(df.columns) + 1):
+                                        cell = ws.cell(row=row_num, column=col_num)
+                                        cell.font = data_font
+                                        cell.border = border
+                                        
+                                        # Aplicar alineación según el tipo de columna
+                                        col_name = df.columns[col_num - 1]
+                                        if 'valor' in col_name.lower() or 'prima' in col_name.lower() or 'iva' in col_name.lower():
+                                            cell.alignment = currency_alignment
+                                            # Formatear como moneda
+                                            if isinstance(cell.value, (int, float)):
+                                                cell.number_format = '$#,##0'
+                                        else:
+                                            cell.alignment = center_alignment
+                                
+                                # Ajustar ancho de columnas
+                                for col_num in range(1, len(df.columns) + 1):
+                                    column_letter = get_column_letter(col_num)
+                                    col_name = df.columns[col_num - 1]
+                                    
+                                    # Calcular ancho basado en el contenido
+                                    max_length = len(str(col_name))
+                                    for row_num in range(2, len(df) + 2):
+                                        cell_value = str(ws.cell(row=row_num, column=col_num).value or '')
+                                        max_length = max(max_length, len(cell_value))
+                                    
+                                    # Establecer ancho mínimo y máximo
+                                    width = min(max(max_length + 2, 15), 30)
+                                    ws.column_dimensions[column_letter].width = width
+                                
+                                # Aplicar filtros automáticos
+                                ws.auto_filter.ref = f"A1:{get_column_letter(len(df.columns))}{len(df) + 1}"
+                                
+                                # Congelar primera fila
+                                ws.freeze_panes = 'A2'
+                            
                             if polizas_data:
                                 # Crear DataFrames con los datos filtrados
                                 if solo_intereses:
                                     df_actuales = pd.DataFrame(solo_intereses)
+                                    # Capitalizar nombres de columnas
+                                    df_actuales.columns = [col.replace('_', ' ').title() for col in df_actuales.columns]
                                     df_actuales.to_excel(writer, sheet_name="Polizas_Actuales", index=False)
+                                    format_worksheet(writer.sheets["Polizas_Actuales"], df_actuales, "polizas")
+                                    
                                 if solo_renovacion:
                                     df_renovacion = pd.DataFrame(solo_renovacion)
+                                    # Capitalizar nombres de columnas
+                                    df_renovacion.columns = [col.replace('_', ' ').title() for col in df_renovacion.columns]
                                     df_renovacion.to_excel(writer, sheet_name="Polizas_Renovacion", index=False)
+                                    format_worksheet(writer.sheets["Polizas_Renovacion"], df_renovacion, "polizas")
+                                    
                             if primas_data:
                                 df_primas_filtrado = pd.DataFrame(solo_primas)
                                 df_primas_filtrado.to_excel(writer, sheet_name="Primas", index=False)
+                                format_worksheet(writer.sheets["Primas"], df_primas_filtrado, "primas")
 
                         excel_data = output.getvalue()
 
