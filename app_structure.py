@@ -10,7 +10,7 @@ import aiohttp
 import ssl
 from polizas_tools import tools as tools_standard
 import asyncio
-from typing import Optional, List, TypedDict, cast
+from typing import Optional, List, TypedDict
 import uuid
 from dotenv import load_dotenv
 import logging
@@ -181,14 +181,14 @@ class QueueItem(TypedDict):
 
 # Configuración de la página
 st.set_page_config(
-    page_title="SeguroSmart - Análisis de Pólizas",
-    page_icon="🛡️",
+    page_title="Análisis de pólizas",
+    page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded"
 )
 
 # Título principal
-st.title("🛡️ SeguroSmart - Sistema de Análisis de Pólizas")
+st.title("📊 Análisis de pólizas")
 st.markdown("---")
 
 # Área principal - Mostrar estado de la cola si existe
@@ -446,7 +446,7 @@ if st.sidebar.button(
                 st.dataframe(df_queue, use_container_width=True)
 
                 # Sección de archivos descargados
-                st.subheader("📁 Archivos Descargados")
+                # st.subheader("📁 Archivos Descargados")
 
                 results = []
 
@@ -461,23 +461,27 @@ if st.sidebar.button(
                     st.subheader("📊 Resultados del Análisis")
                     with st.expander("Results"):
                         st.write(results)
-                    
+
                     # Función para limpiar archivos automáticamente después del procesamiento
                     def cleanup_processed_files(queue_items_list):
                         """Elimina automáticamente los archivos después del procesamiento exitoso"""
                         deleted_files = []
                         failed_deletions = []
-                        
+
                         for item in queue_items_list:
                             try:
                                 if os.path.exists(item["file_path"]):
                                     os.remove(item["file_path"])
                                     deleted_files.append(item["file_name"])
-                                    app_logger.info(f"Archivo eliminado automáticamente: {item['file_name']}")
+                                    app_logger.info(
+                                        f"Archivo eliminado automáticamente: {item['file_name']}"
+                                    )
                             except Exception as e:
                                 failed_deletions.append((item["file_name"], str(e)))
-                                app_logger.error(f"Error al eliminar archivo {item['file_name']}: {str(e)}")
-                        
+                                app_logger.error(
+                                    f"Error al eliminar archivo {item['file_name']}: {str(e)}"
+                                )
+
                         return deleted_files, failed_deletions
 
                     # Función para convertir JSON a clases dataclass
@@ -721,17 +725,17 @@ if st.sidebar.button(
                         total_iva = df_primas["IVA"].sum()
                         total_prima_con_iva = df_primas["Prima Con IVA"].sum()
 
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric(
-                                "💰 Total Prima Sin IVA", f"${total_prima_sin_iva:,.0f}"
-                            )
-                        with col2:
-                            st.metric("💰 Total IVA", f"${total_iva:,.0f}")
-                        with col3:
-                            st.metric(
-                                "💰 Total Prima Con IVA", f"${total_prima_con_iva:,.0f}"
-                            )
+                        # col1, col2, col3 = st.columns(3)
+                        # with col1:
+                        #     st.metric(
+                        #         "💰 Total Prima Sin IVA", f"${total_prima_sin_iva:,.0f}"
+                        #     )
+                        # with col2:
+                        #     st.metric("💰 Total IVA", f"${total_iva:,.0f}")
+                        # with col3:
+                        #     st.metric(
+                        #         "💰 Total Prima Con IVA", f"${total_prima_con_iva:,.0f}"
+                        #     )
                         st.markdown("---")
 
                     # Generar archivo Excel para descarga
@@ -741,23 +745,39 @@ if st.sidebar.button(
                         # Crear archivo Excel en memoria con datos filtrados y formato profesional
                         output = BytesIO()
                         with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                            from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+                            from openpyxl.styles import (
+                                Font,
+                                PatternFill,
+                                Border,
+                                Side,
+                                Alignment,
+                            )
                             from openpyxl.utils.dataframe import dataframe_to_rows
                             from openpyxl.utils import get_column_letter
-                            
+
                             # Definir estilos
-                            header_font = Font(name='Calibri', size=12, bold=True, color='FFFFFF')
-                            header_fill = PatternFill(start_color='2E75B6', end_color='2E75B6', fill_type='solid')
-                            data_font = Font(name='Calibri', size=11)
-                            border = Border(
-                                left=Side(style='thin', color='D0D0D0'),
-                                right=Side(style='thin', color='D0D0D0'),
-                                top=Side(style='thin', color='D0D0D0'),
-                                bottom=Side(style='thin', color='D0D0D0')
+                            header_font = Font(
+                                name="Calibri", size=12, bold=True, color="FFFFFF"
                             )
-                            center_alignment = Alignment(horizontal='center', vertical='center')
-                            currency_alignment = Alignment(horizontal='right', vertical='center')
-                            
+                            header_fill = PatternFill(
+                                start_color="2E75B6",
+                                end_color="2E75B6",
+                                fill_type="solid",
+                            )
+                            data_font = Font(name="Calibri", size=11)
+                            border = Border(
+                                left=Side(style="thin", color="D0D0D0"),
+                                right=Side(style="thin", color="D0D0D0"),
+                                top=Side(style="thin", color="D0D0D0"),
+                                bottom=Side(style="thin", color="D0D0D0"),
+                            )
+                            center_alignment = Alignment(
+                                horizontal="center", vertical="center"
+                            )
+                            currency_alignment = Alignment(
+                                horizontal="right", vertical="center"
+                            )
+
                             def format_worksheet(ws, df, sheet_type):
                                 # Aplicar formato a encabezados
                                 for col_num in range(1, len(df.columns) + 1):
@@ -766,65 +786,100 @@ if st.sidebar.button(
                                     cell.fill = header_fill
                                     cell.border = border
                                     cell.alignment = center_alignment
-                                
+
                                 # Aplicar formato a datos
                                 for row_num in range(2, len(df) + 2):
                                     for col_num in range(1, len(df.columns) + 1):
                                         cell = ws.cell(row=row_num, column=col_num)
                                         cell.font = data_font
                                         cell.border = border
-                                        
+
                                         # Aplicar alineación según el tipo de columna
                                         col_name = df.columns[col_num - 1]
-                                        if 'valor' in col_name.lower() or 'prima' in col_name.lower() or 'iva' in col_name.lower():
+                                        if (
+                                            "valor" in col_name.lower()
+                                            or "prima" in col_name.lower()
+                                            or "iva" in col_name.lower()
+                                        ):
                                             cell.alignment = currency_alignment
                                             # Formatear como moneda
                                             if isinstance(cell.value, (int, float)):
-                                                cell.number_format = '$#,##0'
+                                                cell.number_format = "$#,##0"
                                         else:
                                             cell.alignment = center_alignment
-                                
+
                                 # Ajustar ancho de columnas
                                 for col_num in range(1, len(df.columns) + 1):
                                     column_letter = get_column_letter(col_num)
                                     col_name = df.columns[col_num - 1]
-                                    
+
                                     # Calcular ancho basado en el contenido
                                     max_length = len(str(col_name))
                                     for row_num in range(2, len(df) + 2):
-                                        cell_value = str(ws.cell(row=row_num, column=col_num).value or '')
+                                        cell_value = str(
+                                            ws.cell(row=row_num, column=col_num).value
+                                            or ""
+                                        )
                                         max_length = max(max_length, len(cell_value))
-                                    
+
                                     # Establecer ancho mínimo y máximo
                                     width = min(max(max_length + 2, 15), 30)
                                     ws.column_dimensions[column_letter].width = width
-                                
+
                                 # Aplicar filtros automáticos
                                 ws.auto_filter.ref = f"A1:{get_column_letter(len(df.columns))}{len(df) + 1}"
-                                
+
                                 # Congelar primera fila
-                                ws.freeze_panes = 'A2'
-                            
+                                ws.freeze_panes = "A2"
+
                             if polizas_data:
                                 # Crear DataFrames con los datos filtrados
                                 if solo_intereses:
                                     df_actuales = pd.DataFrame(solo_intereses)
                                     # Capitalizar nombres de columnas
-                                    df_actuales.columns = [col.replace('_', ' ').title() for col in df_actuales.columns]
-                                    df_actuales.to_excel(writer, sheet_name="Polizas_Actuales", index=False)
-                                    format_worksheet(writer.sheets["Polizas_Actuales"], df_actuales, "polizas")
-                                    
+                                    df_actuales.columns = [
+                                        col.replace("_", " ").title()
+                                        for col in df_actuales.columns
+                                    ]
+                                    df_actuales.to_excel(
+                                        writer,
+                                        sheet_name="Polizas_Actuales",
+                                        index=False,
+                                    )
+                                    format_worksheet(
+                                        writer.sheets["Polizas_Actuales"],
+                                        df_actuales,
+                                        "polizas",
+                                    )
+
                                 if solo_renovacion:
                                     df_renovacion = pd.DataFrame(solo_renovacion)
                                     # Capitalizar nombres de columnas
-                                    df_renovacion.columns = [col.replace('_', ' ').title() for col in df_renovacion.columns]
-                                    df_renovacion.to_excel(writer, sheet_name="Polizas_Renovacion", index=False)
-                                    format_worksheet(writer.sheets["Polizas_Renovacion"], df_renovacion, "polizas")
-                                    
+                                    df_renovacion.columns = [
+                                        col.replace("_", " ").title()
+                                        for col in df_renovacion.columns
+                                    ]
+                                    df_renovacion.to_excel(
+                                        writer,
+                                        sheet_name="Polizas_Renovacion",
+                                        index=False,
+                                    )
+                                    format_worksheet(
+                                        writer.sheets["Polizas_Renovacion"],
+                                        df_renovacion,
+                                        "polizas",
+                                    )
+
                             if primas_data:
                                 df_primas_filtrado = pd.DataFrame(solo_primas)
-                                df_primas_filtrado.to_excel(writer, sheet_name="Primas", index=False)
-                                format_worksheet(writer.sheets["Primas"], df_primas_filtrado, "primas")
+                                df_primas_filtrado.to_excel(
+                                    writer, sheet_name="Primas", index=False
+                                )
+                                format_worksheet(
+                                    writer.sheets["Primas"],
+                                    df_primas_filtrado,
+                                    "primas",
+                                )
 
                         excel_data = output.getvalue()
 
@@ -846,7 +901,7 @@ if st.sidebar.button(
                             """,
                             unsafe_allow_html=True,
                         )
-                        
+
                         # Limpieza automática de archivos procesados
                         cleanup_processed_files(queue_items)
 
@@ -854,7 +909,9 @@ if st.sidebar.button(
                     st.warning("No se encontraron resultados para mostrar.")
                     # Limpieza automática incluso si no hay resultados
                     cleanup_processed_files(queue_items)
-                    st.info("🧹 Archivos eliminados automáticamente del directorio downloads.")
+                    st.info(
+                        "🧹 Archivos eliminados automáticamente del directorio downloads."
+                    )
 
             else:
                 st.error(
