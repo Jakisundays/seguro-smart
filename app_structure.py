@@ -539,7 +539,7 @@ if st.sidebar.button(
                                                 prima = Prima(
                                                     prima_sin_iva=data["prima_sin_iva"],
                                                     iva=data["iva"],
-                                                    prima_con_iva=data["prima_con_iva"]
+                                                    prima_con_iva=data["prima_con_iva"],
                                                 )
 
                                                 # Agregar a datos de primas
@@ -686,15 +686,15 @@ if st.sidebar.button(
 
                         # Formatear valores monetarios para visualización
                         df_primas_display = df_primas.copy()
-                        df_primas_display["Prima Sin IVA"] = df_primas_display["Prima Sin IVA"].apply(
-                            lambda x: f"${x:,.0f}"
-                        )
+                        df_primas_display["Prima Sin IVA"] = df_primas_display[
+                            "Prima Sin IVA"
+                        ].apply(lambda x: f"${x:,.0f}")
                         df_primas_display["IVA"] = df_primas_display["IVA"].apply(
                             lambda x: f"${x:,.0f}"
                         )
-                        df_primas_display["Prima Con IVA"] = df_primas_display["Prima Con IVA"].apply(
-                            lambda x: f"${x:,.0f}"
-                        )
+                        df_primas_display["Prima Con IVA"] = df_primas_display[
+                            "Prima Con IVA"
+                        ].apply(lambda x: f"${x:,.0f}")
 
                         st.dataframe(solo_primas, use_container_width=True)
 
@@ -702,31 +702,38 @@ if st.sidebar.button(
                         total_prima_sin_iva = df_primas["Prima Sin IVA"].sum()
                         total_iva = df_primas["IVA"].sum()
                         total_prima_con_iva = df_primas["Prima Con IVA"].sum()
-                        
+
                         col1, col2, col3 = st.columns(3)
                         with col1:
-                            st.metric("💰 Total Prima Sin IVA", f"${total_prima_sin_iva:,.0f}")
+                            st.metric(
+                                "💰 Total Prima Sin IVA", f"${total_prima_sin_iva:,.0f}"
+                            )
                         with col2:
                             st.metric("💰 Total IVA", f"${total_iva:,.0f}")
                         with col3:
-                            st.metric("💰 Total Prima Con IVA", f"${total_prima_con_iva:,.0f}")
+                            st.metric(
+                                "💰 Total Prima Con IVA", f"${total_prima_con_iva:,.0f}"
+                            )
                         st.markdown("---")
 
                     # Generar archivo Excel para descarga
                     if polizas_data or primas_data:
                         st.subheader("📥 Descargar Resultados")
 
-                        # Crear archivo Excel en memoria
+                        # Crear archivo Excel en memoria con datos filtrados
                         output = BytesIO()
                         with pd.ExcelWriter(output, engine="openpyxl") as writer:
                             if polizas_data:
-                                df_polizas.drop_duplicates(
-                                    subset=["Archivo", "Tipo de Documento"]
-                                ).to_excel(writer, sheet_name="Coberturas", index=False)
+                                # Crear DataFrames con los datos filtrados
+                                if solo_intereses:
+                                    df_actuales = pd.DataFrame(solo_intereses)
+                                    df_actuales.to_excel(writer, sheet_name="Polizas_Actuales", index=False)
+                                if solo_renovacion:
+                                    df_renovacion = pd.DataFrame(solo_renovacion)
+                                    df_renovacion.to_excel(writer, sheet_name="Polizas_Renovacion", index=False)
                             if primas_data:
-                                df_primas.drop_duplicates(
-                                    subset=["Archivo", "Tipo de Documento"]
-                                ).to_excel(writer, sheet_name="Primas", index=False)
+                                df_primas_filtrado = pd.DataFrame(solo_primas)
+                                df_primas_filtrado.to_excel(writer, sheet_name="Primas", index=False)
 
                         excel_data = output.getvalue()
 
@@ -749,15 +756,6 @@ if st.sidebar.button(
                             unsafe_allow_html=True,
                         )
 
-                        # Mantener también el botón original como alternativa
-                        # st.download_button(
-                        #     label="📊 Descarga Directa",
-                        #     data=excel_data,
-                        #     file_name="analisis_polizas.xlsx",
-                        #     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        #     type="secondary",
-                        #     help="Descarga directa sin abrir nueva ventana",
-                        # )
                 else:
                     st.warning("No se encontraron resultados para mostrar.")
 
@@ -765,6 +763,3 @@ if st.sidebar.button(
                 st.error(
                     "❌ No se pudieron procesar los archivos. Verifica que los archivos sean válidos."
                 )
-
-
-# TODO: Formatear la info para q RO la vea bien en un excel/pdf
