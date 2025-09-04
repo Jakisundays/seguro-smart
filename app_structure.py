@@ -823,7 +823,7 @@ if st.sidebar.button(
                                       color: white; text-decoration: none; border-radius: 0.25rem; 
                                       font-weight: 600; border: none; cursor: pointer;"
                                onclick="setTimeout(function(){{window.close();}}, 1000);">
-                                📊 Descargar Excel (Nueva Ventana)
+                                📊 Descargar Excel
                             </a>
                             """,
                             unsafe_allow_html=True,
