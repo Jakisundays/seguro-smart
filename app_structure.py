@@ -725,17 +725,6 @@ if st.sidebar.button(
                         total_iva = df_primas["IVA"].sum()
                         total_prima_con_iva = df_primas["Prima Con IVA"].sum()
 
-                        # col1, col2, col3 = st.columns(3)
-                        # with col1:
-                        #     st.metric(
-                        #         "💰 Total Prima Sin IVA", f"${total_prima_sin_iva:,.0f}"
-                        #     )
-                        # with col2:
-                        #     st.metric("💰 Total IVA", f"${total_iva:,.0f}")
-                        # with col3:
-                        #     st.metric(
-                        #         "💰 Total Prima Con IVA", f"${total_prima_con_iva:,.0f}"
-                        #     )
                         st.markdown("---")
 
                     # Generar archivo Excel para descarga
