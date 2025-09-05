@@ -7,6 +7,7 @@ Por cada interés asegurado identificado, devuelve:
 - el valor asegurado correspondiente.  
 
 Además, calcula el total de todos los valores asegurados y devuélvelo en el campo `total_valores_asegurados`.  
+No inventes información ni calcules valores que no estén presentes en el documento.
 
 Devuelve únicamente los campos `detalle_cobertura` y `total_valores_asegurados` en el formato solicitado, sin explicaciones adicionales.
 """,

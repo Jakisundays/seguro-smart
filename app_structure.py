@@ -184,7 +184,7 @@ st.set_page_config(
     page_title="Análisis de pólizas",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 # Título principal
@@ -879,6 +879,181 @@ if st.sidebar.button(
                                     writer.sheets["Primas"],
                                     df_primas_filtrado,
                                     "primas",
+                                )
+
+                            if solo_intereses and solo_renovacion and primas_data:
+                                # Crear estructura organizada con 4 columnas específicas
+
+                                # Obtener datos únicos de intereses asegurados
+                                intereses_unicos = list(
+                                    set(
+                                        [
+                                            item["interes_asegurado"]
+                                            for item in solo_intereses
+                                        ]
+                                        + [
+                                            item["interes_asegurado"]
+                                            for item in solo_renovacion
+                                        ]
+                                    )
+                                )
+
+                                # Crear diccionarios para búsqueda rápida
+                                valores_actuales = {
+                                    item["interes_asegurado"]: item["valor_asegurado"]
+                                    for item in solo_intereses
+                                }
+                                valores_renovacion = {
+                                    item["interes_asegurado"]: item["valor_asegurado"]
+                                    for item in solo_renovacion
+                                }
+
+                                # Calcular totales
+                                total_actual = sum(valores_actuales.values())
+                                total_renovacion = sum(valores_renovacion.values())
+
+                                # Crear datos estructurados
+                                datos_estructurados = []
+
+                                # Agregar filas de intereses asegurados
+                                for interes in sorted(intereses_unicos):
+                                    datos_estructurados.append(
+                                        {
+                                            "Interés Asegurado": interes,
+                                            "Valor Asegurado Actual": valores_actuales.get(
+                                                interes, 0
+                                            ),
+                                            "Valor Asegurado Renovado": valores_renovacion.get(
+                                                interes, 0
+                                            ),
+                                            "Primas": "",
+                                        }
+                                    )
+
+                                # Agregar fila de totales
+                                datos_estructurados.append(
+                                    {
+                                        "Interés Asegurado": "TOTAL",
+                                        "Valor Asegurado Actual": total_actual,
+                                        "Valor Asegurado Renovado": total_renovacion,
+                                        "Primas": "",
+                                    }
+                                )
+
+                                # Crear estructura base con columnas dinámicas para primas
+                                columnas_base = [
+                                    "Interés Asegurado",
+                                    "Valor Asegurado Actual",
+                                    "Valor Asegurado Renovado",
+                                ]
+
+                                # Agregar columnas para cada archivo de prima
+                                columnas_primas = []
+                                if solo_primas:
+                                    for prima in solo_primas:
+                                        nombre_archivo = prima["Archivo"]
+                                        if nombre_archivo not in columnas_primas:
+                                            columnas_primas.append(nombre_archivo)
+
+                                # Crear todas las columnas
+                                todas_columnas = columnas_base + columnas_primas
+
+                                # Inicializar datos estructurados con todas las columnas
+                                datos_estructurados = []
+
+                                # Crear mapas de valores de prima por archivo
+                                valores_prima_por_archivo = {}
+                                if solo_primas:
+                                    for prima in solo_primas:
+                                        nombre_archivo = prima["Archivo"]
+                                        valores_prima_por_archivo[nombre_archivo] = [
+                                            f"Prima Sin IVA - ${prima['Prima Sin IVA']:,.0f}",
+                                            f"IVA - ${prima['IVA']:,.0f}",
+                                            f"Prima Con IVA - ${prima['Prima Con IVA']:,.0f}",
+                                        ]
+
+                                # Agregar filas de intereses asegurados con valores de prima en las primeras filas
+                                intereses_ordenados = sorted(intereses_unicos)
+                                for i, interes in enumerate(intereses_ordenados):
+                                    fila = {
+                                        "Interés Asegurado": interes,
+                                        "Valor Asegurado Actual": valores_actuales.get(
+                                            interes, 0
+                                        ),
+                                        "Valor Asegurado Renovado": valores_renovacion.get(
+                                            interes, 0
+                                        ),
+                                    }
+
+                                    # Agregar valores de prima en las primeras 3 filas
+                                    for col_prima in columnas_primas:
+                                        if (
+                                            col_prima in valores_prima_por_archivo
+                                            and i < 3
+                                        ):
+                                            fila[col_prima] = valores_prima_por_archivo[
+                                                col_prima
+                                            ][i]
+                                        else:
+                                            fila[col_prima] = ""
+
+                                    datos_estructurados.append(fila)
+
+                                # Agregar fila de totales
+                                fila_total = {
+                                    "Interés Asegurado": "TOTAL",
+                                    "Valor Asegurado Actual": total_actual,
+                                    "Valor Asegurado Renovado": total_renovacion,
+                                }
+                                # Inicializar columnas de primas vacías para totales
+                                for col_prima in columnas_primas:
+                                    fila_total[col_prima] = ""
+                                datos_estructurados.append(fila_total)
+
+                                # Crear DataFrame estructurado con columnas ordenadas
+                                df_estructurado = pd.DataFrame(
+                                    datos_estructurados, columns=todas_columnas
+                                )
+
+                                # Validación de integridad de datos
+                                if (
+                                    abs(
+                                        total_actual
+                                        - sum(
+                                            item["valor_asegurado"]
+                                            for item in solo_intereses
+                                        )
+                                    )
+                                    > 0.01
+                                ):
+                                    st.warning(
+                                        "⚠️ Advertencia: Discrepancia detectada en totales actuales"
+                                    )
+
+                                if (
+                                    abs(
+                                        total_renovacion
+                                        - sum(
+                                            item["valor_asegurado"]
+                                            for item in solo_renovacion
+                                        )
+                                    )
+                                    > 0.01
+                                ):
+                                    st.warning(
+                                        "⚠️ Advertencia: Discrepancia detectada en totales de renovación"
+                                    )
+
+                                # Exportar a Excel
+                                df_estructurado.to_excel(
+                                    writer,
+                                    sheet_name="Análisis_Estructurado",
+                                    index=False,
+                                )
+                                format_worksheet(
+                                    writer.sheets["Análisis_Estructurado"],
+                                    df_estructurado,
+                                    "polizas",
                                 )
 
                         excel_data = output.getvalue()
