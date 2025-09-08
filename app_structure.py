@@ -1034,37 +1034,38 @@ if st.sidebar.button(
                                     df_polizas["Tipo de Documento"].str.lower() == "renovacion"
                                 ].copy()
                                 
-                                # Eliminar columnas no deseadas y formatear valores monetarios
-                                columnas_a_eliminar = ["Archivo", "Tipo de Documento"]
-                                for df in [df_actuales, df_renovacion]:
-                                    if not df.empty:
-                                        # Eliminar columnas no deseadas
-                                        for col in columnas_a_eliminar:
-                                            if col in df.columns:
-                                                df.drop(columns=[col], inplace=True)
-                                        
-                                        # Formatear valores monetarios
-                                        if "Valor Asegurado" in df.columns:
-                                            df["Valor Asegurado"] = df["Valor Asegurado"].apply(
-                                                lambda x: f"${x:,.0f}" if pd.notnull(x) else ""
-                                            )
+                                # Función para transponer datos de pólizas
+                                def crear_hoja_transpuesta(df, nombre_hoja):
+                                    if df.empty:
+                                        return
+                                    
+                                    # Obtener intereses únicos y sus valores
+                                    intereses_valores = {}
+                                    total_poliza = 0
+                                    
+                                    for _, row in df.iterrows():
+                                        interes = row["Interés Asegurado"]
+                                        valor = row["Valor Asegurado"]
+                                        total_poliza = row["Total Póliza"]
+                                        intereses_valores[interes] = valor
+                                    
+                                    # Crear estructura transpuesta
+                                    columnas = list(intereses_valores.keys()) + ["Total Póliza"]
+                                    valores = [f"${valor:,.0f}" for valor in intereses_valores.values()] + [f"${total_poliza:,.0f}"]
+                                    
+                                    # Crear DataFrame transpuesto
+                                    df_transpuesto = pd.DataFrame({
+                                        col: [valor] for col, valor in zip(columnas, valores)
+                                    })
+                                    df_transpuesto.index = ["Valor Asegurado"]
+                                    
+                                    # Exportar a Excel
+                                    df_transpuesto.to_excel(writer, sheet_name=nombre_hoja, index=True)
+                                    format_worksheet(writer.sheets[nombre_hoja], df_transpuesto, "polizas")
                                 
-                                # Crear hojas de pólizas
-                                if not df_actuales.empty:
-                                    df_actuales.to_excel(
-                                        writer, sheet_name="Polizas_Actuales", index=False
-                                    )
-                                    format_worksheet(
-                                        writer.sheets["Polizas_Actuales"], df_actuales, "polizas"
-                                    )
-                                
-                                if not df_renovacion.empty:
-                                    df_renovacion.to_excel(
-                                        writer, sheet_name="Polizas_Renovacion", index=False
-                                    )
-                                    format_worksheet(
-                                        writer.sheets["Polizas_Renovacion"], df_renovacion, "polizas"
-                                    )
+                                # Crear hojas transpuestas
+                                crear_hoja_transpuesta(df_actuales, "Polizas_Actuales")
+                                crear_hoja_transpuesta(df_renovacion, "Polizas_Renovacion")
                             
                             # Crear hoja de primas
                             if primas_data:
