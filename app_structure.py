@@ -771,16 +771,48 @@ if st.sidebar.button(
                             )
 
                             def format_worksheet(ws, df, sheet_type):
-                                # Aplicar formato a encabezados
+                                # Insertar fila para el título
+                                ws.insert_rows(1, 2)  # Insertar 2 filas al inicio
+                                
+                                # Agregar título en la primera fila
+                                title_cell = ws.cell(row=1, column=1)
+                                title_cell.value = "CENTRO DE DIAGNOSTICO AUTOMOTOR DE PALMIRA"
+                                
+                                # Formato del título
+                                from openpyxl.styles import Font, Alignment
+                                title_font = Font(
+                                    name="Arial",
+                                    size=16,
+                                    bold=True,
+                                    color="FFFFFF"
+                                )
+                                title_fill = PatternFill(
+                                    start_color="1F4E79",
+                                    end_color="1F4E79",
+                                    fill_type="solid"
+                                )
+                                title_alignment = Alignment(
+                                    horizontal="center",
+                                    vertical="center"
+                                )
+                                
+                                title_cell.font = title_font
+                                title_cell.fill = title_fill
+                                title_cell.alignment = title_alignment
+                                
+                                # Combinar celdas para el título (toda la fila)
+                                ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(df.columns))
+                                
+                                # Aplicar formato a encabezados (ahora en la fila 3)
                                 for col_num in range(1, len(df.columns) + 1):
-                                    cell = ws.cell(row=1, column=col_num)
+                                    cell = ws.cell(row=3, column=col_num)
                                     cell.font = header_font
                                     cell.fill = header_fill
                                     cell.border = border
                                     cell.alignment = center_alignment
 
-                                # Aplicar formato a datos
-                                for row_num in range(2, len(df) + 2):
+                                # Aplicar formato a datos (ahora empezando desde la fila 4)
+                                for row_num in range(4, len(df) + 4):
                                     for col_num in range(1, len(df.columns) + 1):
                                         cell = ws.cell(row=row_num, column=col_num)
                                         cell.font = data_font
@@ -807,9 +839,9 @@ if st.sidebar.button(
                                     column_letter = get_column_letter(col_num)
                                     col_name = df.columns[col_num - 1]
 
-                                    # Calcular ancho basado en el contenido
-                                    max_length = len(str(col_name))
-                                    for row_num in range(2, len(df) + 2):
+                                    # Calcular ancho basado en el contenido (incluyendo el título)
+                                    max_length = max(len(str(col_name)), len("CENTRO DE DIAGNOSTICO AUTOMOTOR DE PALMIRA") // len(df.columns))
+                                    for row_num in range(4, len(df) + 4):
                                         cell_value = str(
                                             ws.cell(row=row_num, column=col_num).value
                                             or ""
