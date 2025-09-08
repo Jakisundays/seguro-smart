@@ -766,6 +766,9 @@ if st.sidebar.button(
                             currency_alignment = Alignment(
                                 horizontal="right", vertical="center"
                             )
+                            left_alignment = Alignment(
+                                horizontal="left", vertical="center"
+                            )
 
                             def format_worksheet(ws, df, sheet_type):
                                 # Aplicar formato a encabezados
@@ -794,6 +797,8 @@ if st.sidebar.button(
                                             # Formatear como moneda
                                             if isinstance(cell.value, (int, float)):
                                                 cell.number_format = "$#,##0"
+                                        elif col_name.lower() == "coberturas":
+                                            cell.alignment = left_alignment
                                         else:
                                             cell.alignment = center_alignment
 
@@ -811,8 +816,13 @@ if st.sidebar.button(
                                         )
                                         max_length = max(max_length, len(cell_value))
 
-                                    # Establecer ancho mínimo y máximo
-                                    width = min(max(max_length + 2, 15), 30)
+                                    # Establecer ancho específico para la columna Coberturas
+                                    if col_name.lower() == "coberturas":
+                                        width = 45  # Ancho específico para coberturas
+                                    else:
+                                        # Establecer ancho mínimo y máximo para otras columnas
+                                        width = min(max(max_length + 2, 15), 30)
+                                    
                                     ws.column_dimensions[column_letter].width = width
 
                                 # Aplicar filtros automáticos
