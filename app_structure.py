@@ -908,9 +908,7 @@ if st.sidebar.button(
                                     for prima in solo_primas:
                                         nombre_archivo = prima["Archivo"]
                                         valores_prima_por_archivo[nombre_archivo] = [
-                                            f"Prima Sin IVA - ${prima['Prima Sin IVA']:,.0f}",
-                                            f"IVA - ${prima['IVA']:,.0f}",
-                                            f"Prima Con IVA - ${prima['Prima Con IVA']:,.0f}",
+                                            f"${prima['Prima Sin IVA']:,.0f}",
                                         ]
 
                                 # Agregar filas de intereses asegurados con valores de prima en las primeras filas
@@ -930,7 +928,7 @@ if st.sidebar.button(
                                     for col_prima in columnas_primas:
                                         if (
                                             col_prima in valores_prima_por_archivo
-                                            and i < 3
+                                            and i < 1
                                         ):
                                             fila[col_prima] = valores_prima_por_archivo[
                                                 col_prima
