@@ -1181,30 +1181,7 @@ if st.sidebar.button(
                                 # Crear hoja consolidada
                                 crear_hoja_consolidada(df_actuales, df_renovacion)
                             
-                            # Crear hoja de primas
-                            if primas_data:
-                                df_primas = pd.DataFrame(primas_data)
-                                
-                                # Eliminar solo la columna "Tipo de Documento", mantener "Archivo"
-                                columnas_a_eliminar = ["Tipo de Documento"]
-                                for col in columnas_a_eliminar:
-                                    if col in df_primas.columns:
-                                        df_primas.drop(columns=[col], inplace=True)
-                                
-                                # Reorganizar columnas para que "Archivo" esté al inicio
-                                if "Archivo" in df_primas.columns:
-                                    columnas_ordenadas = ["Archivo"] + [col for col in df_primas.columns if col != "Archivo"]
-                                    df_primas = df_primas[columnas_ordenadas]
-                                
-                                # Formatear valores monetarios
-                                for col in ["Prima Sin IVA", "IVA", "Prima Con IVA"]:
-                                    if col in df_primas.columns:
-                                        df_primas[col] = df_primas[col].apply(
-                                            lambda x: f"${x:,.0f}" if pd.notnull(x) else ""
-                                        )
-                                
-                                df_primas.to_excel(writer, sheet_name="Primas", index=False)
-                                format_worksheet(writer.sheets["Primas"], df_primas, "primas")
+                            # Hoja de primas eliminada según solicitud del usuario
 
                         excel_data = output.getvalue()
 
