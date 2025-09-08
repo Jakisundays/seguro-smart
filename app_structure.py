@@ -1009,12 +1009,20 @@ if st.sidebar.button(
                                     df_polizas["Tipo de Documento"].str.lower() == "renovacion"
                                 ].copy()
                                 
-                                # Formatear valores monetarios para visualización
+                                # Eliminar columnas no deseadas y formatear valores monetarios
+                                columnas_a_eliminar = ["Archivo", "Tipo de Documento"]
                                 for df in [df_actuales, df_renovacion]:
-                                    if not df.empty and "Valor Asegurado" in df.columns:
-                                        df["Valor Asegurado"] = df["Valor Asegurado"].apply(
-                                            lambda x: f"${x:,.0f}" if pd.notnull(x) else ""
-                                        )
+                                    if not df.empty:
+                                        # Eliminar columnas no deseadas
+                                        for col in columnas_a_eliminar:
+                                            if col in df.columns:
+                                                df.drop(columns=[col], inplace=True)
+                                        
+                                        # Formatear valores monetarios
+                                        if "Valor Asegurado" in df.columns:
+                                            df["Valor Asegurado"] = df["Valor Asegurado"].apply(
+                                                lambda x: f"${x:,.0f}" if pd.notnull(x) else ""
+                                            )
                                 
                                 # Crear hojas de pólizas
                                 if not df_actuales.empty:
@@ -1036,6 +1044,12 @@ if st.sidebar.button(
                             # Crear hoja de primas
                             if primas_data:
                                 df_primas = pd.DataFrame(primas_data)
+                                
+                                # Eliminar columnas no deseadas
+                                columnas_a_eliminar = ["Archivo", "Tipo de Documento"]
+                                for col in columnas_a_eliminar:
+                                    if col in df_primas.columns:
+                                        df_primas.drop(columns=[col], inplace=True)
                                 
                                 # Formatear valores monetarios
                                 for col in ["Prima Sin IVA", "IVA", "Prima Con IVA"]:
