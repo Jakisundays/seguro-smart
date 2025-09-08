@@ -803,6 +803,33 @@ if st.sidebar.button(
                                 # Combinar celdas para el título (toda la fila)
                                 ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(df.columns))
                                 
+                                # Formato especial para etiquetas de pólizas consolidadas
+                                if sheet_type == "polizas":
+                                    label_font = Font(
+                                        name="Arial",
+                                        size=14,
+                                        bold=True,
+                                        color="FFFFFF"
+                                    )
+                                    label_fill = PatternFill(
+                                        start_color="4472C4",
+                                        end_color="4472C4",
+                                        fill_type="solid"
+                                    )
+                                    
+                                    # Buscar y formatear etiquetas de pólizas
+                                    for row_num in range(3, ws.max_row + 1):
+                                        cell_value = ws.cell(row=row_num, column=1).value
+                                        if cell_value and ("PÓLIZAS ACTUALES" in str(cell_value) or "PÓLIZAS DE RENOVACIÓN" in str(cell_value)):
+                                            # Aplicar formato a la etiqueta
+                                            label_cell = ws.cell(row=row_num, column=1)
+                                            label_cell.font = label_font
+                                            label_cell.fill = label_fill
+                                            label_cell.alignment = title_alignment
+                                            
+                                            # Combinar celdas para la etiqueta
+                                            ws.merge_cells(start_row=row_num, start_column=1, end_row=row_num, end_column=len(df.columns))
+                                
                                 # Aplicar formato a encabezados (ahora en la fila 3)
                                 for col_num in range(1, len(df.columns) + 1):
                                     cell = ws.cell(row=3, column=col_num)
@@ -1066,38 +1093,93 @@ if st.sidebar.button(
                                     df_polizas["Tipo de Documento"].str.lower() == "renovacion"
                                 ].copy()
                                 
-                                # Función para transponer datos de pólizas
-                                def crear_hoja_transpuesta(df, nombre_hoja):
-                                    if df.empty:
+                                # Función para crear tabla transpuesta consolidada
+                                def crear_hoja_consolidada(df_actuales, df_renovacion):
+                                    if df_actuales.empty and df_renovacion.empty:
                                         return
                                     
-                                    # Obtener intereses únicos y sus valores
-                                    intereses_valores = {}
-                                    total_poliza = 0
+                                    # Función auxiliar para procesar cada tipo de póliza
+                                    def procesar_poliza(df, tipo_poliza):
+                                        if df.empty:
+                                            return None, None
+                                        
+                                        # Obtener intereses únicos y sus valores
+                                        intereses_valores = {}
+                                        total_poliza = 0
+                                        
+                                        for _, row in df.iterrows():
+                                            interes = row["Interés Asegurado"]
+                                            valor = row["Valor Asegurado"]
+                                            total_poliza = row["Total Póliza"]
+                                            intereses_valores[interes] = valor
+                                        
+                                        # Crear estructura transpuesta
+                                        columnas = list(intereses_valores.keys()) + ["Total Póliza"]
+                                        valores = [f"${valor:,.0f}" for valor in intereses_valores.values()] + [f"${total_poliza:,.0f}"]
+                                        
+                                        return columnas, valores
                                     
-                                    for _, row in df.iterrows():
-                                        interes = row["Interés Asegurado"]
-                                        valor = row["Valor Asegurado"]
-                                        total_poliza = row["Total Póliza"]
-                                        intereses_valores[interes] = valor
+                                    # Procesar ambos tipos de pólizas
+                                    columnas_actuales, valores_actuales = procesar_poliza(df_actuales, "Actual")
+                                    columnas_renovacion, valores_renovacion = procesar_poliza(df_renovacion, "Renovación")
                                     
-                                    # Crear estructura transpuesta
-                                    columnas = list(intereses_valores.keys()) + ["Total Póliza"]
-                                    valores = [f"${valor:,.0f}" for valor in intereses_valores.values()] + [f"${total_poliza:,.0f}"]
+                                    # Crear DataFrame consolidado
+                                    datos_consolidados = []
                                     
-                                    # Crear DataFrame transpuesto
-                                    df_transpuesto = pd.DataFrame({
-                                        col: [valor] for col, valor in zip(columnas, valores)
-                                    })
-                                    df_transpuesto.index = ["Valor Asegurado"]
+                                    # Agregar etiqueta y datos de pólizas actuales
+                                    if columnas_actuales and valores_actuales:
+                                        # Fila de etiqueta para pólizas actuales
+                                        fila_etiqueta_actual = ["PÓLIZAS ACTUALES"] + [""] * (len(columnas_actuales) - 1)
+                                        datos_consolidados.append(fila_etiqueta_actual)
+                                        
+                                        # Fila de encabezados
+                                        datos_consolidados.append(columnas_actuales)
+                                        
+                                        # Fila de valores
+                                        datos_consolidados.append(valores_actuales)
+                                        
+                                        # Fila de separación
+                                        datos_consolidados.append([""] * len(columnas_actuales))
                                     
-                                    # Exportar a Excel
-                                    df_transpuesto.to_excel(writer, sheet_name=nombre_hoja, index=True)
-                                    format_worksheet(writer.sheets[nombre_hoja], df_transpuesto, "polizas")
+                                    # Agregar etiqueta y datos de pólizas de renovación
+                                    if columnas_renovacion and valores_renovacion:
+                                        # Ajustar longitud de columnas para que coincidan
+                                        max_cols = max(len(columnas_actuales) if columnas_actuales else 0, len(columnas_renovacion))
+                                        
+                                        # Fila de etiqueta para pólizas de renovación
+                                        fila_etiqueta_renovacion = ["PÓLIZAS DE RENOVACIÓN"] + [""] * (max_cols - 1)
+                                        datos_consolidados.append(fila_etiqueta_renovacion)
+                                        
+                                        # Ajustar columnas de renovación si es necesario
+                                        columnas_renovacion_ajustadas = columnas_renovacion + [""] * (max_cols - len(columnas_renovacion))
+                                        valores_renovacion_ajustados = valores_renovacion + [""] * (max_cols - len(valores_renovacion))
+                                        
+                                        # Fila de encabezados
+                                        datos_consolidados.append(columnas_renovacion_ajustadas)
+                                        
+                                        # Fila de valores
+                                        datos_consolidados.append(valores_renovacion_ajustados)
+                                    
+                                    # Crear DataFrame final
+                                    if datos_consolidados:
+                                        max_cols = max(len(fila) for fila in datos_consolidados)
+                                        
+                                        # Ajustar todas las filas a la misma longitud
+                                        for i, fila in enumerate(datos_consolidados):
+                                            if len(fila) < max_cols:
+                                                datos_consolidados[i] = fila + [""] * (max_cols - len(fila))
+                                        
+                                        # Crear columnas genéricas
+                                        columnas_genericas = [f"Columna_{i+1}" for i in range(max_cols)]
+                                        
+                                        df_consolidado = pd.DataFrame(datos_consolidados, columns=columnas_genericas)
+                                        
+                                        # Exportar a Excel
+                                        df_consolidado.to_excel(writer, sheet_name="Polizas_Consolidadas", index=False, header=False)
+                                        format_worksheet(writer.sheets["Polizas_Consolidadas"], df_consolidado, "polizas")
                                 
-                                # Crear hojas transpuestas
-                                crear_hoja_transpuesta(df_actuales, "Polizas_Actuales")
-                                crear_hoja_transpuesta(df_renovacion, "Polizas_Renovacion")
+                                # Crear hoja consolidada
+                                crear_hoja_consolidada(df_actuales, df_renovacion)
                             
                             # Crear hoja de primas
                             if primas_data:
