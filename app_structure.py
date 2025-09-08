@@ -821,55 +821,7 @@ if st.sidebar.button(
                                 # Congelar primera fila
                                 ws.freeze_panes = "A2"
 
-                            if polizas_data:
-                                # Crear DataFrames con los datos filtrados
-                                if solo_intereses:
-                                    df_actuales = pd.DataFrame(solo_intereses)
-                                    # Capitalizar nombres de columnas
-                                    df_actuales.columns = [
-                                        col.replace("_", " ").title()
-                                        for col in df_actuales.columns
-                                    ]
-                                    df_actuales.to_excel(
-                                        writer,
-                                        sheet_name="Polizas_Actuales",
-                                        index=False,
-                                    )
-                                    format_worksheet(
-                                        writer.sheets["Polizas_Actuales"],
-                                        df_actuales,
-                                        "polizas",
-                                    )
-
-                                if solo_renovacion:
-                                    df_renovacion = pd.DataFrame(solo_renovacion)
-                                    # Capitalizar nombres de columnas
-                                    df_renovacion.columns = [
-                                        col.replace("_", " ").title()
-                                        for col in df_renovacion.columns
-                                    ]
-                                    df_renovacion.to_excel(
-                                        writer,
-                                        sheet_name="Polizas_Renovacion",
-                                        index=False,
-                                    )
-                                    format_worksheet(
-                                        writer.sheets["Polizas_Renovacion"],
-                                        df_renovacion,
-                                        "polizas",
-                                    )
-
-                            if primas_data:
-                                df_primas_filtrado = pd.DataFrame(solo_primas)
-                                df_primas_filtrado.to_excel(
-                                    writer, sheet_name="Primas", index=False
-                                )
-                                format_worksheet(
-                                    writer.sheets["Primas"],
-                                    df_primas_filtrado,
-                                    "primas",
-                                )
-
+                            # Crear primero la hoja "Análisis_Estructurado" para que sea la primera pestaña
                             if solo_intereses and solo_renovacion and primas_data:
                                 # Crear estructura organizada con 4 columnas específicas
 
@@ -1044,6 +996,56 @@ if st.sidebar.button(
                                     df_estructurado,
                                     "polizas",
                                 )
+
+                            # Crear las otras hojas después de Análisis_Estructurado
+                            if polizas_data:
+                                df_polizas = pd.DataFrame(polizas_data)
+                                
+                                # Separar por tipo de documento
+                                df_actuales = df_polizas[
+                                    df_polizas["Tipo de Documento"].str.lower() == "actual"
+                                ].copy()
+                                df_renovacion = df_polizas[
+                                    df_polizas["Tipo de Documento"].str.lower() == "renovacion"
+                                ].copy()
+                                
+                                # Formatear valores monetarios para visualización
+                                for df in [df_actuales, df_renovacion]:
+                                    if not df.empty and "Valor Asegurado" in df.columns:
+                                        df["Valor Asegurado"] = df["Valor Asegurado"].apply(
+                                            lambda x: f"${x:,.0f}" if pd.notnull(x) else ""
+                                        )
+                                
+                                # Crear hojas de pólizas
+                                if not df_actuales.empty:
+                                    df_actuales.to_excel(
+                                        writer, sheet_name="Polizas_Actuales", index=False
+                                    )
+                                    format_worksheet(
+                                        writer.sheets["Polizas_Actuales"], df_actuales, "polizas"
+                                    )
+                                
+                                if not df_renovacion.empty:
+                                    df_renovacion.to_excel(
+                                        writer, sheet_name="Polizas_Renovacion", index=False
+                                    )
+                                    format_worksheet(
+                                        writer.sheets["Polizas_Renovacion"], df_renovacion, "polizas"
+                                    )
+                            
+                            # Crear hoja de primas
+                            if primas_data:
+                                df_primas = pd.DataFrame(primas_data)
+                                
+                                # Formatear valores monetarios
+                                for col in ["Prima Sin IVA", "IVA", "Prima Con IVA"]:
+                                    if col in df_primas.columns:
+                                        df_primas[col] = df_primas[col].apply(
+                                            lambda x: f"${x:,.0f}" if pd.notnull(x) else ""
+                                        )
+                                
+                                df_primas.to_excel(writer, sheet_name="Primas", index=False)
+                                format_worksheet(writer.sheets["Primas"], df_primas, "primas")
 
                         excel_data = output.getvalue()
 
