@@ -882,7 +882,19 @@ if st.sidebar.button(
                                 )
 
                                 # Crear estructura base con columnas dinámicas para primas
+                                # Definir lista de coberturas
+                                coberturas = [
+                                    "Incendio y/o Rayo Edificios",
+                                    "Explosión Mejoras Locativas",
+                                    "Terremoto, temblor Muebles y Enseres",
+                                    "Asonada, motin, conm. Civil/popular huelga Mercancias Fijas",
+                                    "Extension de amparo",
+                                    "Daños por agua, Anegación Dineros",
+                                    "Incendio y/o Rayo en aparatos electricos Equipo Electronico"
+                                ]
+                                
                                 columnas_base = [
+                                    "Coberturas",
                                     "Interés Asegurado",
                                     "Valor Asegurado Actual",
                                     "Valor Asegurado Renovado",
@@ -911,20 +923,24 @@ if st.sidebar.button(
                                             f"${prima['Prima Sin IVA']:,.0f}",
                                         ]
 
-                                # Agregar filas de intereses asegurados con valores de prima en las primeras filas
+                                # Determinar el número máximo de filas necesarias
                                 intereses_ordenados = sorted(intereses_unicos)
-                                for i, interes in enumerate(intereses_ordenados):
+                                max_filas = max(len(intereses_ordenados), len(coberturas))
+                                
+                                # Agregar filas con coberturas e intereses asegurados
+                                for i in range(max_filas):
                                     fila = {
-                                        "Interés Asegurado": interes,
+                                        "Coberturas": coberturas[i] if i < len(coberturas) else "",
+                                        "Interés Asegurado": intereses_ordenados[i] if i < len(intereses_ordenados) else "",
                                         "Valor Asegurado Actual": valores_actuales.get(
-                                            interes, 0
-                                        ),
+                                            intereses_ordenados[i], 0
+                                        ) if i < len(intereses_ordenados) else "",
                                         "Valor Asegurado Renovado": valores_renovacion.get(
-                                            interes, 0
-                                        ),
+                                            intereses_ordenados[i], 0
+                                        ) if i < len(intereses_ordenados) else "",
                                     }
 
-                                    # Agregar valores de prima en las primeras 3 filas
+                                    # Agregar valores de prima en las primeras filas
                                     for col_prima in columnas_primas:
                                         if (
                                             col_prima in valores_prima_por_archivo
@@ -940,6 +956,7 @@ if st.sidebar.button(
 
                                 # Agregar fila de totales
                                 fila_total = {
+                                    "Coberturas": "",
                                     "Interés Asegurado": "TOTAL",
                                     "Valor Asegurado Actual": total_actual,
                                     "Valor Asegurado Renovado": total_renovacion,
