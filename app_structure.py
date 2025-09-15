@@ -585,10 +585,29 @@ if st.sidebar.button(
                     # Procesar todos los resultados
                     polizas_data, primas_data = procesar_resultados(results)
 
-                    # with st.expander("Ver Polizas"):
-                    #     st.write(polizas_data)
-                    # with st.expander("Ver Primas"):
-                    #     st.write(primas_data)
+                    with st.expander("Ver Polizas"):
+                        st.write(polizas_data)
+                    with st.expander("Ver Primas"):
+                        st.write(primas_data)
+
+                    amparos_y_riesgos_text = (
+                        results[0]
+                        .get("data", {})
+                        .get("candidates", [{}])[0]
+                        .get("content", {})
+                        .get("parts", [{}])[0]
+                        .get("text", "{}")
+                    )
+                    if amparos_y_riesgos_text:
+                        amparos_y_riesgos = json.loads(amparos_y_riesgos_text)
+                        amparos = amparos_y_riesgos["amparos"]
+                        riesgos = amparos_y_riesgos["riesgos"]
+                        with st.expander("Ver Amparos"):
+                            st.write(amparos)
+                        with st.expander("Ver Riesgos"):
+                            st.write(riesgos)
+                            
+                        
 
                     # Separar datos por tipo de documento
                     if polizas_data:
@@ -727,6 +746,54 @@ if st.sidebar.button(
 
                         st.markdown("---")
 
+                    if amparos:
+                        # Sección de Amparos con diseño profesional y simple
+                        st.markdown("""
+                        <div style="background: linear-gradient(90deg, #2c5aa0 0%, #1e3a8a 100%); 
+                                    padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                            <h3 style="color: white; margin: 0; text-align: center;">🛡️ Amparos de la Póliza</h3>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Crear DataFrame para mostrar los amparos de forma profesional
+                        amparos_display = []
+                        for i, amparo_item in enumerate(amparos, 1):
+                            amparos_display.append({
+                                # "N°": i,
+                                "Tipo de Amparo": amparo_item.get("amparo", "No especificado"),
+                                "Deducible": amparo_item.get("deducible", "No especificado")
+                            })
+                        
+                        if amparos_display:
+                            df_amparos = pd.DataFrame(amparos_display)
+                            
+                            # Mostrar métricas rápidas
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                st.metric("Total de Amparos", len(amparos_display))
+                            with col2:
+                                amparos_con_deducible = sum(1 for item in amparos_display if item["Deducible"] != "No especificado")
+                                st.metric("Con Deducible Definido", amparos_con_deducible)
+                            
+                            # Tabla profesional
+                            st.dataframe(
+                                df_amparos,
+                                use_container_width=True,
+                                hide_index=True,
+                                column_config={
+                                    "N°": st.column_config.NumberColumn("N°", width="small"),
+                                    "Tipo de Amparo": st.column_config.TextColumn("Tipo de Amparo", width="large"),
+                                    "Deducible": st.column_config.TextColumn("Deducible", width="medium")
+                                }
+                            )
+                        else:
+                            st.info("No se encontraron amparos en el análisis.")
+                        
+                        st.markdown("---")
+                        
+                    # if riesgos:
+                        
+                        
                     # Generar archivo Excel para descarga
                     if polizas_data or primas_data:
                         st.subheader("📥 Descargar Resultados")
@@ -773,63 +840,75 @@ if st.sidebar.button(
                             def format_worksheet(ws, df, sheet_type):
                                 # Insertar fila para el título
                                 ws.insert_rows(1, 2)  # Insertar 2 filas al inicio
-                                
+
                                 # Agregar título en la primera fila
                                 title_cell = ws.cell(row=1, column=1)
-                                title_cell.value = "CENTRO DE DIAGNOSTICO AUTOMOTOR DE PALMIRA"
-                                
+                                title_cell.value = (
+                                    "CENTRO DE DIAGNOSTICO AUTOMOTOR DE PALMIRA"
+                                )
+
                                 # Formato del título
                                 from openpyxl.styles import Font, Alignment
+
                                 title_font = Font(
-                                    name="Arial",
-                                    size=16,
-                                    bold=True,
-                                    color="FFFFFF"
+                                    name="Arial", size=16, bold=True, color="FFFFFF"
                                 )
                                 title_fill = PatternFill(
                                     start_color="1F4E79",
                                     end_color="1F4E79",
-                                    fill_type="solid"
+                                    fill_type="solid",
                                 )
                                 title_alignment = Alignment(
-                                    horizontal="center",
-                                    vertical="center"
+                                    horizontal="center", vertical="center"
                                 )
-                                
+
                                 title_cell.font = title_font
                                 title_cell.fill = title_fill
                                 title_cell.alignment = title_alignment
-                                
+
                                 # Combinar celdas para el título (toda la fila)
-                                ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(df.columns))
-                                
+                                ws.merge_cells(
+                                    start_row=1,
+                                    start_column=1,
+                                    end_row=1,
+                                    end_column=len(df.columns),
+                                )
+
                                 # Formato especial para etiquetas de pólizas consolidadas
                                 if sheet_type == "polizas":
                                     label_font = Font(
-                                        name="Arial",
-                                        size=14,
-                                        bold=True,
-                                        color="FFFFFF"
+                                        name="Arial", size=14, bold=True, color="FFFFFF"
                                     )
                                     label_fill = PatternFill(
                                         start_color="4472C4",
                                         end_color="4472C4",
-                                        fill_type="solid"
+                                        fill_type="solid",
                                     )
-                                    
+
                                     # Buscar y formatear etiquetas de pólizas
                                     for row_num in range(3, ws.max_row + 1):
-                                        cell_value = ws.cell(row=row_num, column=1).value
-                                        if cell_value and ("PÓLIZAS ACTUALES" in str(cell_value) or "PÓLIZAS DE RENOVACIÓN" in str(cell_value)):
+                                        cell_value = ws.cell(
+                                            row=row_num, column=1
+                                        ).value
+                                        if cell_value and (
+                                            "PÓLIZAS ACTUALES" in str(cell_value)
+                                            or "PÓLIZAS DE RENOVACIÓN"
+                                            in str(cell_value)
+                                        ):
                                             # Aplicar formato a la etiqueta
                                             label_cell = ws.cell(row=row_num, column=1)
                                             label_cell.font = label_font
                                             label_cell.fill = label_fill
                                             label_cell.alignment = title_alignment
-                                            
+
                                             # Combinar celdas para la etiqueta
-                                            ws.merge_cells(start_row=row_num, start_column=1, end_row=row_num, end_column=len(df.columns))
-                                
+                                            ws.merge_cells(
+                                                start_row=row_num,
+                                                start_column=1,
+                                                end_row=row_num,
+                                                end_column=len(df.columns),
+                                            )
+
                                 # Aplicar formato a encabezados (ahora en la fila 3)
                                 for col_num in range(1, len(df.columns) + 1):
                                     cell = ws.cell(row=3, column=col_num)
@@ -867,7 +946,13 @@ if st.sidebar.button(
                                     col_name = df.columns[col_num - 1]
 
                                     # Calcular ancho basado en el contenido (incluyendo el título)
-                                    max_length = max(len(str(col_name)), len("CENTRO DE DIAGNOSTICO AUTOMOTOR DE PALMIRA") // len(df.columns))
+                                    max_length = max(
+                                        len(str(col_name)),
+                                        len(
+                                            "CENTRO DE DIAGNOSTICO AUTOMOTOR DE PALMIRA"
+                                        )
+                                        // len(df.columns),
+                                    )
                                     for row_num in range(4, len(df) + 4):
                                         cell_value = str(
                                             ws.cell(row=row_num, column=col_num).value
@@ -881,7 +966,7 @@ if st.sidebar.button(
                                     else:
                                         # Establecer ancho mínimo y máximo para otras columnas
                                         width = min(max(max_length + 2, 15), 30)
-                                    
+
                                     ws.column_dimensions[column_letter].width = width
 
                                 # Aplicar filtros automáticos
@@ -959,9 +1044,9 @@ if st.sidebar.button(
                                     "Asonada, motin, conm. Civil/popular huelga Mercancias Fijas",
                                     "Extension de amparo",
                                     "Daños por agua, Anegación Dineros",
-                                    "Incendio y/o Rayo en aparatos electricos Equipo Electronico"
+                                    "Incendio y/o Rayo en aparatos electricos Equipo Electronico",
                                 ]
-                                
+
                                 columnas_base = [
                                     "Coberturas",
                                     "Interés Asegurado",
@@ -994,19 +1079,35 @@ if st.sidebar.button(
 
                                 # Determinar el número máximo de filas necesarias
                                 intereses_ordenados = sorted(intereses_unicos)
-                                max_filas = max(len(intereses_ordenados), len(coberturas))
-                                
+                                max_filas = max(
+                                    len(intereses_ordenados), len(coberturas)
+                                )
+
                                 # Agregar filas con coberturas e intereses asegurados
                                 for i in range(max_filas):
                                     fila = {
-                                        "Coberturas": coberturas[i] if i < len(coberturas) else "",
-                                        "Interés Asegurado": intereses_ordenados[i] if i < len(intereses_ordenados) else "",
-                                        "Valor Asegurado Actual": valores_actuales.get(
-                                            intereses_ordenados[i], 0
-                                        ) if i < len(intereses_ordenados) else "",
-                                        "Valor Asegurado Renovado": valores_renovacion.get(
-                                            intereses_ordenados[i], 0
-                                        ) if i < len(intereses_ordenados) else "",
+                                        "Coberturas": (
+                                            coberturas[i] if i < len(coberturas) else ""
+                                        ),
+                                        "Interés Asegurado": (
+                                            intereses_ordenados[i]
+                                            if i < len(intereses_ordenados)
+                                            else ""
+                                        ),
+                                        "Valor Asegurado Actual": (
+                                            valores_actuales.get(
+                                                intereses_ordenados[i], 0
+                                            )
+                                            if i < len(intereses_ordenados)
+                                            else ""
+                                        ),
+                                        "Valor Asegurado Renovado": (
+                                            valores_renovacion.get(
+                                                intereses_ordenados[i], 0
+                                            )
+                                            if i < len(intereses_ordenados)
+                                            else ""
+                                        ),
                                     }
 
                                     # Agregar valores de prima en las primeras filas
@@ -1084,103 +1185,159 @@ if st.sidebar.button(
                             # Crear las otras hojas después de Análisis_Estructurado
                             if polizas_data:
                                 df_polizas = pd.DataFrame(polizas_data)
-                                
+
                                 # Separar por tipo de documento
                                 df_actuales = df_polizas[
-                                    df_polizas["Tipo de Documento"].str.lower() == "actual"
+                                    df_polizas["Tipo de Documento"].str.lower()
+                                    == "actual"
                                 ].copy()
                                 df_renovacion = df_polizas[
-                                    df_polizas["Tipo de Documento"].str.lower() == "renovacion"
+                                    df_polizas["Tipo de Documento"].str.lower()
+                                    == "renovacion"
                                 ].copy()
-                                
+
                                 # Función para crear tabla transpuesta consolidada
                                 def crear_hoja_consolidada(df_actuales, df_renovacion):
                                     if df_actuales.empty and df_renovacion.empty:
                                         return
-                                    
+
                                     # Función auxiliar para procesar cada tipo de póliza
                                     def procesar_poliza(df, tipo_poliza):
                                         if df.empty:
                                             return None, None
-                                        
+
                                         # Obtener intereses únicos y sus valores
                                         intereses_valores = {}
                                         total_poliza = 0
-                                        
+
                                         for _, row in df.iterrows():
                                             interes = row["Interés Asegurado"]
                                             valor = row["Valor Asegurado"]
                                             total_poliza = row["Total Póliza"]
                                             intereses_valores[interes] = valor
-                                        
+
                                         # Crear estructura transpuesta
-                                        columnas = list(intereses_valores.keys()) + ["Total Póliza"]
-                                        valores = [f"${valor:,.0f}" for valor in intereses_valores.values()] + [f"${total_poliza:,.0f}"]
-                                        
+                                        columnas = list(intereses_valores.keys()) + [
+                                            "Total Póliza"
+                                        ]
+                                        valores = [
+                                            f"${valor:,.0f}"
+                                            for valor in intereses_valores.values()
+                                        ] + [f"${total_poliza:,.0f}"]
+
                                         return columnas, valores
-                                    
+
                                     # Procesar ambos tipos de pólizas
-                                    columnas_actuales, valores_actuales = procesar_poliza(df_actuales, "Actual")
-                                    columnas_renovacion, valores_renovacion = procesar_poliza(df_renovacion, "Renovación")
-                                    
+                                    columnas_actuales, valores_actuales = (
+                                        procesar_poliza(df_actuales, "Actual")
+                                    )
+                                    columnas_renovacion, valores_renovacion = (
+                                        procesar_poliza(df_renovacion, "Renovación")
+                                    )
+
                                     # Crear DataFrame consolidado
                                     datos_consolidados = []
-                                    
+
                                     # Agregar etiqueta y datos de pólizas actuales
                                     if columnas_actuales and valores_actuales:
                                         # Fila de etiqueta para pólizas actuales
-                                        fila_etiqueta_actual = ["PÓLIZAS ACTUALES"] + [""] * (len(columnas_actuales) - 1)
+                                        fila_etiqueta_actual = ["PÓLIZAS ACTUALES"] + [
+                                            ""
+                                        ] * (len(columnas_actuales) - 1)
                                         datos_consolidados.append(fila_etiqueta_actual)
-                                        
+
                                         # Fila de encabezados
                                         datos_consolidados.append(columnas_actuales)
-                                        
+
                                         # Fila de valores
                                         datos_consolidados.append(valores_actuales)
-                                        
+
                                         # Fila de separación
-                                        datos_consolidados.append([""] * len(columnas_actuales))
-                                    
+                                        datos_consolidados.append(
+                                            [""] * len(columnas_actuales)
+                                        )
+
                                     # Agregar etiqueta y datos de pólizas de renovación
                                     if columnas_renovacion and valores_renovacion:
                                         # Ajustar longitud de columnas para que coincidan
-                                        max_cols = max(len(columnas_actuales) if columnas_actuales else 0, len(columnas_renovacion))
-                                        
+                                        max_cols = max(
+                                            (
+                                                len(columnas_actuales)
+                                                if columnas_actuales
+                                                else 0
+                                            ),
+                                            len(columnas_renovacion),
+                                        )
+
                                         # Fila de etiqueta para pólizas de renovación
-                                        fila_etiqueta_renovacion = ["PÓLIZAS DE RENOVACIÓN"] + [""] * (max_cols - 1)
-                                        datos_consolidados.append(fila_etiqueta_renovacion)
-                                        
+                                        fila_etiqueta_renovacion = [
+                                            "PÓLIZAS DE RENOVACIÓN"
+                                        ] + [""] * (max_cols - 1)
+                                        datos_consolidados.append(
+                                            fila_etiqueta_renovacion
+                                        )
+
                                         # Ajustar columnas de renovación si es necesario
-                                        columnas_renovacion_ajustadas = columnas_renovacion + [""] * (max_cols - len(columnas_renovacion))
-                                        valores_renovacion_ajustados = valores_renovacion + [""] * (max_cols - len(valores_renovacion))
-                                        
+                                        columnas_renovacion_ajustadas = (
+                                            columnas_renovacion
+                                            + [""]
+                                            * (max_cols - len(columnas_renovacion))
+                                        )
+                                        valores_renovacion_ajustados = (
+                                            valores_renovacion
+                                            + [""]
+                                            * (max_cols - len(valores_renovacion))
+                                        )
+
                                         # Fila de encabezados
-                                        datos_consolidados.append(columnas_renovacion_ajustadas)
-                                        
+                                        datos_consolidados.append(
+                                            columnas_renovacion_ajustadas
+                                        )
+
                                         # Fila de valores
-                                        datos_consolidados.append(valores_renovacion_ajustados)
-                                    
+                                        datos_consolidados.append(
+                                            valores_renovacion_ajustados
+                                        )
+
                                     # Crear DataFrame final
                                     if datos_consolidados:
-                                        max_cols = max(len(fila) for fila in datos_consolidados)
-                                        
+                                        max_cols = max(
+                                            len(fila) for fila in datos_consolidados
+                                        )
+
                                         # Ajustar todas las filas a la misma longitud
                                         for i, fila in enumerate(datos_consolidados):
                                             if len(fila) < max_cols:
-                                                datos_consolidados[i] = fila + [""] * (max_cols - len(fila))
-                                        
+                                                datos_consolidados[i] = fila + [""] * (
+                                                    max_cols - len(fila)
+                                                )
+
                                         # Crear columnas genéricas
-                                        columnas_genericas = [f"Columna_{i+1}" for i in range(max_cols)]
-                                        
-                                        df_consolidado = pd.DataFrame(datos_consolidados, columns=columnas_genericas)
-                                        
+                                        columnas_genericas = [
+                                            f"Columna_{i+1}" for i in range(max_cols)
+                                        ]
+
+                                        df_consolidado = pd.DataFrame(
+                                            datos_consolidados,
+                                            columns=columnas_genericas,
+                                        )
+
                                         # Exportar a Excel
-                                        df_consolidado.to_excel(writer, sheet_name="Polizas_Consolidadas", index=False, header=False)
-                                        format_worksheet(writer.sheets["Polizas_Consolidadas"], df_consolidado, "polizas")
-                                
+                                        df_consolidado.to_excel(
+                                            writer,
+                                            sheet_name="Polizas_Consolidadas",
+                                            index=False,
+                                            header=False,
+                                        )
+                                        format_worksheet(
+                                            writer.sheets["Polizas_Consolidadas"],
+                                            df_consolidado,
+                                            "polizas",
+                                        )
+
                                 # Crear hoja consolidada
                                 crear_hoja_consolidada(df_actuales, df_renovacion)
-                            
+
                             # Hoja de primas eliminada según solicitud del usuario
 
                         excel_data = output.getvalue()
