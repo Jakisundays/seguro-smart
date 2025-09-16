@@ -896,6 +896,89 @@ if st.sidebar.button(
                                                     }
                                                 )
 
+                                                amparos = data.get("amparos")
+
+                                                if amparos:
+                                                    # Sección de Amparos con diseño profesional y simple
+                                                    st.markdown(
+                                                        f"""
+                                                    <div style="background: linear-gradient(90deg, #2c5aa0 0%, #1e3a8a 100%); 
+                                                                padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                                                        <h3 style="color: white; margin: 0; text-align: center;">🛡️ Amparos de la Póliza {file_name} ({doc_type})</h3>
+                                                    </div>
+                                                    """,
+                                                        unsafe_allow_html=True,
+                                                    )
+
+                                                    # Crear DataFrame para mostrar los amparos de forma profesional
+                                                    amparos_display = []
+                                                    for i, amparo_item in enumerate(
+                                                        amparos, 1
+                                                    ):
+                                                        amparos_display.append(
+                                                            {
+                                                                # "N°": i,
+                                                                "Tipo de Amparo": amparo_item.get(
+                                                                    "amparo",
+                                                                    "No especificado",
+                                                                ),
+                                                                "Deducible": amparo_item.get(
+                                                                    "deducible",
+                                                                    "No especificado",
+                                                                ),
+                                                            }
+                                                        )
+
+                                                    if amparos_display:
+                                                        df_amparos = pd.DataFrame(
+                                                            amparos_display
+                                                        )
+
+                                                        # Mostrar métricas rápidas
+                                                        col1, col2 = st.columns(2)
+                                                        with col1:
+                                                            st.metric(
+                                                                "Total de Amparos",
+                                                                len(amparos_display),
+                                                            )
+                                                        with col2:
+                                                            amparos_con_deducible = sum(
+                                                                1
+                                                                for item in amparos_display
+                                                                if item["Deducible"]
+                                                                != "No especificado"
+                                                            )
+                                                            st.metric(
+                                                                "Con Deducible Definido",
+                                                                amparos_con_deducible,
+                                                            )
+
+                                                        # Tabla profesional
+                                                        st.dataframe(
+                                                            df_amparos,
+                                                            use_container_width=True,
+                                                            hide_index=True,
+                                                            column_config={
+                                                                "N°": st.column_config.NumberColumn(
+                                                                    "N°", width="small"
+                                                                ),
+                                                                "Tipo de Amparo": st.column_config.TextColumn(
+                                                                    "Tipo de Amparo",
+                                                                    width="large",
+                                                                ),
+                                                                "Deducible": st.column_config.TextColumn(
+                                                                    "Deducible",
+                                                                    width="medium",
+                                                                ),
+                                                            },
+                                                        )
+                                                    else:
+                                                        st.info(
+                                                            "No se encontraron amparos en el análisis."
+                                                        )
+
+                                                    st.markdown("---")
+
                                 except Exception as e:
                                     st.error(
                                         f"Error procesando {result.get('file_name', 'archivo')}: {str(e)}"
