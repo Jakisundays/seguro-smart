@@ -509,6 +509,11 @@ if st.sidebar.button(
                                             # Parsear el JSON
                                             data = json.loads(json_text)
 
+                                            with st.expander(
+                                                f"Resultado para {file_name} ({doc_type})"
+                                            ):
+                                                st.write(data)
+
                                             # Procesar según el tipo de documento
                                             if (
                                                 doc_type in ["actual", "renovacion"]
@@ -551,6 +556,322 @@ if st.sidebar.button(
                                                         }
                                                     )
 
+                                                amparos = data.get("amparos")
+                                                riesgos = data.get("riesgos")
+
+                                                if amparos:
+                                                    # Sección de Amparos con diseño profesional y simple
+                                                    st.markdown(
+                                                        f"""
+                                                    <div style="background: linear-gradient(90deg, #2c5aa0 0%, #1e3a8a 100%); 
+                                                                padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                                                        <h3 style="color: white; margin: 0; text-align: center;">🛡️ Amparos de la Póliza {file_name} ({doc_type})</h3>
+                                                    </div>
+                                                    """,
+                                                        unsafe_allow_html=True,
+                                                    )
+
+                                                    # Crear DataFrame para mostrar los amparos de forma profesional
+                                                    amparos_display = []
+                                                    for i, amparo_item in enumerate(
+                                                        amparos, 1
+                                                    ):
+                                                        amparos_display.append(
+                                                            {
+                                                                # "N°": i,
+                                                                "Tipo de Amparo": amparo_item.get(
+                                                                    "amparo",
+                                                                    "No especificado",
+                                                                ),
+                                                                "Deducible": amparo_item.get(
+                                                                    "deducible",
+                                                                    "No especificado",
+                                                                ),
+                                                            }
+                                                        )
+
+                                                    if amparos_display:
+                                                        df_amparos = pd.DataFrame(
+                                                            amparos_display
+                                                        )
+
+                                                        # Mostrar métricas rápidas
+                                                        col1, col2 = st.columns(2)
+                                                        with col1:
+                                                            st.metric(
+                                                                "Total de Amparos",
+                                                                len(amparos_display),
+                                                            )
+                                                        with col2:
+                                                            amparos_con_deducible = sum(
+                                                                1
+                                                                for item in amparos_display
+                                                                if item["Deducible"]
+                                                                != "No especificado"
+                                                            )
+                                                            st.metric(
+                                                                "Con Deducible Definido",
+                                                                amparos_con_deducible,
+                                                            )
+
+                                                        # Tabla profesional
+                                                        st.dataframe(
+                                                            df_amparos,
+                                                            use_container_width=True,
+                                                            hide_index=True,
+                                                            column_config={
+                                                                "N°": st.column_config.NumberColumn(
+                                                                    "N°", width="small"
+                                                                ),
+                                                                "Tipo de Amparo": st.column_config.TextColumn(
+                                                                    "Tipo de Amparo",
+                                                                    width="large",
+                                                                ),
+                                                                "Deducible": st.column_config.TextColumn(
+                                                                    "Deducible",
+                                                                    width="medium",
+                                                                ),
+                                                            },
+                                                        )
+                                                    else:
+                                                        st.info(
+                                                            "No se encontraron amparos en el análisis."
+                                                        )
+
+                                                    st.markdown("---")
+
+                                                if riesgos:
+                                                    # Encabezado con diseño profesional
+                                                    st.markdown(
+                                                        f"""
+                                                    <div style="background: linear-gradient(90deg, #dc2626 0%, #b91c1c 100%); 
+                                                                padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                                                        <h3 style="color: white; margin: 0; text-align: center;">⚠️ Análisis de Riesgos por Ubicación {file_name} ({doc_type})</h3>
+                                                    </div>
+                                                    """,
+                                                        unsafe_allow_html=True,
+                                                    )
+
+                                                    try:
+                                                        # Métricas rápidas
+                                                        total_ubicaciones = (
+                                                            len(riesgos)
+                                                            if isinstance(riesgos, list)
+                                                            else 0
+                                                        )
+                                                        total_coberturas = 0
+                                                        total_valor_asegurado = 0
+
+                                                        if isinstance(riesgos, list):
+                                                            for ubicacion in riesgos:
+                                                                if (
+                                                                    isinstance(
+                                                                        ubicacion, dict
+                                                                    )
+                                                                    and "detalle_cobertura"
+                                                                    in ubicacion
+                                                                ):
+                                                                    detalle = ubicacion[
+                                                                        "detalle_cobertura"
+                                                                    ]
+                                                                    if isinstance(
+                                                                        detalle, list
+                                                                    ):
+                                                                        total_coberturas += len(
+                                                                            detalle
+                                                                        )
+                                                                        for (
+                                                                            item
+                                                                        ) in detalle:
+                                                                            if (
+                                                                                isinstance(
+                                                                                    item,
+                                                                                    dict,
+                                                                                )
+                                                                                and "valor_asegurado"
+                                                                                in item
+                                                                            ):
+                                                                                try:
+                                                                                    total_valor_asegurado += float(
+                                                                                        item[
+                                                                                            "valor_asegurado"
+                                                                                        ]
+                                                                                    )
+                                                                                except (
+                                                                                    ValueError,
+                                                                                    TypeError,
+                                                                                ):
+                                                                                    pass
+
+                                                        # Mostrar cada ubicación con su detalle
+                                                        if isinstance(riesgos, list):
+                                                            for (
+                                                                i,
+                                                                ubicacion_data,
+                                                            ) in enumerate(riesgos, 1):
+                                                                if isinstance(
+                                                                    ubicacion_data, dict
+                                                                ):
+                                                                    ubicacion = ubicacion_data.get(
+                                                                        "ubicacion",
+                                                                        f"Ubicación {i}",
+                                                                    )
+                                                                    detalle_cobertura = ubicacion_data.get(
+                                                                        "detalle_cobertura",
+                                                                        [],
+                                                                    )
+
+                                                                    # Card para cada ubicación
+                                                                    with st.expander(
+                                                                        f"📍 {ubicacion}",
+                                                                        expanded=True,
+                                                                    ):
+                                                                        # st.markdown(
+                                                                        #     f"""
+                                                                        # <div style="background: #f8fafc; padding: 1rem; border-radius: 6px; border-left: 4px solid #dc2626;">
+                                                                        #     <h4 style="margin: 0; color: #1f2937;">🏢 {ubicacion}</h4>
+                                                                        # </div>
+                                                                        # """,
+                                                                        #     unsafe_allow_html=True,
+                                                                        # )
+
+                                                                        if (
+                                                                            isinstance(
+                                                                                detalle_cobertura,
+                                                                                list,
+                                                                            )
+                                                                            and detalle_cobertura
+                                                                        ):
+                                                                            # Crear DataFrame para la tabla
+                                                                            tabla_data = (
+                                                                                []
+                                                                            )
+                                                                            for (
+                                                                                j,
+                                                                                item,
+                                                                            ) in enumerate(
+                                                                                detalle_cobertura,
+                                                                                1,
+                                                                            ):
+                                                                                if isinstance(
+                                                                                    item,
+                                                                                    dict,
+                                                                                ):
+                                                                                    interes = item.get(
+                                                                                        "interes_asegurado",
+                                                                                        "No especificado",
+                                                                                    )
+                                                                                    valor = item.get(
+                                                                                        "valor_asegurado",
+                                                                                        0,
+                                                                                    )
+                                                                                    riesgos_list = item.get(
+                                                                                        "riesgos",
+                                                                                        [],
+                                                                                    )
+
+                                                                                    # Formatear la lista de riesgos
+                                                                                    if isinstance(
+                                                                                        riesgos_list,
+                                                                                        list,
+                                                                                    ):
+                                                                                        riesgos_str = (
+                                                                                            ", ".join(
+                                                                                                riesgos_list
+                                                                                            )
+                                                                                            if riesgos_list
+                                                                                            else "No especificados"
+                                                                                        )
+                                                                                    else:
+                                                                                        riesgos_str = (
+                                                                                            str(
+                                                                                                riesgos_list
+                                                                                            )
+                                                                                            if riesgos_list
+                                                                                            else "No especificados"
+                                                                                        )
+
+                                                                                    tabla_data.append(
+                                                                                        {
+                                                                                            # "N°": j,
+                                                                                            "Interés Asegurado": interes,
+                                                                                            "Valor Asegurado": (
+                                                                                                f"${float(valor):,.0f}"
+                                                                                                if valor
+                                                                                                else "$0"
+                                                                                            ),
+                                                                                            # "Riesgos Cubiertos": riesgos_str,
+                                                                                        }
+                                                                                    )
+
+                                                                            if tabla_data:
+                                                                                df_riesgos = pd.DataFrame(
+                                                                                    tabla_data
+                                                                                )
+                                                                                st.dataframe(
+                                                                                    df_riesgos,
+                                                                                    use_container_width=True,
+                                                                                    hide_index=True,
+                                                                                    column_config={
+                                                                                        # "N°": st.column_config.NumberColumn(
+                                                                                        #     "N°", width="small"
+                                                                                        # ),
+                                                                                        "Interés Asegurado": st.column_config.TextColumn(
+                                                                                            "Interés Asegurado",
+                                                                                            width="medium",
+                                                                                        ),
+                                                                                        "Valor Asegurado": st.column_config.TextColumn(
+                                                                                            "Valor Asegurado",
+                                                                                            width="medium",
+                                                                                        ),
+                                                                                        # "Riesgos Cubiertos": st.column_config.TextColumn(
+                                                                                        #     "Riesgos Cubiertos",
+                                                                                        #     width="large",
+                                                                                        # ),
+                                                                                    },
+                                                                                )
+
+                                                                                # Resumen de la ubicación
+                                                                                # total_ubicacion = sum(
+                                                                                #     float(item.get("valor_asegurado", 0))
+                                                                                #     for item in detalle_cobertura
+                                                                                #     if isinstance(item, dict)
+                                                                                # )
+                                                                                # st.info(f"💼 **Total asegurado en esta ubicación:** ${total_ubicacion:,.0f}")
+                                                                            else:
+                                                                                st.warning(
+                                                                                    "No se encontraron detalles de cobertura válidos para esta ubicación."
+                                                                                )
+                                                                        else:
+                                                                            st.warning(
+                                                                                "No se encontraron detalles de cobertura para esta ubicación."
+                                                                            )
+
+                                                                        # st.markdown("---")
+                                                        else:
+                                                            st.warning(
+                                                                "Los datos de riesgos no tienen el formato esperado (lista de ubicaciones)."
+                                                            )
+
+                                                    except json.JSONDecodeError:
+                                                        st.error(
+                                                            "Error al procesar los datos de riesgos: formato JSON inválido."
+                                                        )
+                                                    except KeyError as e:
+                                                        st.error(
+                                                            f"Error al acceder a los datos de riesgos: clave faltante {e}"
+                                                        )
+                                                    except Exception as e:
+                                                        st.error(
+                                                            f"Error inesperado al procesar riesgos: {str(e)}"
+                                                        )
+                                                        st.info(
+                                                            "Mostrando datos sin procesar:"
+                                                        )
+                                                        st.write(riesgos)
+
+                                                    st.markdown("---")
+
                                             elif (
                                                 doc_type == "adicional"
                                                 and "prima_sin_iva" in data
@@ -590,24 +911,6 @@ if st.sidebar.button(
                     with st.expander("Ver Primas"):
                         st.write(primas_data)
 
-                    amparos_y_riesgos_text = (
-                        results[0]
-                        .get("data", {})
-                        .get("candidates", [{}])[0]
-                        .get("content", {})
-                        .get("parts", [{}])[0]
-                        .get("text", "{}")
-                    )
-                    if amparos_y_riesgos_text:
-                        amparos_y_riesgos = json.loads(amparos_y_riesgos_text)
-                        amparos = amparos_y_riesgos["amparos"]
-                        riesgos = amparos_y_riesgos["riesgos"]
-                        with st.expander("Ver Amparos"):
-                            st.write(amparos)
-                        with st.expander("Ver Riesgos"):
-                            st.write(riesgos)
-
-                    # Separar datos por tipo de documento
                     if polizas_data:
                         solo_intereses = [
                             {
@@ -741,265 +1044,6 @@ if st.sidebar.button(
                         total_prima_sin_iva = df_primas["Prima Sin IVA"].sum()
                         total_iva = df_primas["IVA"].sum()
                         total_prima_con_iva = df_primas["Prima Con IVA"].sum()
-
-                        st.markdown("---")
-
-                    if amparos:
-                        # Sección de Amparos con diseño profesional y simple
-                        st.markdown(
-                            """
-                        <div style="background: linear-gradient(90deg, #2c5aa0 0%, #1e3a8a 100%); 
-                                    padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-                            <h3 style="color: white; margin: 0; text-align: center;">🛡️ Amparos de la Póliza</h3>
-                        </div>
-                        """,
-                            unsafe_allow_html=True,
-                        )
-
-                        # Crear DataFrame para mostrar los amparos de forma profesional
-                        amparos_display = []
-                        for i, amparo_item in enumerate(amparos, 1):
-                            amparos_display.append(
-                                {
-                                    # "N°": i,
-                                    "Tipo de Amparo": amparo_item.get(
-                                        "amparo", "No especificado"
-                                    ),
-                                    "Deducible": amparo_item.get(
-                                        "deducible", "No especificado"
-                                    ),
-                                }
-                            )
-
-                        if amparos_display:
-                            df_amparos = pd.DataFrame(amparos_display)
-
-                            # Mostrar métricas rápidas
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                st.metric("Total de Amparos", len(amparos_display))
-                            with col2:
-                                amparos_con_deducible = sum(
-                                    1
-                                    for item in amparos_display
-                                    if item["Deducible"] != "No especificado"
-                                )
-                                st.metric(
-                                    "Con Deducible Definido", amparos_con_deducible
-                                )
-
-                            # Tabla profesional
-                            st.dataframe(
-                                df_amparos,
-                                use_container_width=True,
-                                hide_index=True,
-                                column_config={
-                                    "N°": st.column_config.NumberColumn(
-                                        "N°", width="small"
-                                    ),
-                                    "Tipo de Amparo": st.column_config.TextColumn(
-                                        "Tipo de Amparo", width="large"
-                                    ),
-                                    "Deducible": st.column_config.TextColumn(
-                                        "Deducible", width="medium"
-                                    ),
-                                },
-                            )
-                        else:
-                            st.info("No se encontraron amparos en el análisis.")
-
-                        st.markdown("---")
-
-                    if riesgos:
-                        # Encabezado con diseño profesional
-                        st.markdown(
-                            """
-                        <div style="background: linear-gradient(90deg, #dc2626 0%, #b91c1c 100%); 
-                                    padding: 1rem; border-radius: 8px; margin: 1rem 0;">
-                            <h3 style="color: white; margin: 0; text-align: center;">⚠️ Análisis de Riesgos por Ubicación</h3>
-                        </div>
-                        """,
-                            unsafe_allow_html=True,
-                        )
-
-                        try:
-                            # Métricas rápidas
-                            total_ubicaciones = (
-                                len(riesgos) if isinstance(riesgos, list) else 0
-                            )
-                            total_coberturas = 0
-                            total_valor_asegurado = 0
-
-                            if isinstance(riesgos, list):
-                                for ubicacion in riesgos:
-                                    if (
-                                        isinstance(ubicacion, dict)
-                                        and "detalle_cobertura" in ubicacion
-                                    ):
-                                        detalle = ubicacion["detalle_cobertura"]
-                                        if isinstance(detalle, list):
-                                            total_coberturas += len(detalle)
-                                            for item in detalle:
-                                                if (
-                                                    isinstance(item, dict)
-                                                    and "valor_asegurado" in item
-                                                ):
-                                                    try:
-                                                        total_valor_asegurado += float(
-                                                            item["valor_asegurado"]
-                                                        )
-                                                    except (ValueError, TypeError):
-                                                        pass
-
-                            # Mostrar métricas
-                            # col1, col2, col3 = st.columns(3)
-                            # with col1:
-                            #     st.metric("🏢 Total Ubicaciones", total_ubicaciones)
-                            # with col2:
-                            #     st.metric("📋 Total Coberturas", total_coberturas)
-                            # with col3:
-                            #     st.metric(
-                            #         "💰 Valor Total Asegurado",
-                            #         f"${total_valor_asegurado:,.0f}",
-                            #     )
-
-                            # st.markdown("---")
-
-                            # Mostrar cada ubicación con su detalle
-                            if isinstance(riesgos, list):
-                                for i, ubicacion_data in enumerate(riesgos, 1):
-                                    if isinstance(ubicacion_data, dict):
-                                        ubicacion = ubicacion_data.get(
-                                            "ubicacion", f"Ubicación {i}"
-                                        )
-                                        detalle_cobertura = ubicacion_data.get(
-                                            "detalle_cobertura", []
-                                        )
-
-                                        # Card para cada ubicación
-                                        with st.expander(
-                                            f"📍 {ubicacion}", expanded=True
-                                        ):
-                                            # st.markdown(
-                                            #     f"""
-                                            # <div style="background: #f8fafc; padding: 1rem; border-radius: 6px; border-left: 4px solid #dc2626;">
-                                            #     <h4 style="margin: 0; color: #1f2937;">🏢 {ubicacion}</h4>
-                                            # </div>
-                                            # """,
-                                            #     unsafe_allow_html=True,
-                                            # )
-
-                                            if (
-                                                isinstance(detalle_cobertura, list)
-                                                and detalle_cobertura
-                                            ):
-                                                # Crear DataFrame para la tabla
-                                                tabla_data = []
-                                                for j, item in enumerate(
-                                                    detalle_cobertura, 1
-                                                ):
-                                                    if isinstance(item, dict):
-                                                        interes = item.get(
-                                                            "interes_asegurado",
-                                                            "No especificado",
-                                                        )
-                                                        valor = item.get(
-                                                            "valor_asegurado", 0
-                                                        )
-                                                        riesgos_list = item.get(
-                                                            "riesgos", []
-                                                        )
-
-                                                        # Formatear la lista de riesgos
-                                                        if isinstance(
-                                                            riesgos_list, list
-                                                        ):
-                                                            riesgos_str = (
-                                                                ", ".join(riesgos_list)
-                                                                if riesgos_list
-                                                                else "No especificados"
-                                                            )
-                                                        else:
-                                                            riesgos_str = (
-                                                                str(riesgos_list)
-                                                                if riesgos_list
-                                                                else "No especificados"
-                                                            )
-
-                                                        tabla_data.append(
-                                                            {
-                                                                # "N°": j,
-                                                                "Interés Asegurado": interes,
-                                                                "Valor Asegurado": (
-                                                                    f"${float(valor):,.0f}"
-                                                                    if valor
-                                                                    else "$0"
-                                                                ),
-                                                                # "Riesgos Cubiertos": riesgos_str,
-                                                            }
-                                                        )
-
-                                                if tabla_data:
-                                                    df_riesgos = pd.DataFrame(
-                                                        tabla_data
-                                                    )
-                                                    st.dataframe(
-                                                        df_riesgos,
-                                                        use_container_width=True,
-                                                        hide_index=True,
-                                                        column_config={
-                                                            # "N°": st.column_config.NumberColumn(
-                                                            #     "N°", width="small"
-                                                            # ),
-                                                            "Interés Asegurado": st.column_config.TextColumn(
-                                                                "Interés Asegurado",
-                                                                width="medium",
-                                                            ),
-                                                            "Valor Asegurado": st.column_config.TextColumn(
-                                                                "Valor Asegurado",
-                                                                width="medium",
-                                                            ),
-                                                            # "Riesgos Cubiertos": st.column_config.TextColumn(
-                                                            #     "Riesgos Cubiertos",
-                                                            #     width="large",
-                                                            # ),
-                                                        },
-                                                    )
-
-                                                    # Resumen de la ubicación
-                                                    # total_ubicacion = sum(
-                                                    #     float(item.get("valor_asegurado", 0))
-                                                    #     for item in detalle_cobertura
-                                                    #     if isinstance(item, dict)
-                                                    # )
-                                                    # st.info(f"💼 **Total asegurado en esta ubicación:** ${total_ubicacion:,.0f}")
-                                                else:
-                                                    st.warning(
-                                                        "No se encontraron detalles de cobertura válidos para esta ubicación."
-                                                    )
-                                            else:
-                                                st.warning(
-                                                    "No se encontraron detalles de cobertura para esta ubicación."
-                                                )
-
-                                            # st.markdown("---")
-                            else:
-                                st.warning(
-                                    "Los datos de riesgos no tienen el formato esperado (lista de ubicaciones)."
-                                )
-
-                        except json.JSONDecodeError:
-                            st.error(
-                                "Error al procesar los datos de riesgos: formato JSON inválido."
-                            )
-                        except KeyError as e:
-                            st.error(
-                                f"Error al acceder a los datos de riesgos: clave faltante {e}"
-                            )
-                        except Exception as e:
-                            st.error(f"Error inesperado al procesar riesgos: {str(e)}")
-                            st.info("Mostrando datos sin procesar:")
-                            st.write(riesgos)
 
                         st.markdown("---")
 
