@@ -70,6 +70,26 @@ handler.setFormatter(formatter)
 app_logger.addHandler(handler)
 
 
+def cleanup_processed_files(queue_items_list):
+    """Elimina automáticamente los archivos después del procesamiento exitoso"""
+    deleted_files = []
+    failed_deletions = []
+
+    for item in queue_items_list:
+        try:
+            if os.path.exists(item["file_path"]):
+                os.remove(item["file_path"])
+                deleted_files.append(item["file_name"])
+                app_logger.info(
+                    f"Archivo eliminado automáticamente: {item['file_name']}"
+                )
+        except Exception as e:
+            failed_deletions.append((item["file_name"], str(e)))
+            app_logger.error(f"Error al eliminar archivo {item['file_name']}: {str(e)}")
+
+    return deleted_files, failed_deletions
+
+
 class QueueItem(TypedDict):
     file_name: str
     file_extension: str
@@ -397,6 +417,16 @@ with st.sidebar:
 
     st.markdown("---")
 
+    # campo 4: Conjunto de documentos
+    st.subheader("4️⃣ Conjunto de Documentos adicionales")
+    conjunto_documentos = st.file_uploader(
+        "Cargar conjunto de documentos",
+        type=["pdf", "docx", "txt", "jpg", "png"],
+        accept_multiple_files=True,
+        key="conjunto_documentos",
+        help="Sube un conjunto de documentos para extraer información de todos ellos",
+    )
+
     # Botón de procesamiento
 if st.sidebar.button(
     "🚀 Iniciar Proceso",
@@ -409,6 +439,7 @@ if st.sidebar.button(
         not archivo_poliza_actual
         and not archivo_poliza_renovacion
         and not archivos_multiples
+        and not conjunto_documentos
     ):
         st.error("⚠️ Por favor, carga al menos un archivo antes de iniciar el proceso.")
     else:
@@ -416,12 +447,14 @@ if st.sidebar.button(
         with st.spinner("Procesando archivos..."):
             # Procesar archivos y crear cola
             queue_items = process_files_and_create_queue(
-                archivo_poliza_actual, archivo_poliza_renovacion, archivos_multiples
+                archivo_poliza_actual,
+                archivo_poliza_renovacion,
+                archivos_multiples,
             )
 
             # st.write(queue_items)
 
-            if queue_items:
+            if queue_items or conjunto_documentos:
                 st.success(
                     f"✅ Se procesaron {len(queue_items)} archivo(s) exitosamente."
                 )
@@ -461,28 +494,6 @@ if st.sidebar.button(
                     st.subheader("📊 Resultados del Análisis")
                     with st.expander("Results"):
                         st.write(results)
-
-                    # Función para limpiar archivos automáticamente después del procesamiento
-                    def cleanup_processed_files(queue_items_list):
-                        """Elimina automáticamente los archivos después del procesamiento exitoso"""
-                        deleted_files = []
-                        failed_deletions = []
-
-                        for item in queue_items_list:
-                            try:
-                                if os.path.exists(item["file_path"]):
-                                    os.remove(item["file_path"])
-                                    deleted_files.append(item["file_name"])
-                                    app_logger.info(
-                                        f"Archivo eliminado automáticamente: {item['file_name']}"
-                                    )
-                            except Exception as e:
-                                failed_deletions.append((item["file_name"], str(e)))
-                                app_logger.error(
-                                    f"Error al eliminar archivo {item['file_name']}: {str(e)}"
-                                )
-
-                        return deleted_files, failed_deletions
 
                     # Función para convertir JSON a clases dataclass
                     def procesar_resultados(results_list):
@@ -585,6 +596,10 @@ if st.sidebar.button(
                                                                 ),
                                                                 "Deducible": amparo_item.get(
                                                                     "deducible",
+                                                                    "No especificado",
+                                                                ),
+                                                                "Tipo": amparo_item.get(
+                                                                    "tipo",
                                                                     "No especificado",
                                                                 ),
                                                             }
@@ -765,31 +780,10 @@ if st.sidebar.button(
                                                                                         "valor_asegurado",
                                                                                         0,
                                                                                     )
-                                                                                    riesgos_list = item.get(
-                                                                                        "riesgos",
-                                                                                        [],
+                                                                                    tipo_de_riesgo = item.get(
+                                                                                        "tipo",
+                                                                                        "No especificado",
                                                                                     )
-
-                                                                                    # Formatear la lista de riesgos
-                                                                                    if isinstance(
-                                                                                        riesgos_list,
-                                                                                        list,
-                                                                                    ):
-                                                                                        riesgos_str = (
-                                                                                            ", ".join(
-                                                                                                riesgos_list
-                                                                                            )
-                                                                                            if riesgos_list
-                                                                                            else "No especificados"
-                                                                                        )
-                                                                                    else:
-                                                                                        riesgos_str = (
-                                                                                            str(
-                                                                                                riesgos_list
-                                                                                            )
-                                                                                            if riesgos_list
-                                                                                            else "No especificados"
-                                                                                        )
 
                                                                                     tabla_data.append(
                                                                                         {
@@ -800,7 +794,7 @@ if st.sidebar.button(
                                                                                                 if valor
                                                                                                 else "$0"
                                                                                             ),
-                                                                                            # "Riesgos Cubiertos": riesgos_str,
+                                                                                            "Tipo de Riesgo": tipo_de_riesgo,
                                                                                         }
                                                                                     )
 
@@ -1708,7 +1702,74 @@ if st.sidebar.button(
                         "🧹 Archivos eliminados automáticamente del directorio downloads."
                     )
 
-            else:
+                if conjunto_documentos:
+                    pdf_files = [
+                        f for f in conjunto_documentos if f.type == "application/pdf"
+                    ]
+                    base64_docs = []
+
+                    for pdf_file in pdf_files:
+                        st.subheader(f"{pdf_file.name}")
+
+                        # Convertir PDF a base64
+                        pdf_bytes = pdf_file.getvalue()
+                        pdf_base64 = base64.b64encode(pdf_bytes).decode("utf-8")
+                        base64_docs.append(pdf_base64)
+
+                    files_metadata_b64 = [
+                        {"inline_data": {"mime_type": "application/pdf", "data": doc}}
+                        for doc in base64_docs
+                    ]
+
+                    prompt = tools_standard[1]["prompt"]
+                    responseSchema = tools_standard[1]["data"]
+
+                    payload = {
+                        "contents": [
+                            {"parts": files_metadata_b64 + [{"text": prompt}]}
+                        ],
+                        "generationConfig": {
+                            "responseMimeType": "application/json",
+                            "responseSchema": responseSchema,
+                        },
+                    }
+
+                    response = asyncio.run(
+                        orchestrator.make_api_request(
+                            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={orchestrator.api_key}",
+                            headers={"Content-Type": "application/json"},
+                            data=payload,
+                            process_id="SIIIUUUUUUU",
+                        )
+                    )
+
+                    # st.write(response)
+                    data = json.loads(
+                        response.get("candidates")[0]
+                        .get("content", {})
+                        .get("parts", [{}])[0]
+                        .get("text", "")
+                    )
+                    # st.write(data)
+                    st.title("Detalle de Póliza")
+
+                    # Mostrar primas
+                    st.subheader("Primas")
+                    st.metric("Prima sin IVA", f"${data['prima_sin_iva']:,}")
+                    st.metric("IVA", f"${data['iva']:,}")
+                    st.metric("Prima con IVA", f"${data['prima_con_iva']:,}")
+
+                    # Convertir amparos en DataFrame
+                    amparos_df = pd.DataFrame(data["amparos"])
+
+                    st.subheader("Amparos y Deducibles")
+                    st.dataframe(amparos_df, use_container_width=True)
+
+                    # También se puede mostrar el JSON completo bonito
+                    st.subheader("JSON completo")
+                    st.json(data)
+
+            elif not queue_items:
                 st.error(
                     "❌ No se pudieron procesar los archivos. Verifica que los archivos sean válidos."
                 )
