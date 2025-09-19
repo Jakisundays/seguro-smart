@@ -1,4 +1,5 @@
-poliza_actual_cuadro = [
+# poliza_actual_cuadro
+poliza_actual = [
     {"Interés Asegurado": "Edificios", "Valor Asegurado": 22615066519},
     {"Interés Asegurado": "Equipo Electrónico", "Valor Asegurado": 1204502680},
     {"Interés Asegurado": "Muebles y Enseres", "Valor Asegurado": 1621213188},
@@ -7,8 +8,8 @@ poliza_actual_cuadro = [
     {"Interés Asegurado": "Dinero", "Valor Asegurado": 196000000},
     {"Interés Asegurado": "Eq. Móviles y Portátiles", "Valor Asegurado": 82695800},
 ]
-
-poliza_renovacion_cuadro = [
+# poliza_renovacion_cuadro
+poliza_renovacion = [
     {"Interés Asegurado": "Edificios", "Valor Asegurado": 24876573170},
     {"Interés Asegurado": "Equipo Electrónico", "Valor Asegurado": 1245453104},
     {"Interés Asegurado": "Muebles y Enseres", "Valor Asegurado": 1783334507},
@@ -17,7 +18,7 @@ poliza_renovacion_cuadro = [
     {"Interés Asegurado": "Dinero", "Valor Asegurado": 196000000},
     {"Interés Asegurado": "Eq. Móviles y Portátiles", "Valor Asegurado": 94156337},
 ]
-
+# docs_adicionales_data - NO LO USAMOS
 docs_adicionales_data = [
     {
         "Archivo": "Slip Cotización 2500004260 Pyme Segura 10+ (1).pdf",
@@ -32,7 +33,7 @@ docs_adicionales_data = [
         "Prima Con IVA": 28289403,
     },
 ]
-
+# riesgos_actuales
 riesgos_actuales = [
     {
         "ubicacion": "Calle 28 # 30-15 PALMIRA",
@@ -205,7 +206,7 @@ riesgos_actuales = [
         ],
     },
 ]
-
+# riesgos_renovacion
 riesgos_renovacion = [
     {
         "ubicacion": "Calle 28 # 30-15 PALMIRA",
@@ -373,7 +374,7 @@ riesgos_renovacion = [
         ],
     },
 ]
-
+# amparos_actuales
 amparos_actuales = {
     "archivo": "Actual.pdf",
     "amparos": [
@@ -609,7 +610,7 @@ amparos_actuales = {
         },
     ],
 }
-
+# amparos_renovacion
 amparos_renovacion = {
     "archivo": "renovacion.pdf",
     "amparos": [
@@ -855,7 +856,7 @@ amparos_renovacion = {
         },
     ],
 }
-
+# amparos_adicionales
 amparos_adicionales = [
     {
         "archivo": "Adiciones.pdf",
@@ -899,8 +900,53 @@ amparos_adicionales = [
     },
 ]
 
+from typing import TypedDict, List
 
-def generar_excel_analisis_polizas(output_path="reporte_polizas_riesgos.xlsx"):
+
+class PolizaDict(TypedDict):
+    interes_asegurado: str
+    valor_asegurado: int
+
+
+class DocAdicionalDict(TypedDict):
+    archivo: str
+    prima_sin_iva: int
+    iva: int
+    prima_con_iva: int
+
+
+class DetalleCobertura(TypedDict):
+    interes_asegurado: str
+    valor_asegurado: int
+    tipo: str
+
+
+class RiesgoDict(TypedDict):
+    ubicacion: str
+    detalle_cobertura: List[DetalleCobertura]
+
+
+class Amparo(TypedDict):
+    amparo: str
+    deducible: str
+    tipo: str
+
+
+class AmparosDict(TypedDict):
+    archivo: str
+    amparos: List[Amparo]
+
+
+def generar_excel_analisis_polizas(
+    poliza_actual: List[PolizaDict],
+    poliza_renovacion: List[PolizaDict],
+    riesgos_actuales: List[RiesgoDict],
+    riesgos_renovacion: List[RiesgoDict],
+    amparos_actuales: AmparosDict,
+    amparos_renovacion: AmparosDict,
+    amparos_adicionales: List[AmparosDict],
+    output_path="reporte_polizas_riesgos.xlsx",
+):
     """
     Genera un archivo Excel con análisis de pólizas replicando la funcionalidad
     del código original de app_structure.py usando los datos de x.py
@@ -1023,17 +1069,16 @@ def generar_excel_analisis_polizas(output_path="reporte_polizas_riesgos.xlsx"):
         # ===== hoja Análisis_Estructurado =====
         intereses_unicos = list(
             set(
-                [item["Interés Asegurado"] for item in poliza_actual_cuadro]
-                + [item["Interés Asegurado"] for item in poliza_renovacion_cuadro]
+                [item["Interés Asegurado"] for item in poliza_actual]
+                + [item["Interés Asegurado"] for item in poliza_renovacion]
             )
         )
         valores_actuales = {
-            item["Interés Asegurado"]: item["Valor Asegurado"]
-            for item in poliza_actual_cuadro
+            item["Interés Asegurado"]: item["Valor Asegurado"] for item in poliza_actual
         }
         valores_renovacion = {
             item["Interés Asegurado"]: item["Valor Asegurado"]
-            for item in poliza_renovacion_cuadro
+            for item in poliza_renovacion
         }
         total_actual = sum(valores_actuales.values())
         total_renovacion = sum(valores_renovacion.values())
@@ -1113,10 +1158,8 @@ def generar_excel_analisis_polizas(output_path="reporte_polizas_riesgos.xlsx"):
                 ]
                 return columnas, valores
 
-            columnas_actuales, valores_actuales = procesar_poliza(poliza_actual_cuadro)
-            columnas_renovacion, valores_renovacion = procesar_poliza(
-                poliza_renovacion_cuadro
-            )
+            columnas_actuales, valores_actuales = procesar_poliza(poliza_actual)
+            columnas_renovacion, valores_renovacion = procesar_poliza(poliza_renovacion)
 
             datos_consolidados = []
             if columnas_actuales and valores_actuales:
@@ -1162,7 +1205,320 @@ def generar_excel_analisis_polizas(output_path="reporte_polizas_riesgos.xlsx"):
 
         crear_hoja_consolidada()
 
-        # ===== hoja Riesgos (tercera hoja) =====
+        # ===== hoja Amparos (tercera hoja) =====
+        def crear_hoja_amparos():
+            # Generar la tabla unificada de amparos basada en la imagen de referencia
+            datos_amparos = []
+
+            # Agregar secciones basadas en tipo de amparo
+            tipos_encontrados = set()
+
+            # Procesar amparos actuales
+            for amp in amparos_actuales["amparos"]:
+                tipos_encontrados.add(amp["tipo"])
+
+            # Procesar amparos renovación
+            for amp in amparos_renovacion["amparos"]:
+                tipos_encontrados.add(amp["tipo"])
+
+            # Procesar amparos adicionales
+            for doc in amparos_adicionales:
+                for amp in doc["amparos"]:
+                    tipos_encontrados.add(amp["tipo"])
+
+            # Ordenar tipos para crear secciones consistentes
+            tipos_ordenados = sorted(tipos_encontrados)
+
+            # Crear estructura basada en la imagen de referencia
+            amparos_unicos = []
+            amparos_vistos = set()
+
+            # Recopilar todos los amparos únicos
+            for amp in amparos_actuales["amparos"]:
+                if amp["amparo"] not in amparos_vistos:
+                    amparos_unicos.append(amp)
+                    amparos_vistos.add(amp["amparo"])
+
+            for amp in amparos_renovacion["amparos"]:
+                if amp["amparo"] not in amparos_vistos:
+                    amparos_unicos.append(amp)
+                    amparos_vistos.add(amp["amparo"])
+
+            for doc in amparos_adicionales:
+                for amp in doc["amparos"]:
+                    if amp["amparo"] not in amparos_vistos:
+                        amparos_unicos.append(amp)
+                        amparos_vistos.add(amp["amparo"])
+
+            # Organizar por tipo
+            amparos_por_tipo = {}
+            for amp in amparos_unicos:
+                tipo = amp["tipo"]
+                if tipo not in amparos_por_tipo:
+                    amparos_por_tipo[tipo] = []
+                amparos_por_tipo[tipo].append(amp)
+
+            # Crear estructura de datos para Excel
+            for tipo in tipos_ordenados:
+                # Añadir fila de sección (encabezado del tipo)
+                datos_amparos.append(
+                    {
+                        "RAMO": tipo.upper(),
+                        "CONDICIONES ACTUALES": "",
+                        "ZURICH": "",
+                        "AXA": "",
+                        "BBVA": "",
+                        "_es_seccion": True,
+                    }
+                )
+
+                # Añadir amparos de este tipo
+                if tipo in amparos_por_tipo:
+                    for amp in amparos_por_tipo[tipo]:
+                        # Buscar deducibles en actuales, renovación y adicionales
+                        ded_actual = ""
+                        ded_renovacion = ""
+                        ded_adicional = ""
+
+                        # Buscar en actuales
+                        for a in amparos_actuales["amparos"]:
+                            if a["amparo"] == amp["amparo"]:
+                                ded_actual = a["deducible"]
+                                break
+
+                        # Buscar en renovación
+                        for a in amparos_renovacion["amparos"]:
+                            if a["amparo"] == amp["amparo"]:
+                                ded_renovacion = a["deducible"]
+                                break
+
+                        # Buscar en adicionales
+                        for doc in amparos_adicionales:
+                            for a in doc["amparos"]:
+                                if a["amparo"] == amp["amparo"]:
+                                    ded_adicional = a["deducible"]
+                                    break
+
+                        datos_amparos.append(
+                            {
+                                "RAMO": amp["amparo"],
+                                "CONDICIONES ACTUALES": ded_actual,
+                                "CONDICIONES DE RENOVACIÓN": ded_renovacion,
+                                **{
+                                    doc["archivo"]: (
+                                        next(
+                                            (
+                                                a["deducible"]
+                                                for a in doc["amparos"]
+                                                if a["amparo"] == amp["amparo"]
+                                            ),
+                                            "",
+                                        )
+                                    )
+                                    for doc in amparos_adicionales
+                                },
+                                "_es_seccion": False,
+                            }
+                        )
+
+            # Crear DataFrame
+            # Columnas dinámicas: RAMO, actuales, renovación y un campo por cada archivo adicional
+            columnas = [
+                "RAMO",
+                "CONDICIONES ACTUALES",
+                "CONDICIONES DE RENOVACIÓN",
+            ] + [doc["archivo"] for doc in amparos_adicionales]
+            df_amparos = pd.DataFrame(datos_amparos)[columnas]
+
+            # Escribir a Excel
+            df_amparos.to_excel(writer, sheet_name="Amparos", index=False)
+            ws = writer.sheets["Amparos"]
+
+            # Formateo especial para la hoja de amparos
+
+            # 1. Insertar filas de título y preparar cabeceras multinivel
+            ws.insert_rows(1, 2)
+
+            # 2. Título principal
+            title_cell = ws.cell(row=1, column=1)
+            title_cell.value = "DEDUCIBLES"
+            title_cell.font = Font(name="Calibri", size=16, bold=True, color="FFFFFF")
+            title_cell.fill = PatternFill(
+                start_color="1F4E79", end_color="1F4E79", fill_type="solid"
+            )
+            title_cell.alignment = Alignment(horizontal="center", vertical="center")
+            ws.merge_cells(
+                start_row=1, start_column=1, end_row=1, end_column=len(columnas)
+            )
+
+            # 3. Encabezados de grupo (fila 2) y subencabezados (fila 3)
+            # RAMO ocupa dos filas
+            ws.merge_cells(start_row=2, start_column=1, end_row=3, end_column=1)
+            a2 = ws.cell(row=2, column=1)
+            a2.value = "RAMO"
+            a2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+            a2.fill = PatternFill(
+                start_color="305496", end_color="305496", fill_type="solid"
+            )
+            a2.alignment = Alignment(
+                horizontal="center", vertical="center", wrap_text=True
+            )
+            a2.border = Border(
+                left=Side(style="thin", color="000000"),
+                right=Side(style="thin", color="000000"),
+                top=Side(style="thin", color="000000"),
+                bottom=Side(style="thin", color="000000"),
+            )
+
+            # CONDICIONES ACTUALES (columna B) con subencabezado dinámico del archivo de actuales
+            b2 = ws.cell(row=2, column=2)
+            b2.value = "CONDICIONES ACTUALES"
+            b2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+            b2.fill = PatternFill(
+                start_color="70AD47", end_color="70AD47", fill_type="solid"
+            )
+            b2.alignment = Alignment(
+                horizontal="center", vertical="center", wrap_text=True
+            )
+            b2.border = Border(
+                left=Side(style="thin", color="000000"),
+                right=Side(style="thin", color="000000"),
+                top=Side(style="thin", color="000000"),
+                bottom=Side(style="thin", color="000000"),
+            )
+            ws.cell(row=3, column=2).value = amparos_actuales.get(
+                "archivo", "CONDICIONES ACTUALES"
+            )
+
+            # CONDICIONES DE RENOVACIÓN (columna C)
+            c2 = ws.cell(row=2, column=3)
+            c2.value = "CONDICIONES DE RENOVACIÓN"
+            c2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+            c2.fill = PatternFill(
+                start_color="2F75B5", end_color="2F75B5", fill_type="solid"
+            )
+            c2.alignment = Alignment(
+                horizontal="center", vertical="center", wrap_text=True
+            )
+            c2.border = Border(
+                left=Side(style="thin", color="000000"),
+                right=Side(style="thin", color="000000"),
+                top=Side(style="thin", color="000000"),
+                bottom=Side(style="thin", color="000000"),
+            )
+            ws.cell(row=3, column=3).value = amparos_renovacion.get(
+                "archivo", "CONDICIONES DE RENOVACIÓN"
+            )
+
+            # COTIZACIONES adicionales (desde la columna 4 en adelante)
+            if len(columnas) > 3:
+                ws.merge_cells(
+                    start_row=2, start_column=4, end_row=2, end_column=len(columnas)
+                )
+                d2 = ws.cell(row=2, column=4)
+                d2.value = "ARCHIVOS ADICIONALES"
+                d2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+                d2.fill = PatternFill(
+                    start_color="404040", end_color="404040", fill_type="solid"
+                )
+                d2.alignment = Alignment(
+                    horizontal="center", vertical="center", wrap_text=True
+                )
+                d2.border = Border(
+                    left=Side(style="thin", color="000000"),
+                    right=Side(style="thin", color="000000"),
+                    top=Side(style="thin", color="000000"),
+                    bottom=Side(style="thin", color="000000"),
+                )
+                # Subencabezados con nombres reales de archivos
+                for idx, nombre_archivo in enumerate(columnas[3:], start=4):
+                    ws.cell(row=3, column=idx).value = nombre_archivo
+
+            # 4. Formatear subencabezados de columna (fila 3)
+            for col_num in range(1, len(columnas) + 1):
+                cell = ws.cell(row=3, column=col_num)
+                cell.font = Font(
+                    name="Calibri",
+                    size=11,
+                    bold=True,
+                    color="000000" if col_num >= 4 else "FFFFFF",
+                )
+                fill_map = {
+                    1: "305496",  # RAMO
+                    2: "A9D08E",  # Actual
+                    3: "9DC3E6",  # Renovación
+                }
+                color = fill_map.get(col_num, "D9D9D9")
+                cell.fill = PatternFill(
+                    start_color=color, end_color=color, fill_type="solid"
+                )
+                cell.border = Border(
+                    left=Side(style="thin", color="000000"),
+                    right=Side(style="thin", color="000000"),
+                    top=Side(style="thin", color="000000"),
+                    bottom=Side(style="thin", color="000000"),
+                )
+                cell.alignment = Alignment(
+                    horizontal="center", vertical="center", wrap_text=True
+                )
+
+            # 4. Formatear datos
+            for row_num in range(4, len(df_amparos) + 4):
+                fila_datos = datos_amparos[row_num - 4]
+                es_seccion = fila_datos.get("_es_seccion", False)
+
+                for col_num in range(1, len(columnas) + 1):
+                    cell = ws.cell(row=row_num, column=col_num)
+
+                    if es_seccion:
+                        # Formato para filas de sección (tipo de amparo)
+                        cell.font = Font(
+                            name="Calibri", size=11, bold=True, color="FFFFFF"
+                        )
+                        cell.fill = PatternFill(
+                            start_color="4472C4", end_color="4472C4", fill_type="solid"
+                        )
+                        cell.alignment = Alignment(
+                            horizontal="center", vertical="center", wrap_text=True
+                        )
+
+                        # Mergear toda la fila para la sección
+                        if col_num == 1:
+                            ws.merge_cells(
+                                start_row=row_num,
+                                start_column=1,
+                                end_row=row_num,
+                                end_column=len(columnas),
+                            )
+                    else:
+                        # Formato para filas de datos normales
+                        cell.font = Font(name="Calibri", size=10)
+                        cell.alignment = Alignment(
+                            horizontal="left", vertical="center", wrap_text=True
+                        )
+
+                    # Bordes para todas las celdas
+                    cell.border = Border(
+                        left=Side(style="thin", color="000000"),
+                        right=Side(style="thin", color="000000"),
+                        top=Side(style="thin", color="000000"),
+                        bottom=Side(style="thin", color="000000"),
+                    )
+
+            # 5. Ajustar anchos de columna
+            ws.column_dimensions["A"].width = 50  # RAMO - más ancho para nombres largos
+            ws.column_dimensions["B"].width = 30  # CONDICIONES ACTUALES
+            ws.column_dimensions["C"].width = 30  # ZURICH
+            ws.column_dimensions["D"].width = 30  # AXA
+            ws.column_dimensions["E"].width = 30  # BBVA
+
+            # 6. Ajustar altura de filas para mejor legibilidad
+            for row_num in range(1, len(df_amparos) + 4):
+                ws.row_dimensions[row_num].height = 20
+
+        crear_hoja_amparos()
+
+        # ===== hoja Riesgos (cuarta hoja) =====
         def crear_hoja_riesgos():
             # 1) Normalización de intereses asegurados (para consistencia)
             def normalizar_interes(texto: str) -> str:
@@ -1306,4 +1662,14 @@ def generar_excel_analisis_polizas(output_path="reporte_polizas_riesgos.xlsx"):
 
 
 if __name__ == "__main__":
-    generar_excel_analisis_polizas("reporte_polizas_riesgos.xlsx")
+    generar_excel_analisis_polizas(
+        poliza_actual=poliza_actual,
+        poliza_renovacion=poliza_renovacion,
+        riesgos_actuales=riesgos_actuales,
+        riesgos_renovacion=riesgos_renovacion,
+        amparos_actuales=amparos_actuales,
+        amparos_renovacion=amparos_renovacion,
+        amparos_adicionales=amparos_adicionales,
+        output_path="aaa.xlsx",
+    )
+
