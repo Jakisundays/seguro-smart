@@ -1,23 +1,63 @@
+# Standard library imports
+import os
+import ssl
+import uuid
+import json
+import base64
+import logging
+from io import BytesIO
+from pathlib import Path
+from typing import List, Optional, TypedDict, Dict, Literal
+from dataclasses import dataclass, field
+
+# Third party imports
+import aiohttp
+import certifi
+import asyncio
 import streamlit as st
 import pandas as pd
-from io import BytesIO
-import base64
-from typing import List, Optional
-from typing import TypedDict, Dict, List, Optional, Literal
-import os
-import certifi
-import aiohttp
-import ssl
-from polizas_tools import tools as tools_standard
-import asyncio
-from typing import Optional, List, TypedDict
-import uuid
 from dotenv import load_dotenv
-import logging
-from pathlib import Path
-from dataclasses import dataclass, field
-import json
-from openpyxl.styles import Font, Alignment
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
+import tempfile
+import copy
+
+# Local imports
+from polizas_tools import tools as tools_standard
+
+
+class PolizaDict(TypedDict):
+    interes_asegurado: str
+    valor_asegurado: int
+
+
+class DocAdicionalDict(TypedDict):
+    archivo: str
+    prima_sin_iva: int
+    iva: int
+    prima_con_iva: int
+
+
+class DetalleCobertura(TypedDict):
+    interes_asegurado: str
+    valor_asegurado: int
+    tipo: str
+
+
+class RiesgoDict(TypedDict):
+    ubicacion: str
+    detalle_cobertura: List[DetalleCobertura]
+
+
+class Amparo(TypedDict):
+    amparo: str
+    deducible: str
+    tipo: str
+
+
+class AmparosDict(TypedDict):
+    archivo: str
+    amparos: List[Amparo]
 
 
 @dataclass
@@ -79,6 +119,862 @@ handler = logging.StreamHandler()
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 handler.setFormatter(formatter)
 app_logger.addHandler(handler)
+
+
+def mostrar_riesgos(riesgos: list, titulo: str):
+    """
+    Muestra en Streamlit una tabla con los riesgos actuales.
+
+    Args:
+        riesgos (list): Lista de riesgos con ubicacion y detalle_cobertura.
+        titulo (str): Título a mostrar arriba de la tabla.
+    """
+    # Normalizar datos en filas planas
+    rows = []
+    for riesgo in riesgos:
+        for cobertura in riesgo["detalle_cobertura"]:
+            rows.append(
+                {
+                    "Ubicación": riesgo["ubicacion"],
+                    "Interés Asegurado": cobertura["interes_asegurado"],
+                    "Valor Asegurado": cobertura["valor_asegurado"],
+                    "Tipo": cobertura["tipo"],
+                }
+            )
+
+    df = pd.DataFrame(rows)
+
+    # Formatear valores asegurados con separador de miles
+    df["Valor Asegurado"] = df["Valor Asegurado"].apply(lambda x: f"{x:,.0f}")
+
+    # Mostrar tabla
+    st.title(titulo)
+    st.dataframe(df, use_container_width=True)
+
+
+def mostrar_amparos(amparos_input, titulo: str = "📄 Amparos"):
+    """
+    Muestra en Streamlit una tabla de amparos sin modificar el input original.
+    """
+    # Hacemos una copia profunda para no tocar el input
+    amparos = copy.deepcopy(amparos_input)
+
+    rows = []
+
+    # Si es un dict con un solo archivo
+    if isinstance(amparos, dict):
+        archivo = amparos.get("archivo", "")
+        for a in amparos.get("amparos", []):
+            rows.append(
+                {
+                    "Archivo": archivo,
+                    "Amparo": a["amparo"],
+                    "Deducible": a["deducible"],
+                    "Tipo": a["tipo"],
+                }
+            )
+    # Si es una lista de dicts (varios archivos)
+    elif isinstance(amparos, list):
+        for archivo_data in amparos:
+            archivo = archivo_data.get("archivo", "")
+            for a in archivo_data.get("amparos", []):
+                rows.append(
+                    {
+                        "Archivo": archivo,
+                        "Amparo": a["amparo"],
+                        "Deducible": a["deducible"],
+                        "Tipo": a["tipo"],
+                    }
+                )
+
+    df = pd.DataFrame(rows)
+    st.title(titulo)
+    st.dataframe(df, use_container_width=True)
+
+
+def mostrar_amparos_adicionales(
+    amparos_adicionales: list, titulo: str = "📂 Amparos Adicionales"
+):
+    """
+    Muestra en Streamlit una tabla con los amparos adicionales de varios archivos.
+
+    Args:
+        amparos_adicionales (list): Lista de diccionarios con clave 'archivo' y lista de 'amparos'.
+        titulo (str): Título a mostrar arriba de la tabla.
+    """
+    rows = []
+    for archivo_data in amparos_adicionales:
+        archivo = archivo_data.get("archivo", "")
+        for a in archivo_data.get("amparos", []):
+            rows.append(
+                {
+                    "Archivo": archivo,
+                    "Amparo": a["amparo"],
+                    "Deducible": a["deducible"],
+                    "Tipo": a["tipo"],
+                }
+            )
+
+    df = pd.DataFrame(rows)
+
+    st.title(titulo)
+    st.dataframe(df, use_container_width=True)
+
+
+def obtener_nombres_archivos(archivos):
+    """
+    Recibe una lista de UploadedFile (Streamlit) y devuelve
+    un string con todos los nombres de archivo separados por comas.
+    """
+    if not archivos:
+        return ""
+    return ", ".join([archivo.name for archivo in archivos])
+
+
+def generar_excel_analisis_polizas(
+    poliza_actual: List[PolizaDict],
+    poliza_renovacion: List[PolizaDict],
+    riesgos_actuales: List[RiesgoDict],
+    riesgos_renovacion: List[RiesgoDict],
+    amparos_actuales: AmparosDict,
+    amparos_renovacion: AmparosDict,
+    amparos_adicionales: List[AmparosDict],
+    output_path="reporte_polizas_riesgos.xlsx",
+):
+    """
+    Genera un archivo Excel con análisis de pólizas replicando la funcionalidad
+    del código original de app_structure.py usando los datos de x.py
+
+    Args:
+        output_path (str): Ruta donde se guardará el archivo Excel
+
+    Returns:
+        str: Ruta del archivo generado
+    """
+
+    output = BytesIO()
+
+    # Create expander to show all parameters
+    with st.expander("View All Parameters"):
+        st.write("**Current Policy Parameters:**")
+        st.json([p for p in poliza_actual])
+
+        st.write("**Renewal Policy Parameters:**")
+        st.json([p for p in poliza_renovacion])
+
+        st.write("**Current Risks:**")
+        st.json([r for r in riesgos_actuales])
+
+        st.write("**Renewal Risks:**")
+        st.json([r for r in riesgos_renovacion])
+
+        st.write("**Current Coverage:**")
+        st.json(amparos_actuales)
+
+        st.write("**Renewal Coverage:**")
+        st.json(amparos_renovacion)
+
+        st.write("**Additional Coverage:**")
+        st.json([a for a in amparos_adicionales])
+
+        st.write("**Output Path:**")
+        st.code(output_path)
+
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        # ===== estilos =====
+        header_font = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
+        header_fill = PatternFill(
+            start_color="2E75B6", end_color="2E75B6", fill_type="solid"
+        )
+        data_font = Font(name="Calibri", size=11)
+        border = Border(
+            left=Side(style="thin", color="D0D0D0"),
+            right=Side(style="thin", color="D0D0D0"),
+            top=Side(style="thin", color="D0D0D0"),
+            bottom=Side(style="thin", color="D0D0D0"),
+        )
+        center_alignment = Alignment(
+            horizontal="center", vertical="center", wrap_text=True, shrink_to_fit=True
+        )
+        currency_alignment = Alignment(
+            horizontal="right", vertical="center", wrap_text=True, shrink_to_fit=True
+        )
+        left_alignment = Alignment(
+            horizontal="left", vertical="center", wrap_text=True, shrink_to_fit=True
+        )
+
+        def format_worksheet(ws, df, sheet_type):
+            ws.insert_rows(1, 2)
+            title_cell = ws.cell(row=1, column=1)
+            title_cell.value = "CENTRO DE DIAGNOSTICO AUTOMOTOR DE PALMIRA"
+            title_cell.font = Font(name="Arial", size=16, bold=True, color="FFFFFF")
+            title_cell.fill = PatternFill(
+                start_color="1F4E79", end_color="1F4E79", fill_type="solid"
+            )
+            title_cell.alignment = Alignment(horizontal="center", vertical="center")
+            ws.merge_cells(
+                start_row=1, start_column=1, end_row=1, end_column=len(df.columns)
+            )
+
+            if sheet_type == "polizas":
+                label_font = Font(name="Arial", size=14, bold=True, color="FFFFFF")
+                label_fill = PatternFill(
+                    start_color="4472C4", end_color="4472C4", fill_type="solid"
+                )
+                for row_num in range(3, ws.max_row + 1):
+                    cell_value = ws.cell(row=row_num, column=1).value
+                    if cell_value and (
+                        "PÓLIZAS ACTUALES" in str(cell_value)
+                        or "PÓLIZAS DE RENOVACIÓN" in str(cell_value)
+                    ):
+                        label_cell = ws.cell(row=row_num, column=1)
+                        label_cell.font = label_font
+                        label_cell.fill = label_fill
+                        label_cell.alignment = Alignment(
+                            horizontal="center", vertical="center"
+                        )
+                        ws.merge_cells(
+                            start_row=row_num,
+                            start_column=1,
+                            end_row=row_num,
+                            end_column=len(df.columns),
+                        )
+
+            for col_num in range(1, len(df.columns) + 1):
+                cell = ws.cell(row=3, column=col_num)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.border = border
+                cell.alignment = center_alignment
+
+            for row_num in range(4, len(df) + 4):
+                for col_num in range(1, len(df.columns) + 1):
+                    cell = ws.cell(row=row_num, column=col_num)
+                    cell.font = data_font
+                    cell.border = border
+                    col_name = df.columns[col_num - 1]
+                    if any(x in col_name.lower() for x in ["valor", "prima", "iva"]):
+                        cell.alignment = currency_alignment
+                        if isinstance(cell.value, (int, float)):
+                            cell.number_format = "$#,##0"
+                    elif col_name.lower() == "coberturas":
+                        cell.alignment = left_alignment
+                    else:
+                        cell.alignment = center_alignment
+
+            for col_num in range(1, len(df.columns) + 1):
+                column_letter = get_column_letter(col_num)
+                col_name = df.columns[col_num - 1]
+                max_length = max(
+                    len(str(col_name)),
+                    len("CENTRO DE DIAGNOSTICO AUTOMOTOR DE PALMIRA")
+                    // len(df.columns),
+                )
+                for row_num in range(4, len(df) + 4):
+                    cell_value = str(ws.cell(row=row_num, column=col_num).value or "")
+                    max_length = max(max_length, len(cell_value))
+                if col_name.lower() == "coberturas":
+                    width = 45
+                else:
+                    width = min(max(max_length + 2, 15), 40)
+                ws.column_dimensions[column_letter].width = width
+
+            ws.auto_filter.ref = f"A1:{get_column_letter(len(df.columns))}{len(df) + 1}"
+            ws.freeze_panes = "A2"
+
+        # ===== hoja Análisis_Estructurado =====
+        intereses_unicos = list(
+            set(
+                [item["Interés Asegurado"] for item in poliza_actual]
+                + [item["Interés Asegurado"] for item in poliza_renovacion]
+            )
+        )
+        valores_actuales = {
+            item["Interés Asegurado"]: item["Valor Asegurado"] for item in poliza_actual
+        }
+        valores_renovacion = {
+            item["Interés Asegurado"]: item["Valor Asegurado"]
+            for item in poliza_renovacion
+        }
+        total_actual = sum(valores_actuales.values())
+        total_renovacion = sum(valores_renovacion.values())
+
+        coberturas = [
+            "Incendio y/o Rayo Edificios",
+            "Explosión Mejoras Locativas",
+            "Terremoto, temblor Muebles y Enseres",
+            "Asonada, motin, conm. Civil/popular huelga Mercancias Fijas",
+            "Extension de amparo",
+            "Daños por agua, Anegación Dineros",
+            "Incendio y/o Rayo en aparatos electricos Equipo Electronico",
+        ]
+
+        columnas_analisis = [
+            "Coberturas",
+            "Interés Asegurado",
+            "Valor Asegurado Actual",
+            "Valor Asegurado Renovado",
+        ]
+        intereses_ordenados = sorted(intereses_unicos)
+        max_filas = max(len(intereses_ordenados), len(coberturas))
+
+        datos_estructurados = []
+        for i in range(max_filas):
+            fila = {
+                "Coberturas": coberturas[i] if i < len(coberturas) else "",
+                "Interés Asegurado": (
+                    intereses_ordenados[i] if i < len(intereses_ordenados) else ""
+                ),
+                "Valor Asegurado Actual": (
+                    valores_actuales.get(intereses_ordenados[i], 0)
+                    if i < len(intereses_ordenados)
+                    else ""
+                ),
+                "Valor Asegurado Renovado": (
+                    valores_renovacion.get(intereses_ordenados[i], 0)
+                    if i < len(intereses_ordenados)
+                    else ""
+                ),
+            }
+            datos_estructurados.append(fila)
+
+        datos_estructurados.append(
+            {
+                "Coberturas": "",
+                "Interés Asegurado": "TOTAL",
+                "Valor Asegurado Actual": total_actual,
+                "Valor Asegurado Renovado": total_renovacion,
+            }
+        )
+
+        # forzar solo columnas definidas
+        df_estructurado = pd.DataFrame(datos_estructurados)[columnas_analisis]
+
+        df_estructurado.to_excel(
+            writer, sheet_name="Análisis_Estructurado", index=False
+        )
+        format_worksheet(
+            writer.sheets["Análisis_Estructurado"], df_estructurado, "polizas"
+        )
+
+        # ===== hoja Polizas_Consolidadas =====
+        def crear_hoja_consolidada():
+            def procesar_poliza(poliza_data):
+                if not poliza_data:
+                    return None, None
+                intereses_valores = {}
+                total_poliza = sum(item["Valor Asegurado"] for item in poliza_data)
+                for item in poliza_data:
+                    intereses_valores[item["Interés Asegurado"]] = item[
+                        "Valor Asegurado"
+                    ]
+                columnas = list(intereses_valores.keys()) + ["Total Póliza"]
+                valores = [f"${valor:,.0f}" for valor in intereses_valores.values()] + [
+                    f"${total_poliza:,.0f}"
+                ]
+                return columnas, valores
+
+            columnas_actuales, valores_actuales = procesar_poliza(poliza_actual)
+            columnas_renovacion, valores_renovacion = procesar_poliza(poliza_renovacion)
+
+            datos_consolidados = []
+            if columnas_actuales and valores_actuales:
+                datos_consolidados.append(
+                    ["PÓLIZAS ACTUALES"] + [""] * (len(columnas_actuales) - 1)
+                )
+                datos_consolidados.append(columnas_actuales)
+                datos_consolidados.append(valores_actuales)
+                datos_consolidados.append([""] * len(columnas_actuales))
+
+            if columnas_renovacion and valores_renovacion:
+                max_cols = max(
+                    (len(columnas_actuales) if columnas_actuales else 0),
+                    len(columnas_renovacion),
+                )
+                datos_consolidados.append(
+                    ["PÓLIZAS DE RENOVACIÓN"] + [""] * (max_cols - 1)
+                )
+                columnas_renovacion_ajustadas = columnas_renovacion + [""] * (
+                    max_cols - len(columnas_renovacion)
+                )
+                valores_renovacion_ajustados = valores_renovacion + [""] * (
+                    max_cols - len(valores_renovacion)
+                )
+                datos_consolidados.append(columnas_renovacion_ajustadas)
+                datos_consolidados.append(valores_renovacion_ajustados)
+
+            if datos_consolidados:
+                max_cols = max(len(fila) for fila in datos_consolidados)
+                for i, fila in enumerate(datos_consolidados):
+                    if len(fila) < max_cols:
+                        datos_consolidados[i] = fila + [""] * (max_cols - len(fila))
+                columnas_genericas = [f"Columna_{i+1}" for i in range(max_cols)]
+                df_consolidado = pd.DataFrame(
+                    datos_consolidados, columns=columnas_genericas
+                )
+                df_consolidado.to_excel(
+                    writer, sheet_name="Polizas_Consolidadas", index=False, header=False
+                )
+                format_worksheet(
+                    writer.sheets["Polizas_Consolidadas"], df_consolidado, "polizas"
+                )
+
+        crear_hoja_consolidada()
+
+        # ===== hoja Amparos (tercera hoja) =====
+        def crear_hoja_amparos():
+            # Generar la tabla unificada de amparos basada en la imagen de referencia
+            datos_amparos = []
+
+            # Agregar secciones basadas en tipo de amparo
+            tipos_encontrados = set()
+
+            # Procesar amparos actuales
+            for amp in amparos_actuales["amparos"]:
+                tipos_encontrados.add(amp["tipo"])
+
+            # Procesar amparos renovación
+            for amp in amparos_renovacion["amparos"]:
+                tipos_encontrados.add(amp["tipo"])
+
+            # Procesar amparos adicionales
+            for doc in amparos_adicionales:
+                for amp in doc["amparos"]:
+                    tipos_encontrados.add(amp["tipo"])
+
+            # Ordenar tipos para crear secciones consistentes
+            tipos_ordenados = sorted(tipos_encontrados)
+
+            # Crear estructura basada en la imagen de referencia
+            amparos_unicos = []
+            amparos_vistos = set()
+
+            # Recopilar todos los amparos únicos
+            for amp in amparos_actuales["amparos"]:
+                if amp["amparo"] not in amparos_vistos:
+                    amparos_unicos.append(amp)
+                    amparos_vistos.add(amp["amparo"])
+
+            for amp in amparos_renovacion["amparos"]:
+                if amp["amparo"] not in amparos_vistos:
+                    amparos_unicos.append(amp)
+                    amparos_vistos.add(amp["amparo"])
+
+            for doc in amparos_adicionales:
+                for amp in doc["amparos"]:
+                    if amp["amparo"] not in amparos_vistos:
+                        amparos_unicos.append(amp)
+                        amparos_vistos.add(amp["amparo"])
+
+            # Organizar por tipo
+            amparos_por_tipo = {}
+            for amp in amparos_unicos:
+                tipo = amp["tipo"]
+                if tipo not in amparos_por_tipo:
+                    amparos_por_tipo[tipo] = []
+                amparos_por_tipo[tipo].append(amp)
+
+            # Crear estructura de datos para Excel
+            for tipo in tipos_ordenados:
+                # Añadir fila de sección (encabezado del tipo)
+                datos_amparos.append(
+                    {
+                        "RAMO": tipo.upper(),
+                        "CONDICIONES ACTUALES": "",
+                        "ZURICH": "",
+                        "AXA": "",
+                        "BBVA": "",
+                        "_es_seccion": True,
+                    }
+                )
+
+                # Añadir amparos de este tipo
+                if tipo in amparos_por_tipo:
+                    for amp in amparos_por_tipo[tipo]:
+                        # Buscar deducibles en actuales, renovación y adicionales
+                        ded_actual = ""
+                        ded_renovacion = ""
+                        ded_adicional = ""
+
+                        # Buscar en actuales
+                        for a in amparos_actuales["amparos"]:
+                            if a["amparo"] == amp["amparo"]:
+                                ded_actual = a["deducible"]
+                                break
+
+                        # Buscar en renovación
+                        for a in amparos_renovacion["amparos"]:
+                            if a["amparo"] == amp["amparo"]:
+                                ded_renovacion = a["deducible"]
+                                break
+
+                        # Buscar en adicionales
+                        for doc in amparos_adicionales:
+                            for a in doc["amparos"]:
+                                if a["amparo"] == amp["amparo"]:
+                                    ded_adicional = a["deducible"]
+                                    break
+
+                        datos_amparos.append(
+                            {
+                                "RAMO": amp["amparo"],
+                                "CONDICIONES ACTUALES": ded_actual,
+                                "CONDICIONES DE RENOVACIÓN": ded_renovacion,
+                                **{
+                                    doc["archivo"]: (
+                                        next(
+                                            (
+                                                a["deducible"]
+                                                for a in doc["amparos"]
+                                                if a["amparo"] == amp["amparo"]
+                                            ),
+                                            "",
+                                        )
+                                    )
+                                    for doc in amparos_adicionales
+                                },
+                                "_es_seccion": False,
+                            }
+                        )
+
+            # Crear DataFrame
+            # Columnas dinámicas: RAMO, actuales, renovación y un campo por cada archivo adicional
+            columnas = [
+                "RAMO",
+                "CONDICIONES ACTUALES",
+                "CONDICIONES DE RENOVACIÓN",
+            ] + [doc["archivo"] for doc in amparos_adicionales]
+            df_amparos = pd.DataFrame(datos_amparos)[columnas]
+
+            # Escribir a Excel
+            df_amparos.to_excel(writer, sheet_name="Amparos", index=False)
+            ws = writer.sheets["Amparos"]
+
+            # Formateo especial para la hoja de amparos
+
+            # 1. Insertar filas de título y preparar cabeceras multinivel
+            ws.insert_rows(1, 2)
+
+            # 2. Título principal
+            title_cell = ws.cell(row=1, column=1)
+            title_cell.value = "DEDUCIBLES"
+            title_cell.font = Font(name="Calibri", size=16, bold=True, color="FFFFFF")
+            title_cell.fill = PatternFill(
+                start_color="1F4E79", end_color="1F4E79", fill_type="solid"
+            )
+            title_cell.alignment = Alignment(horizontal="center", vertical="center")
+            ws.merge_cells(
+                start_row=1, start_column=1, end_row=1, end_column=len(columnas)
+            )
+
+            # 3. Encabezados de grupo (fila 2) y subencabezados (fila 3)
+            # RAMO ocupa dos filas
+            ws.merge_cells(start_row=2, start_column=1, end_row=3, end_column=1)
+            a2 = ws.cell(row=2, column=1)
+            a2.value = "RAMO"
+            a2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+            a2.fill = PatternFill(
+                start_color="305496", end_color="305496", fill_type="solid"
+            )
+            a2.alignment = Alignment(
+                horizontal="center", vertical="center", wrap_text=True
+            )
+            a2.border = Border(
+                left=Side(style="thin", color="000000"),
+                right=Side(style="thin", color="000000"),
+                top=Side(style="thin", color="000000"),
+                bottom=Side(style="thin", color="000000"),
+            )
+
+            # CONDICIONES ACTUALES (columna B) con subencabezado dinámico del archivo de actuales
+            b2 = ws.cell(row=2, column=2)
+            b2.value = "CONDICIONES ACTUALES"
+            b2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+            b2.fill = PatternFill(
+                start_color="70AD47", end_color="70AD47", fill_type="solid"
+            )
+            b2.alignment = Alignment(
+                horizontal="center", vertical="center", wrap_text=True
+            )
+            b2.border = Border(
+                left=Side(style="thin", color="000000"),
+                right=Side(style="thin", color="000000"),
+                top=Side(style="thin", color="000000"),
+                bottom=Side(style="thin", color="000000"),
+            )
+            ws.cell(row=3, column=2).value = amparos_actuales.get(
+                "archivo", "CONDICIONES ACTUALES"
+            )
+
+            # CONDICIONES DE RENOVACIÓN (columna C)
+            c2 = ws.cell(row=2, column=3)
+            c2.value = "CONDICIONES DE RENOVACIÓN"
+            c2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+            c2.fill = PatternFill(
+                start_color="2F75B5", end_color="2F75B5", fill_type="solid"
+            )
+            c2.alignment = Alignment(
+                horizontal="center", vertical="center", wrap_text=True
+            )
+            c2.border = Border(
+                left=Side(style="thin", color="000000"),
+                right=Side(style="thin", color="000000"),
+                top=Side(style="thin", color="000000"),
+                bottom=Side(style="thin", color="000000"),
+            )
+            ws.cell(row=3, column=3).value = amparos_renovacion.get(
+                "archivo", "CONDICIONES DE RENOVACIÓN"
+            )
+
+            # COTIZACIONES adicionales (desde la columna 4 en adelante)
+            if len(columnas) > 3:
+                ws.merge_cells(
+                    start_row=2, start_column=4, end_row=2, end_column=len(columnas)
+                )
+                d2 = ws.cell(row=2, column=4)
+                d2.value = "ARCHIVOS ADICIONALES"
+                d2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+                d2.fill = PatternFill(
+                    start_color="404040", end_color="404040", fill_type="solid"
+                )
+                d2.alignment = Alignment(
+                    horizontal="center", vertical="center", wrap_text=True
+                )
+                d2.border = Border(
+                    left=Side(style="thin", color="000000"),
+                    right=Side(style="thin", color="000000"),
+                    top=Side(style="thin", color="000000"),
+                    bottom=Side(style="thin", color="000000"),
+                )
+                # Subencabezados con nombres reales de archivos
+                for idx, nombre_archivo in enumerate(columnas[3:], start=4):
+                    ws.cell(row=3, column=idx).value = nombre_archivo
+
+            # 4. Formatear subencabezados de columna (fila 3)
+            for col_num in range(1, len(columnas) + 1):
+                cell = ws.cell(row=3, column=col_num)
+                cell.font = Font(
+                    name="Calibri",
+                    size=11,
+                    bold=True,
+                    color="000000" if col_num >= 4 else "FFFFFF",
+                )
+                fill_map = {
+                    1: "305496",  # RAMO
+                    2: "A9D08E",  # Actual
+                    3: "9DC3E6",  # Renovación
+                }
+                color = fill_map.get(col_num, "D9D9D9")
+                cell.fill = PatternFill(
+                    start_color=color, end_color=color, fill_type="solid"
+                )
+                cell.border = Border(
+                    left=Side(style="thin", color="000000"),
+                    right=Side(style="thin", color="000000"),
+                    top=Side(style="thin", color="000000"),
+                    bottom=Side(style="thin", color="000000"),
+                )
+                cell.alignment = Alignment(
+                    horizontal="center", vertical="center", wrap_text=True
+                )
+
+            # 4. Formatear datos
+            for row_num in range(4, len(df_amparos) + 4):
+                fila_datos = datos_amparos[row_num - 4]
+                es_seccion = fila_datos.get("_es_seccion", False)
+
+                for col_num in range(1, len(columnas) + 1):
+                    cell = ws.cell(row=row_num, column=col_num)
+
+                    if es_seccion:
+                        # Formato para filas de sección (tipo de amparo)
+                        cell.font = Font(
+                            name="Calibri", size=11, bold=True, color="FFFFFF"
+                        )
+                        cell.fill = PatternFill(
+                            start_color="4472C4", end_color="4472C4", fill_type="solid"
+                        )
+                        cell.alignment = Alignment(
+                            horizontal="center", vertical="center", wrap_text=True
+                        )
+
+                        # Mergear toda la fila para la sección
+                        if col_num == 1:
+                            ws.merge_cells(
+                                start_row=row_num,
+                                start_column=1,
+                                end_row=row_num,
+                                end_column=len(columnas),
+                            )
+                    else:
+                        # Formato para filas de datos normales
+                        cell.font = Font(name="Calibri", size=10)
+                        cell.alignment = Alignment(
+                            horizontal="left", vertical="center", wrap_text=True
+                        )
+
+                    # Bordes para todas las celdas
+                    cell.border = Border(
+                        left=Side(style="thin", color="000000"),
+                        right=Side(style="thin", color="000000"),
+                        top=Side(style="thin", color="000000"),
+                        bottom=Side(style="thin", color="000000"),
+                    )
+
+            # 5. Ajustar anchos de columna
+            ws.column_dimensions["A"].width = 50  # RAMO - más ancho para nombres largos
+            ws.column_dimensions["B"].width = 30  # CONDICIONES ACTUALES
+            ws.column_dimensions["C"].width = 30  # ZURICH
+            ws.column_dimensions["D"].width = 30  # AXA
+            ws.column_dimensions["E"].width = 30  # BBVA
+
+            # 6. Ajustar altura de filas para mejor legibilidad
+            for row_num in range(1, len(df_amparos) + 4):
+                ws.row_dimensions[row_num].height = 20
+
+        crear_hoja_amparos()
+
+        # ===== hoja Riesgos (cuarta hoja) =====
+        def crear_hoja_riesgos():
+            # 1) Normalización de intereses asegurados (para consistencia)
+            def normalizar_interes(texto: str) -> str:
+                t = (texto or "").strip().lower()
+                reemplazos = {
+                    "edificio": "Edificio",
+                    "muebles y enseres": "Muebles y Enseres",
+                    "maquinaria y equipo": "Maquinaria y Equipo",
+                    "equipo electrico y electronico": "Equipo Eléctrico y Electrónico",
+                    "equipo eléctrico y electrónico": "Equipo Eléctrico y Electrónico",
+                    "mercancías": "Mercancías",
+                    "mercancias": "Mercancías",
+                    "dineros": "Dineros",
+                    "equipo movil": "Equipo Móvil",
+                    "equipo móvil": "Equipo Móvil",
+                    "obras de arte": "Obras de Arte",
+                }
+                # caso combinado en renovación
+                if "+" in t and "muebles" in t and "obras" in t:
+                    return "Muebles y Enseres"  # asignamos al rubro principal
+                return reemplazos.get(t, texto)
+
+            # 2) Definir columnas a partir de riesgos_actuales (L36-375)
+            intereses_cols = sorted(
+                {
+                    normalizar_interes(det["interes_asegurado"])  # noqa: E501
+                    for r in riesgos_actuales
+                    for det in r.get("detalle_cobertura", [])
+                }
+            )
+
+            def pivot_riesgos(dataset):
+                filas = []
+                for r in dataset:
+                    fila = {"Ubicación": r.get("ubicacion", "")}
+                    for col in intereses_cols:
+                        fila[col] = 0
+                    for det in r.get("detalle_cobertura", []):
+                        k = normalizar_interes(det.get("interes_asegurado", ""))
+                        if k in fila:
+                            fila[k] += det.get("valor_asegurado", 0)
+                    filas.append(fila)
+                # Totales
+                tot = {"Ubicación": "TOTAL VALORES"}
+                for col in intereses_cols:
+                    tot[col] = sum(f[col] for f in filas)
+                filas.append(tot)
+                return pd.DataFrame(filas, columns=["Ubicación"] + intereses_cols)
+
+            df_actual = pivot_riesgos(riesgos_actuales)
+            df_renov = pivot_riesgos(riesgos_renovacion)
+
+            # Escribir ambas tablas en la MISMA hoja, con los mismos encabezados
+            start_row = 0
+            sheet_name = "Riesgos"
+
+            # Tabla 1: Póliza actual
+            df_actual.to_excel(
+                writer, sheet_name=sheet_name, index=False, startrow=start_row + 1
+            )
+            ws = writer.sheets[sheet_name]
+            ws.cell(row=start_row + 1, column=1, value="Póliza actual").font = Font(
+                name="Arial", size=13, bold=True
+            )
+            ws.merge_cells(
+                start_row=start_row + 1,
+                start_column=1,
+                end_row=start_row + 1,
+                end_column=len(df_actual.columns),
+            )
+
+            # Formato encabezados y celdas de la primera tabla
+            header_row_1 = start_row + 2
+            for col_idx in range(1, len(df_actual.columns) + 1):
+                c = ws.cell(row=header_row_1, column=col_idx)
+                c.font = header_font
+                c.fill = header_fill
+                c.border = border
+                c.alignment = center_alignment
+            for r in range(header_row_1 + 1, header_row_1 + 1 + len(df_actual)):
+                for cidx in range(1, len(df_actual.columns) + 1):
+                    c = ws.cell(row=r, column=cidx)
+                    c.font = data_font
+                    c.border = border
+                    if cidx == 1:
+                        c.alignment = left_alignment
+                    else:
+                        c.alignment = currency_alignment
+                        if isinstance(c.value, (int, float)):
+                            c.number_format = "$#,##0"
+
+            # Tabla 2: Póliza de Renovación
+            start_row_2 = header_row_1 + len(df_actual) + 2
+            df_renov.to_excel(
+                writer, sheet_name=sheet_name, index=False, startrow=start_row_2 + 1
+            )
+            ws.cell(
+                row=start_row_2 + 1, column=1, value="Póliza de Renovación"
+            ).font = Font(name="Arial", size=13, bold=True)
+            ws.merge_cells(
+                start_row=start_row_2 + 1,
+                start_column=1,
+                end_row=start_row_2 + 1,
+                end_column=len(df_renov.columns),
+            )
+
+            header_row_2 = start_row_2 + 2
+            for col_idx in range(1, len(df_renov.columns) + 1):
+                c = ws.cell(row=header_row_2, column=col_idx)
+                c.font = header_font
+                c.fill = header_fill
+                c.border = border
+                c.alignment = center_alignment
+            for r in range(header_row_2 + 1, header_row_2 + 1 + len(df_renov)):
+                for cidx in range(1, len(df_renov.columns) + 1):
+                    c = ws.cell(row=r, column=cidx)
+                    c.font = data_font
+                    c.border = border
+                    if cidx == 1:
+                        c.alignment = left_alignment
+                    else:
+                        c.alignment = currency_alignment
+                        if isinstance(c.value, (int, float)):
+                            c.number_format = "$#,##0"
+
+            # Ajuste de anchos para toda la hoja
+            for cidx in range(1, len(df_actual.columns) + 1):
+                letter = get_column_letter(cidx)
+                if cidx == 1:
+                    ws.column_dimensions[letter].width = 50
+                else:
+                    ws.column_dimensions[letter].width = 20
+
+        crear_hoja_riesgos()
+
+    with open(output_path, "wb") as f:
+        f.write(output.getvalue())
+
+    print(f"✅ Archivo Excel generado exitosamente: {output_path}")
+    return output_path
 
 
 def cleanup_processed_files(queue_items_list):
@@ -238,9 +1134,6 @@ def listar_valores_asegurados(poliza_json, tipo_documento):
         )
 
     return resultado
-
-
-# def x():
 
 
 class InvoiceOrchestrator:
@@ -469,6 +1362,8 @@ async def main():
             docs_adicionales = []
             doc_conjuntos = None
 
+            amparos_adicionales = []
+
             with st.expander("Actual"):
                 for item in results:
                     if item.get("doc_type") == "actual":
@@ -507,6 +1402,12 @@ async def main():
                         )
                         doc_adicional["file_name"] = item.get("file_name")
                         docs_adicionales.append(doc_adicional)
+                        amparos_adicionales.append(
+                            {
+                                "archivo": doc_adicional.get("file_name"),
+                                "amparos": doc_adicional.get("amparos"),
+                            }
+                        )
                         st.write(doc_adicional)
 
             with st.expander("Conjunto"):
@@ -518,7 +1419,15 @@ async def main():
                             .get("parts", [{}])[0]
                             .get("text", "")
                         )
-                        doc_conjuntos["file_name"] = item.get("file_name")
+                        doc_conjuntos["file_name"] = obtener_nombres_archivos(
+                            archivos_conjuntos
+                        )
+                        amparos_adicionales.append(
+                            {
+                                "archivo": doc_conjuntos.get("file_name"),
+                                "amparos": doc_conjuntos.get("amparos", ""),
+                            }
+                        )
                         st.write(doc_conjuntos)
 
             if poliza_actual:
@@ -617,6 +1526,7 @@ async def main():
                 st.markdown("---")
 
             if docs_adicionales:
+                st.header("Primas")
                 solo_primas = [
                     {
                         "Archivo": item["Archivo"],
@@ -628,7 +1538,7 @@ async def main():
                 ]
                 with st.expander("solo_primas"):
                     st.write(solo_primas)
-                
+
                 df_primas = pd.DataFrame(solo_primas)
 
                 # Formatear valores monetarios para visualización
@@ -647,551 +1557,81 @@ async def main():
 
                 st.markdown("---")
 
+            riesgos_actuales = poliza_actual["riesgos"] if poliza_actual else []
+            riesgos_renovacion = (
+                poliza_renovacion["riesgos"] if poliza_renovacion else []
+            )
+            amparos_actuales = (
+                {
+                    "archivo": poliza_actual.get("file_name"),
+                    "amparos": poliza_actual["amparos"],
+                }
+                if poliza_actual
+                else {
+                    "archivo": poliza_actual.get("file_name"),
+                    "amparos": [],
+                }
+            )
+            amparos_renovacion = (
+                {
+                    "archivo": poliza_renovacion.get("file_name"),
+                    "amparos": poliza_renovacion["amparos"],
+                }
+                if poliza_renovacion
+                else {
+                    "archivo": poliza_renovacion.get("file_name"),
+                    "amparos": [],
+                }
+            )
+
+            mostrar_riesgos(riesgos_actuales, "📊 Tabla de Riesgos Actuales")
+            mostrar_riesgos(riesgos_renovacion, "📊 Tabla de Riesgos de Renovación")
+
+            mostrar_amparos(amparos_actuales, "📄 Amparos Actuales")
+            mostrar_amparos(amparos_renovacion, "📄 Amparos de Renovación")
+
+            mostrar_amparos_adicionales(amparos_adicionales, "📂 Amparos Adicionales")
+
             if poliza_data_actual or docs_adicionales_data:
                 st.subheader("📥 Descargar Resultados")
+                tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+                tmp_path = tmp.name
+                tmp.close()
 
-                # Crear archivo Excel en memoria con datos filtrados y formato profesional
-                output = BytesIO()
-                with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                    # Asegurarse de que al menos una hoja sea creada y visible
-                    if poliza_data_actual:
-                        pd.DataFrame(poliza_data_actual).to_excel(
-                            writer, sheet_name="Pólizas Actuales", index=False
-                        )
-                    elif docs_adicionales_data:
-                        pd.DataFrame(docs_adicionales_data).to_excel(
-                            writer, sheet_name="Documentos Adicionales", index=False
-                        )
-                    else:
-                        # Si no hay datos, crear una hoja vacía para evitar el error
-                        pd.DataFrame().to_excel(writer, sheet_name="Datos", index=False)
-                    from openpyxl.styles import (
-                        Font,
-                        PatternFill,
-                        Border,
-                        Side,
-                        Alignment,
+                try:
+                    output_path = generar_excel_analisis_polizas(
+                        poliza_actual=poliza_actual_cuadro,
+                        poliza_renovacion=poliza_renovacion_cuadro,
+                        riesgos_actuales=riesgos_actuales,
+                        riesgos_renovacion=riesgos_renovacion,
+                        amparos_actuales=amparos_actuales,
+                        amparos_renovacion=amparos_renovacion,
+                        amparos_adicionales=amparos_adicionales,
+                        output_path=tmp_path,
                     )
-                    from openpyxl.utils import get_column_letter
-
-                    # Definir estilos
-                    header_font = Font(
-                        name="Calibri", size=12, bold=True, color="FFFFFF"
-                    )
-                    header_fill = PatternFill(
-                        start_color="2E75B6",
-                        end_color="2E75B6",
-                        fill_type="solid",
-                    )
-                    data_font = Font(name="Calibri", size=11)
-                    border = Border(
-                        left=Side(style="thin", color="D0D0D0"),
-                        right=Side(style="thin", color="D0D0D0"),
-                        top=Side(style="thin", color="D0D0D0"),
-                        bottom=Side(style="thin", color="D0D0D0"),
-                    )
-                    center_alignment = Alignment(horizontal="center", vertical="center")
-                    currency_alignment = Alignment(
-                        horizontal="right", vertical="center"
-                    )
-                    left_alignment = Alignment(horizontal="left", vertical="center")
-
-                    def format_worksheet(ws, df, sheet_type):
-                        # Insertar fila para el título
-                        ws.insert_rows(1, 2)  # Insertar 2 filas al inicio
-
-                        # Agregar título en la primera fila
-                        title_cell = ws.cell(row=1, column=1)
-                        title_cell.value = "CENTRO DE DIAGNOSTICO AUTOMOTOR DE PALMIRA"
-
-                        title_font = Font(
-                            name="Arial", size=16, bold=True, color="FFFFFF"
+                    with open(output_path, "rb") as f:
+                        excel_bytes = f.read()
+                        b64_excel = base64.b64encode(excel_bytes).decode()
+                        href = (
+                            "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,"
+                            + b64_excel
                         )
-                        title_fill = PatternFill(
-                            start_color="1F4E79",
-                            end_color="1F4E79",
-                            fill_type="solid",
-                        )
-                        title_alignment = Alignment(
-                            horizontal="center", vertical="center"
-                        )
-
-                        title_cell.font = title_font
-                        title_cell.fill = title_fill
-                        title_cell.alignment = title_alignment
-
-                        # Combinar celdas para el título (toda la fila)
-                        ws.merge_cells(
-                            start_row=1,
-                            start_column=1,
-                            end_row=1,
-                            end_column=len(df.columns),
-                        )
-
-                        # Formato especial para etiquetas de pólizas consolidadas
-                        if sheet_type == "polizas":
-                            label_font = Font(
-                                name="Arial", size=14, bold=True, color="FFFFFF"
-                            )
-                            label_fill = PatternFill(
-                                start_color="4472C4",
-                                end_color="4472C4",
-                                fill_type="solid",
-                            )
-
-                            # Buscar y formatear etiquetas de pólizas
-                            for row_num in range(3, ws.max_row + 1):
-                                cell_value = ws.cell(row=row_num, column=1).value
-                                if cell_value and (
-                                    "PÓLIZAS ACTUALES" in str(cell_value)
-                                    or "PÓLIZAS DE RENOVACIÓN" in str(cell_value)
-                                ):
-                                    # Aplicar formato a la etiqueta
-                                    label_cell = ws.cell(row=row_num, column=1)
-                                    label_cell.font = label_font
-                                    label_cell.fill = label_fill
-                                    label_cell.alignment = title_alignment
-
-                                    # Combinar celdas para la etiqueta
-                                    ws.merge_cells(
-                                        start_row=row_num,
-                                        start_column=1,
-                                        end_row=row_num,
-                                        end_column=len(df.columns),
-                                    )
-
-                        # Aplicar formato a encabezados (ahora en la fila 3)
-                        for col_num in range(1, len(df.columns) + 1):
-                            cell = ws.cell(row=3, column=col_num)
-                            cell.font = header_font
-                            cell.fill = header_fill
-                            cell.border = border
-                            cell.alignment = center_alignment
-
-                        # Aplicar formato a datos (ahora empezando desde la fila 4)
-                        for row_num in range(4, len(df) + 4):
-                            for col_num in range(1, len(df.columns) + 1):
-                                cell = ws.cell(row=row_num, column=col_num)
-                                cell.font = data_font
-                                cell.border = border
-
-                                # Aplicar alineación según el tipo de columna
-                                col_name = df.columns[col_num - 1]
-                                if (
-                                    "valor" in col_name.lower()
-                                    or "prima" in col_name.lower()
-                                    or "iva" in col_name.lower()
-                                ):
-                                    cell.alignment = currency_alignment
-                                    # Formatear como moneda
-                                    if isinstance(cell.value, (int, float)):
-                                        cell.number_format = "$#,##0"
-                                elif col_name.lower() == "coberturas":
-                                    cell.alignment = left_alignment
-                                else:
-                                    cell.alignment = center_alignment
-
-                        # Ajustar ancho de columnas
-                        for col_num in range(1, len(df.columns) + 1):
-                            column_letter = get_column_letter(col_num)
-                            col_name = df.columns[col_num - 1]
-
-                            # Calcular ancho basado en el contenido (incluyendo el título)
-                            max_length = max(
-                                len(str(col_name)),
-                                len("CENTRO DE DIAGNOSTICO AUTOMOTOR DE PALMIRA")
-                                // len(df.columns),
-                            )
-                            for row_num in range(4, len(df) + 4):
-                                cell_value = str(
-                                    ws.cell(row=row_num, column=col_num).value or ""
-                                )
-                                max_length = max(max_length, len(cell_value))
-
-                            # Establecer ancho específico para la columna Coberturas
-                            if col_name.lower() == "coberturas":
-                                width = 45  # Ancho específico para coberturas
-                            else:
-                                # Establecer ancho mínimo y máximo para otras columnas
-                                width = min(max(max_length + 2, 15), 30)
-
-                            ws.column_dimensions[column_letter].width = width
-
-                        # Aplicar filtros automáticos
-                        ws.auto_filter.ref = (
-                            f"A1:{get_column_letter(len(df.columns))}{len(df) + 1}"
-                        )
-
-                        # Congelar primera fila
-                        ws.freeze_panes = "A2"
-
-                    # Crear primero la hoja "Análisis_Estructurado" para que sea la primera pestaña
-                    if (
-                        poliza_actual_cuadro
-                        and poliza_renovacion_cuadro
-                        and docs_adicionales_data
-                    ):
-                        # Crear estructura organizada con 4 columnas específicas
-
-                        # Obtener datos únicos de intereses asegurados
-                        intereses_unicos = list(
-                            set(
-                                [
-                                    item["Interés Asegurado"]
-                                    for item in poliza_actual_cuadro
-                                ]
-                                + [
-                                    item["Interés Asegurado"]
-                                    for item in poliza_renovacion_cuadro
-                                ]
-                            )
-                        )
-
-                        # Crear diccionarios para búsqueda rápida
-                        valores_actuales = {
-                            item["Interés Asegurado"]: item["valor_asegurado"]
-                            for item in poliza_actual_cuadro
-                        }
-                        valores_renovacion = {
-                            item["Interés Asegurado"]: item["valor_asegurado"]
-                            for item in poliza_renovacion_cuadro
-                        }
-
-                        # Calcular totales
-                        total_actual = sum(valores_actuales.values())
-                        total_renovacion = sum(valores_renovacion.values())
-
-                        # Crear datos estructurados
-                        datos_estructurados = []
-
-                        # Agregar filas de intereses asegurados
-                        for interes in sorted(intereses_unicos):
-                            datos_estructurados.append(
-                                {
-                                    "Interés Asegurado": interes,
-                                    "Valor Asegurado Actual": valores_actuales.get(
-                                        interes, 0
-                                    ),
-                                    "Valor Asegurado Renovado": valores_renovacion.get(
-                                        interes, 0
-                                    ),
-                                    "Primas": "",
-                                }
-                            )
-
-                        # Agregar fila de totales
-                        datos_estructurados.append(
-                            {
-                                "Interés Asegurado": "TOTAL",
-                                "Valor Asegurado Actual": total_actual,
-                                "Valor Asegurado Renovado": total_renovacion,
-                                "Primas": "",
-                            }
-                        )
-
-                        # Crear estructura base con columnas dinámicas para primas
-                        # Definir lista de coberturas
-                        coberturas = [
-                            "Incendio y/o Rayo Edificios",
-                            "Explosión Mejoras Locativas",
-                            "Terremoto, temblor Muebles y Enseres",
-                            "Asonada, motin, conm. Civil/popular huelga Mercancias Fijas",
-                            "Extension de amparo",
-                            "Daños por agua, Anegación Dineros",
-                            "Incendio y/o Rayo en aparatos electricos Equipo Electronico",
-                        ]
-
-                        columnas_base = [
-                            "Coberturas",
-                            "Interés Asegurado",
-                            "Valor Asegurado Actual",
-                            "Valor Asegurado Renovado",
-                        ]
-
-                        # Agregar columnas para cada archivo de prima
-                        columnas_primas = []
-                        if solo_primas:
-                            for prima in solo_primas:
-                                nombre_archivo = prima["Archivo"]
-                                if nombre_archivo not in columnas_primas:
-                                    columnas_primas.append(nombre_archivo)
-
-                        # Crear todas las columnas
-                        todas_columnas = columnas_base + columnas_primas
-
-                        # Inicializar datos estructurados con todas las columnas
-                        datos_estructurados = []
-
-                        # Crear mapas de valores de prima por archivo
-                        valores_prima_por_archivo = {}
-                        if solo_primas:
-                            for prima in solo_primas:
-                                nombre_archivo = prima["Archivo"]
-                                valores_prima_por_archivo[nombre_archivo] = [
-                                    f"${prima['Prima Sin IVA']:,.0f}",
-                                ]
-
-                        # Determinar el número máximo de filas necesarias
-                        intereses_ordenados = sorted(intereses_unicos)
-                        max_filas = max(len(intereses_ordenados), len(coberturas))
-
-                        # Agregar filas con coberturas e intereses asegurados
-                        for i in range(max_filas):
-                            fila = {
-                                "Coberturas": (
-                                    coberturas[i] if i < len(coberturas) else ""
-                                ),
-                                "Interés Asegurado": (
-                                    intereses_ordenados[i]
-                                    if i < len(intereses_ordenados)
-                                    else ""
-                                ),
-                                "Valor Asegurado Actual": (
-                                    valores_actuales.get(intereses_ordenados[i], 0)
-                                    if i < len(intereses_ordenados)
-                                    else ""
-                                ),
-                                "Valor Asegurado Renovado": (
-                                    valores_renovacion.get(intereses_ordenados[i], 0)
-                                    if i < len(intereses_ordenados)
-                                    else ""
-                                ),
-                            }
-
-                            # Agregar valores de prima en las primeras filas
-                            for col_prima in columnas_primas:
-                                if col_prima in valores_prima_por_archivo and i < 1:
-                                    fila[col_prima] = valores_prima_por_archivo[
-                                        col_prima
-                                    ][i]
-                                else:
-                                    fila[col_prima] = ""
-
-                            datos_estructurados.append(fila)
-
-                        # Agregar fila de totales
-                        fila_total = {
-                            "Coberturas": "",
-                            "Interés Asegurado": "TOTAL",
-                            "Valor Asegurado Actual": total_actual,
-                            "Valor Asegurado Renovado": total_renovacion,
-                        }
-                        # Inicializar columnas de primas vacías para totales
-                        for col_prima in columnas_primas:
-                            fila_total[col_prima] = ""
-                        datos_estructurados.append(fila_total)
-
-                        # Crear DataFrame estructurado con columnas ordenadas
-                        df_estructurado = pd.DataFrame(
-                            datos_estructurados, columns=todas_columnas
-                        )
-
-                        # Validación de integridad de datos
-                        if (
-                            abs(
-                                total_actual
-                                - sum(
-                                    item["valor_asegurado"]
-                                    for item in poliza_actual_cuadro
-                                )
-                            )
-                            > 0.01
-                        ):
-                            st.warning(
-                                "⚠️ Advertencia: Discrepancia detectada en totales actuales"
-                            )
-
-                        if (
-                            abs(
-                                total_renovacion
-                                - sum(
-                                    item["valor_asegurado"]
-                                    for item in poliza_renovacion_cuadro
-                                )
-                            )
-                            > 0.01
-                        ):
-                            st.warning(
-                                "⚠️ Advertencia: Discrepancia detectada en totales de renovación"
-                            )
-
-                        # Exportar a Excel
-                        df_estructurado.to_excel(
-                            writer,
-                            sheet_name="Análisis_Estructurado",
-                            index=False,
-                        )
-                        format_worksheet(
-                            writer.sheets["Análisis_Estructurado"],
-                            df_estructurado,
-                            "polizas",
-                        )
-
-                    # Crear las otras hojas después de Análisis_Estructurado
-                    if poliza_data_actual:
-                        df_polizas = pd.DataFrame(poliza_data_actual)
-
-                        # Separar por tipo de documento
-                        df_actuales = df_polizas[
-                            df_polizas["Tipo de Documento"].str.lower() == "actual"
-                        ].copy()
-                        df_renovacion = df_polizas[
-                            df_polizas["Tipo de Documento"].str.lower() == "renovacion"
-                        ].copy()
-
-                        # Función para crear tabla transpuesta consolidada
-                        def crear_hoja_consolidada(df_actuales, df_renovacion):
-                            if df_actuales.empty and df_renovacion.empty:
-                                return
-
-                            # Función auxiliar para procesar cada tipo de póliza
-                            def procesar_poliza(df, tipo_poliza):
-                                if df.empty:
-                                    return None, None
-
-                                # Obtener intereses únicos y sus valores
-                                intereses_valores = {}
-                                total_poliza = 0
-
-                                for _, row in df.iterrows():
-                                    interes = row["Interés Asegurado"]
-                                    valor = row["Valor Asegurado"]
-                                    total_poliza = row["Total Póliza"]
-                                    intereses_valores[interes] = valor
-
-                                # Crear estructura transpuesta
-                                columnas = list(intereses_valores.keys()) + [
-                                    "Total Póliza"
-                                ]
-                                valores = [
-                                    f"${valor:,.0f}"
-                                    for valor in intereses_valores.values()
-                                ] + [f"${total_poliza:,.0f}"]
-
-                                return columnas, valores
-
-                            # Procesar ambos tipos de pólizas
-                            columnas_actuales, valores_actuales = procesar_poliza(
-                                df_actuales, "Actual"
-                            )
-                            columnas_renovacion, valores_renovacion = procesar_poliza(
-                                df_renovacion, "Renovación"
-                            )
-
-                            # Crear DataFrame consolidado
-                            datos_consolidados = []
-
-                            # Agregar etiqueta y datos de pólizas actuales
-                            if columnas_actuales and valores_actuales:
-                                # Fila de etiqueta para pólizas actuales
-                                fila_etiqueta_actual = ["PÓLIZAS ACTUALES"] + [""] * (
-                                    len(columnas_actuales) - 1
-                                )
-                                datos_consolidados.append(fila_etiqueta_actual)
-
-                                # Fila de encabezados
-                                datos_consolidados.append(columnas_actuales)
-
-                                # Fila de valores
-                                datos_consolidados.append(valores_actuales)
-
-                                # Fila de separación
-                                datos_consolidados.append([""] * len(columnas_actuales))
-
-                            # Agregar etiqueta y datos de pólizas de renovación
-                            if columnas_renovacion and valores_renovacion:
-                                # Ajustar longitud de columnas para que coincidan
-                                max_cols = max(
-                                    (
-                                        len(columnas_actuales)
-                                        if columnas_actuales
-                                        else 0
-                                    ),
-                                    len(columnas_renovacion),
-                                )
-
-                                # Fila de etiqueta para pólizas de renovación
-                                fila_etiqueta_renovacion = ["PÓLIZAS DE RENOVACIÓN"] + [
-                                    ""
-                                ] * (max_cols - 1)
-                                datos_consolidados.append(fila_etiqueta_renovacion)
-
-                                # Ajustar columnas de renovación si es necesario
-                                columnas_renovacion_ajustadas = columnas_renovacion + [
-                                    ""
-                                ] * (max_cols - len(columnas_renovacion))
-                                valores_renovacion_ajustados = valores_renovacion + [
-                                    ""
-                                ] * (max_cols - len(valores_renovacion))
-
-                                # Fila de encabezados
-                                datos_consolidados.append(columnas_renovacion_ajustadas)
-
-                                # Fila de valores
-                                datos_consolidados.append(valores_renovacion_ajustados)
-
-                            # Crear DataFrame final
-                            if datos_consolidados:
-                                max_cols = max(len(fila) for fila in datos_consolidados)
-
-                                # Ajustar todas las filas a la misma longitud
-                                for i, fila in enumerate(datos_consolidados):
-                                    if len(fila) < max_cols:
-                                        datos_consolidados[i] = fila + [""] * (
-                                            max_cols - len(fila)
-                                        )
-
-                                # Crear columnas genéricas
-                                columnas_genericas = [
-                                    f"Columna_{i+1}" for i in range(max_cols)
-                                ]
-
-                                df_consolidado = pd.DataFrame(
-                                    datos_consolidados,
-                                    columns=columnas_genericas,
-                                )
-
-                                # Exportar a Excel
-                                df_consolidado.to_excel(
-                                    writer,
-                                    sheet_name="Polizas_Consolidadas",
-                                    index=False,
-                                    header=False,
-                                )
-                                format_worksheet(
-                                    writer.sheets["Polizas_Consolidadas"],
-                                    df_consolidado,
-                                    "polizas",
-                                )
-
-                        # Crear hoja consolidada
-                        crear_hoja_consolidada(df_actuales, df_renovacion)
-
-                    # Hoja de primas eliminada según solicitud del usuario
-
-                excel_data = output.getvalue()
-
-                # Botón de descarga
-                # Crear enlace de descarga que abre en nueva ventana
-                b64_excel = base64.b64encode(excel_data).decode()
-                href = f"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64_excel}"
-
-                # Botón con enlace que abre en nueva ventana y descarga automáticamente
-                st.markdown(
-                    f"""
-                            <a href="{href}" download="analisis_polizas.xlsx" target="_blank" 
-                               style="display: inline-block; padding: 0.5rem 1rem; background-color: #ff4b4b; 
-                                      color: white; text-decoration: none; border-radius: 0.25rem; 
-                                      font-weight: 600; border: none; cursor: pointer;"
-                               onclick="setTimeout(function(){{window.close();}}, 1000);">
-                                📊 Descargar Excel
+                        st.markdown(
+                            f"""
+                            <a class="download-btn" href="{href}" download="reporte_polizas_riesgos.xlsx" target="_blank" role="button" aria-label="Descargar Excel de análisis">
+                            📥 <span>Descargar Excel</span>
                             </a>
                             """,
-                    unsafe_allow_html=True,
-                )
+                            unsafe_allow_html=True,
+                        )
 
-                # Limpieza automática de archivos procesados
-                cleanup_processed_files(queue_items)
+                except Exception as e:
+                    st.error(f"Error al generar el archivo Excel: {e}")
+                finally:
+                    try:
+                        os.remove(tmp_path)
+                    except Exception:
+                        pass
 
         else:
             st.warning("Por favor, sube al menos un archivo para procesar.")
