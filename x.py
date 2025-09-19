@@ -33,7 +33,7 @@ docs_adicionales_data = [
     },
 ]
 
-riesgos = [
+riesgos_actuales = [
     {
         "ubicacion": "Calle 28 # 30-15 PALMIRA",
         "detalle_cobertura": [
@@ -206,8 +206,701 @@ riesgos = [
     },
 ]
 
+riesgos_renovacion = [
+    {
+        "ubicacion": "Calle 28 # 30-15 PALMIRA",
+        "detalle_cobertura": [
+            {
+                "interes_asegurado": "EDIFICIO",
+                "valor_asegurado": 3367752116,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "MAQUINARIA Y EQUIPO",
+                "valor_asegurado": 155364000,
+                "tipo": "Equipo y Maquinaria",
+            },
+            {
+                "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
+                "valor_asegurado": 64735000,
+                "tipo": "Equipo y Maquinaria",
+            },
+        ],
+    },
+    {
+        "ubicacion": "Carrera 18 # 8-31 FLORIDA",
+        "detalle_cobertura": [
+            {
+                "interes_asegurado": "EDIFICIO",
+                "valor_asegurado": 555521727,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "MUEBLES Y ENSERES",
+                "valor_asegurado": 110160116,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "MAQUINARIA Y EQUIPO",
+                "valor_asegurado": 84980661,
+                "tipo": "Equipo y Maquinaria",
+            },
+            {
+                "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
+                "valor_asegurado": 69072144,
+                "tipo": "Equipo y Maquinaria",
+            },
+            {
+                "interes_asegurado": "MERCANCIAS",
+                "valor_asegurado": 11000000,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "DINEROS",
+                "valor_asegurado": 22000000,
+                "tipo": "Manejo de Dinero",
+            },
+        ],
+    },
+    {
+        "ubicacion": "Calle 6 # 12-50 PRADERA",
+        "detalle_cobertura": [
+            {
+                "interes_asegurado": "EDIFICIO",
+                "valor_asegurado": 645223536,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "MUEBLES Y ENSERES",
+                "valor_asegurado": 135339571,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "MAQUINARIA Y EQUIPO",
+                "valor_asegurado": 84980661,
+                "tipo": "Equipo y Maquinaria",
+            },
+            {
+                "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
+                "valor_asegurado": 64709165,
+                "tipo": "Equipo y Maquinaria",
+            },
+            {
+                "interes_asegurado": "MERCANCIAS",
+                "valor_asegurado": 11000000,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "DINEROS",
+                "valor_asegurado": 22000000,
+                "tipo": "Manejo de Dinero",
+            },
+        ],
+    },
+    {
+        "ubicacion": "Carrera 7 #. 11-56 CANDELARIA",
+        "detalle_cobertura": [
+            {
+                "interes_asegurado": "EDIFICIO",
+                "valor_asegurado": 887575791,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "MUEBLES Y ENSERES",
+                "valor_asegurado": 100717820,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "MAQUINARIA Y EQUIPO",
+                "valor_asegurado": 42490330,
+                "tipo": "Equipo y Maquinaria",
+            },
+            {
+                "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
+                "valor_asegurado": 55159965,
+                "tipo": "Equipo y Maquinaria",
+            },
+            {
+                "interes_asegurado": "MERCANCIAS",
+                "valor_asegurado": 2200000,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "DINEROS",
+                "valor_asegurado": 22000000,
+                "tipo": "Manejo de Dinero",
+            },
+        ],
+    },
+    {
+        "ubicacion": "Carrera 31 # 28-00 y Calle 28 #31-30 Esq PALMIRA",
+        "detalle_cobertura": [
+            {
+                "interes_asegurado": "EDIFICIO",
+                "valor_asegurado": 19420500000,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "MUEBLES Y ENSERES + OBRAS DE ARTE",
+                "valor_asegurado": 1437117000,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "MAQUINARIA Y EQUIPO",
+                "valor_asegurado": 2853518800,
+                "tipo": "Equipo y Maquinaria",
+            },
+            {
+                "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
+                "valor_asegurado": 991776830,
+                "tipo": "Equipo y Maquinaria",
+            },
+            {
+                "interes_asegurado": "EQUIPO MOVIL",
+                "valor_asegurado": 94156337,
+                "tipo": "Equipo y Maquinaria",
+            },
+            {
+                "interes_asegurado": "MERCANCIAS",
+                "valor_asegurado": 22000000,
+                "tipo": "Incendio",
+            },
+            {
+                "interes_asegurado": "DINEROS",
+                "valor_asegurado": 130000000,
+                "tipo": "Manejo de Dinero",
+            },
+        ],
+    },
+]
 
-def generar_excel_analisis_polizas(output_path="analisis_polizas.xlsx"):
+amparos_actuales = {
+    "archivo": "Actual.pdf",
+    "amparos": [
+        {
+            "amparo": "Incendio y/o Impacto Directo De Rayo",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Explosión",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Extensión de Amparos",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Explosión de Calderas u Otros Aparatos Generadores de Vapor",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Rotura Accidental De Vidrios",
+            "deducible": "0,25 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Terremoto, Temblor De Tierra, Erupción Volcánica, Tsunami, Maremoto",
+            "deducible": "2% del valor asegurable del artículo mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Anegación",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Daños Por Agua",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "AMIT Y Terrorismo",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "HMACC",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Productos Almacenados En Frigoríficos",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Daño Interno Equipos Eléctricos Y Electrónicos",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Equipo y Maquinaria",
+        },
+        {
+            "amparo": "Portadores Externos de Datos",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Equipo y Maquinaria",
+        },
+        {
+            "amparo": "Equipos Móviles Y Portátiles",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Equipo y Maquinaria",
+        },
+        {
+            "amparo": "Incremento en Costos De Operación",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Daños por Fallas En Equipos De Climatización",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Equipo y Maquinaria",
+        },
+        {
+            "amparo": "Rotura De Maquinaria",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Equipo y Maquinaria",
+        },
+        {
+            "amparo": "Pérdida de Contenido en Tanques",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Deterioro de Bienes Refrigerados",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Hurto Calificado",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Sustracción",
+        },
+        {
+            "amparo": "Hurto Simple para Equipo Eléctrico Y Electrónico Fijo de Oficina",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Sustracción",
+        },
+        {
+            "amparo": "Bienes de Propiedad de Empleados del Asegurado",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Traslado Temporal de Bienes",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Construcciones y Montajes Nuevos",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Bienes a la Intemperie",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Actos de Autoridad",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Remoción de Escombros",
+            "deducible": "Aplica el de la cobertura afectada",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Honorarios de Profesionales como Arquitectos, Interventores, Ingenieros y Consultores",
+            "deducible": "Aplica el de la cobertura afectada",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Gastos para la Preservación de Bienes",
+            "deducible": "Aplica el de la cobertura afectada",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Gastos para la Reproducción y/o Reemplazo de la Información",
+            "deducible": "Aplica el de la cobertura afectada",
+            "tipo": "Equipo y Maquinaria",
+        },
+        {
+            "amparo": "Gastos para Demostrar la Pérdida",
+            "deducible": "Aplica el de la cobertura afectada",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Transporte De Valores",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Transporte de Valores",
+        },
+        {
+            "amparo": "Daños o pérdidas de Mercancías a Granel",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Manejo",
+            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+            "tipo": "Manejo de Dinero",
+        },
+        {
+            "amparo": "Empleados de Carácter Temporal y/o de Firmas Especializadas",
+            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+            "tipo": "Manejo de Dinero",
+        },
+        {
+            "amparo": "Empleados no Identificados",
+            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+            "tipo": "Manejo de Dinero",
+        },
+        {
+            "amparo": "Bienes de Propiedad de Terceros",
+            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+            "tipo": "Manejo de Dinero",
+        },
+        {
+            "amparo": "Protección para Depósitos Bancarios",
+            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+            "tipo": "Manejo de Dinero",
+        },
+        {
+            "amparo": "Predios Labores y Operaciones",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Contratistas y Subcontratistas",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Responsabilidad Civil Patronal",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Vehículos Propios y no Propios",
+            "deducible": "En exceso del SOAT y RCE autos mínimo 100.000.000/100.000.000/200.000.000 COP",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Propietarios, Arrendatarios y Poseedores",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Gastos Médicos",
+            "deducible": "No aplica",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Responsabilidad Civil Cruzada",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Responsabilidad Civil Parqueaderos",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+    ],
+}
+
+amparos_renovacion = {
+    "archivo": "renovacion.pdf",
+    "amparos": [
+        {
+            "amparo": "Incendio y/o Impacto Directo De Rayo",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Explosión",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Extensión de Amparos",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Explosión de Calderas u Otros Aparatos Generadores de Vapor",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Rotura Accidental De Vidrios",
+            "deducible": "0,25 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Terremoto, Temblor De Tierra, Erupción Volcánica, Tsunami, Maremoto",
+            "deducible": "2% del valor asegurable del artículo mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Anegación",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Daños Por Agua",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "AMIT Y Terrorismo",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "HMACC",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Productos Almacenados En Frigoríficos",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Daño Interno Equipos Eléctricos Y Electrónicos",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Equipo y Maquinaria",
+        },
+        {
+            "amparo": "Portadores Externos de Datos",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Equipo y Maquinaria",
+        },
+        {
+            "amparo": "Equipos Móviles Y Portátiles",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Equipo y Maquinaria",
+        },
+        {
+            "amparo": "Incremento en Costos De Operación",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Daños por Fallas En Equipos De Climatización",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Equipo y Maquinaria",
+        },
+        {
+            "amparo": "Rotura De Maquinaria",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Equipo y Maquinaria",
+        },
+        {
+            "amparo": "Pérdida de Contenido en Tanques",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Deterioro de Bienes Refrigerados",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Hurto Calificado",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Sustracción",
+        },
+        {
+            "amparo": "Hurto Simple para Equipo Eléctrico Y Electrónico Fijo de Oficina",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Sustracción",
+        },
+        {
+            "amparo": "Bienes de Propiedad de Empleados del Asegurado",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Sustracción",
+        },
+        {
+            "amparo": "Traslado Temporal de Bienes",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Transporte de Valores",
+        },
+        {
+            "amparo": "Construcciones y Montajes Nuevos",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Bienes a la Intemperie",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Actos de Autoridad",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Remoción de Escombros",
+            "deducible": "Aplica el de la cobertura afectada",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Honorarios de Profesionales como Arquitectos, Ingenieros y Contratistas",
+            "deducible": "Aplica el de la cobertura afectada",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Gastos para la Preservación de Bienes",
+            "deducible": "Aplica el de la cobertura afectada",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Gastos para la Reproducción y/o Reemplazo de la Información",
+            "deducible": "Aplica el de la cobertura afectada",
+            "tipo": "Equipo y Maquinaria",
+        },
+        {
+            "amparo": "Gastos para Demostrar la Pérdida",
+            "deducible": "Aplica el de la cobertura afectada",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Transporte De Valores",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Transporte de Valores",
+        },
+        {
+            "amparo": "Asistencia",
+            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Labores y Materiales",
+            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Gastos de Extinción del siniestro",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Daños o pérdidas de Mercancías a Granel",
+            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Manejo",
+            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+            "tipo": "Manejo de Dinero",
+        },
+        {
+            "amparo": "Empleados de Carácter Temporal y/o de Firmas Especializadas",
+            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+            "tipo": "Manejo de Dinero",
+        },
+        {
+            "amparo": "Bienes de propiedad de Terceros",
+            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+            "tipo": "Incendio",
+        },
+        {
+            "amparo": "Protección para Depósitos Bancarios",
+            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+            "tipo": "Manejo de Dinero",
+        },
+        {
+            "amparo": "Predios Labores Y Operaciones",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Contratistas Y Subcontratistas",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Responsabilidad Civil Patronal",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Vehículos Propios y no Propios",
+            "deducible": "Deducible mínimo 10% del valor de la pérdida con mínimo 50.000.000.000.000/200.000,00 en SMLMV",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Propietarios, Arrendatarios y Poseedores",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Gastos Médicos",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Responsabilidad Civil Cruzada",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+        {
+            "amparo": "Responsabilidad Civil Parqueaderos",
+            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+            "tipo": "Responsabilidad Civil",
+        },
+    ],
+}
+
+amparos_adicionales = [
+    {
+        "archivo": "Adiciones.pdf",
+        "amparos": [
+            {
+                "amparo": "Gastos Médicos",
+                "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+                "tipo": "Responsabilidad Civil",
+            },
+            {
+                "amparo": "Responsabilidad Civil Cruzada",
+                "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+                "tipo": "Responsabilidad Civil",
+            },
+            {
+                "amparo": "Responsabilidad Civil Parqueaderos",
+                "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+                "tipo": "Responsabilidad Civil",
+            },
+        ],
+    },
+    {
+        "archivo": "Adiciones2.pdf",
+        "amparos": [
+            {
+                "amparo": "Gastos Médicos",
+                "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+                "tipo": "Responsabilidad Civil",
+            },
+            {
+                "amparo": "Responsabilidad Civil Cruzada",
+                "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+                "tipo": "Responsabilidad Civil",
+            },
+            {
+                "amparo": "Responsabilidad Civil Parqueaderos",
+                "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+                "tipo": "Responsabilidad Civil",
+            },
+        ],
+    },
+]
+
+
+def generar_excel_analisis_polizas(output_path="reporte_polizas_riesgos.xlsx"):
     """
     Genera un archivo Excel con análisis de pólizas replicando la funcionalidad
     del código original de app_structure.py usando los datos de x.py
@@ -238,9 +931,15 @@ def generar_excel_analisis_polizas(output_path="analisis_polizas.xlsx"):
             top=Side(style="thin", color="D0D0D0"),
             bottom=Side(style="thin", color="D0D0D0"),
         )
-        center_alignment = Alignment(horizontal="center", vertical="center")
-        currency_alignment = Alignment(horizontal="right", vertical="center")
-        left_alignment = Alignment(horizontal="left", vertical="center")
+        center_alignment = Alignment(
+            horizontal="center", vertical="center", wrap_text=True, shrink_to_fit=True
+        )
+        currency_alignment = Alignment(
+            horizontal="right", vertical="center", wrap_text=True, shrink_to_fit=True
+        )
+        left_alignment = Alignment(
+            horizontal="left", vertical="center", wrap_text=True, shrink_to_fit=True
+        )
 
         def format_worksheet(ws, df, sheet_type):
             ws.insert_rows(1, 2)
@@ -315,7 +1014,7 @@ def generar_excel_analisis_polizas(output_path="analisis_polizas.xlsx"):
                 if col_name.lower() == "coberturas":
                     width = 45
                 else:
-                    width = min(max(max_length + 2, 15), 30)
+                    width = min(max(max_length + 2, 15), 40)
                 ws.column_dimensions[column_letter].width = width
 
             ws.auto_filter.ref = f"A1:{get_column_letter(len(df.columns))}{len(df) + 1}"
@@ -463,6 +1162,142 @@ def generar_excel_analisis_polizas(output_path="analisis_polizas.xlsx"):
 
         crear_hoja_consolidada()
 
+        # ===== hoja Riesgos (tercera hoja) =====
+        def crear_hoja_riesgos():
+            # 1) Normalización de intereses asegurados (para consistencia)
+            def normalizar_interes(texto: str) -> str:
+                t = (texto or "").strip().lower()
+                reemplazos = {
+                    "edificio": "Edificio",
+                    "muebles y enseres": "Muebles y Enseres",
+                    "maquinaria y equipo": "Maquinaria y Equipo",
+                    "equipo electrico y electronico": "Equipo Eléctrico y Electrónico",
+                    "equipo eléctrico y electrónico": "Equipo Eléctrico y Electrónico",
+                    "mercancías": "Mercancías",
+                    "mercancias": "Mercancías",
+                    "dineros": "Dineros",
+                    "equipo movil": "Equipo Móvil",
+                    "equipo móvil": "Equipo Móvil",
+                    "obras de arte": "Obras de Arte",
+                }
+                # caso combinado en renovación
+                if "+" in t and "muebles" in t and "obras" in t:
+                    return "Muebles y Enseres"  # asignamos al rubro principal
+                return reemplazos.get(t, texto)
+
+            # 2) Definir columnas a partir de riesgos_actuales (L36-375)
+            intereses_cols = sorted(
+                {
+                    normalizar_interes(det["interes_asegurado"])  # noqa: E501
+                    for r in riesgos_actuales
+                    for det in r.get("detalle_cobertura", [])
+                }
+            )
+
+            def pivot_riesgos(dataset):
+                filas = []
+                for r in dataset:
+                    fila = {"Ubicación": r.get("ubicacion", "")}
+                    for col in intereses_cols:
+                        fila[col] = 0
+                    for det in r.get("detalle_cobertura", []):
+                        k = normalizar_interes(det.get("interes_asegurado", ""))
+                        if k in fila:
+                            fila[k] += det.get("valor_asegurado", 0)
+                    filas.append(fila)
+                # Totales
+                tot = {"Ubicación": "TOTAL VALORES"}
+                for col in intereses_cols:
+                    tot[col] = sum(f[col] for f in filas)
+                filas.append(tot)
+                return pd.DataFrame(filas, columns=["Ubicación"] + intereses_cols)
+
+            df_actual = pivot_riesgos(riesgos_actuales)
+            df_renov = pivot_riesgos(riesgos_renovacion)
+
+            # Escribir ambas tablas en la MISMA hoja, con los mismos encabezados
+            start_row = 0
+            sheet_name = "Riesgos"
+
+            # Tabla 1: Póliza actual
+            df_actual.to_excel(
+                writer, sheet_name=sheet_name, index=False, startrow=start_row + 1
+            )
+            ws = writer.sheets[sheet_name]
+            ws.cell(row=start_row + 1, column=1, value="Póliza actual").font = Font(
+                name="Arial", size=13, bold=True
+            )
+            ws.merge_cells(
+                start_row=start_row + 1,
+                start_column=1,
+                end_row=start_row + 1,
+                end_column=len(df_actual.columns),
+            )
+
+            # Formato encabezados y celdas de la primera tabla
+            header_row_1 = start_row + 2
+            for col_idx in range(1, len(df_actual.columns) + 1):
+                c = ws.cell(row=header_row_1, column=col_idx)
+                c.font = header_font
+                c.fill = header_fill
+                c.border = border
+                c.alignment = center_alignment
+            for r in range(header_row_1 + 1, header_row_1 + 1 + len(df_actual)):
+                for cidx in range(1, len(df_actual.columns) + 1):
+                    c = ws.cell(row=r, column=cidx)
+                    c.font = data_font
+                    c.border = border
+                    if cidx == 1:
+                        c.alignment = left_alignment
+                    else:
+                        c.alignment = currency_alignment
+                        if isinstance(c.value, (int, float)):
+                            c.number_format = "$#,##0"
+
+            # Tabla 2: Póliza de Renovación
+            start_row_2 = header_row_1 + len(df_actual) + 2
+            df_renov.to_excel(
+                writer, sheet_name=sheet_name, index=False, startrow=start_row_2 + 1
+            )
+            ws.cell(
+                row=start_row_2 + 1, column=1, value="Póliza de Renovación"
+            ).font = Font(name="Arial", size=13, bold=True)
+            ws.merge_cells(
+                start_row=start_row_2 + 1,
+                start_column=1,
+                end_row=start_row_2 + 1,
+                end_column=len(df_renov.columns),
+            )
+
+            header_row_2 = start_row_2 + 2
+            for col_idx in range(1, len(df_renov.columns) + 1):
+                c = ws.cell(row=header_row_2, column=col_idx)
+                c.font = header_font
+                c.fill = header_fill
+                c.border = border
+                c.alignment = center_alignment
+            for r in range(header_row_2 + 1, header_row_2 + 1 + len(df_renov)):
+                for cidx in range(1, len(df_renov.columns) + 1):
+                    c = ws.cell(row=r, column=cidx)
+                    c.font = data_font
+                    c.border = border
+                    if cidx == 1:
+                        c.alignment = left_alignment
+                    else:
+                        c.alignment = currency_alignment
+                        if isinstance(c.value, (int, float)):
+                            c.number_format = "$#,##0"
+
+            # Ajuste de anchos para toda la hoja
+            for cidx in range(1, len(df_actual.columns) + 1):
+                letter = get_column_letter(cidx)
+                if cidx == 1:
+                    ws.column_dimensions[letter].width = 50
+                else:
+                    ws.column_dimensions[letter].width = 20
+
+        crear_hoja_riesgos()
+
     with open(output_path, "wb") as f:
         f.write(output.getvalue())
 
@@ -471,5 +1306,4 @@ def generar_excel_analisis_polizas(output_path="analisis_polizas.xlsx"):
 
 
 if __name__ == "__main__":
-
-    generar_excel_analisis_polizas()
+    generar_excel_analisis_polizas("reporte_polizas_riesgos.xlsx")
