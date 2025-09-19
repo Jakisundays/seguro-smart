@@ -569,6 +569,8 @@ async def main():
                     }
                     for poliza in poliza_data_actual
                 ]
+                with st.expander("poliza_actual_cuadro"):
+                    st.write(poliza_actual_cuadro)
                 st.subheader("📋 Pólizas Actuales")
                 df_actuales_display = polizas_actuales.copy()
                 df_actuales_display["Valor Asegurado"] = df_actuales_display[
@@ -589,6 +591,8 @@ async def main():
                     }
                     for poliza in poliza_data_renovacion
                 ]
+                with st.expander("poliza_renovacion_cuadro"):
+                    st.write(poliza_renovacion_cuadro)
                 st.subheader("🔄 Pólizas de Renovación")
                 df_renovacion_display = polizas_renovacion.copy()
                 df_renovacion_display["Valor Asegurado"] = df_renovacion_display[
@@ -622,6 +626,9 @@ async def main():
                     }
                     for item in docs_adicionales_data
                 ]
+                with st.expander("solo_primas"):
+                    st.write(solo_primas)
+                
                 df_primas = pd.DataFrame(solo_primas)
 
                 # Formatear valores monetarios para visualización
@@ -646,6 +653,18 @@ async def main():
                 # Crear archivo Excel en memoria con datos filtrados y formato profesional
                 output = BytesIO()
                 with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                    # Asegurarse de que al menos una hoja sea creada y visible
+                    if poliza_data_actual:
+                        pd.DataFrame(poliza_data_actual).to_excel(
+                            writer, sheet_name="Pólizas Actuales", index=False
+                        )
+                    elif docs_adicionales_data:
+                        pd.DataFrame(docs_adicionales_data).to_excel(
+                            writer, sheet_name="Documentos Adicionales", index=False
+                        )
+                    else:
+                        # Si no hay datos, crear una hoja vacía para evitar el error
+                        pd.DataFrame().to_excel(writer, sheet_name="Datos", index=False)
                     from openpyxl.styles import (
                         Font,
                         PatternFill,
@@ -807,15 +826,22 @@ async def main():
                         ws.freeze_panes = "A2"
 
                     # Crear primero la hoja "Análisis_Estructurado" para que sea la primera pestaña
-                    if poliza_actual_cuadro and poliza_renovacion_cuadro and docs_adicionales_data:
+                    if (
+                        poliza_actual_cuadro
+                        and poliza_renovacion_cuadro
+                        and docs_adicionales_data
+                    ):
                         # Crear estructura organizada con 4 columnas específicas
 
                         # Obtener datos únicos de intereses asegurados
                         intereses_unicos = list(
                             set(
-                                [item["interes_asegurado"] for item in poliza_actual_cuadro]
+                                [
+                                    item["Interés Asegurado"]
+                                    for item in poliza_actual_cuadro
+                                ]
                                 + [
-                                    item["interes_asegurado"]
+                                    item["Interés Asegurado"]
                                     for item in poliza_renovacion_cuadro
                                 ]
                             )
@@ -823,11 +849,11 @@ async def main():
 
                         # Crear diccionarios para búsqueda rápida
                         valores_actuales = {
-                            item["interes_asegurado"]: item["valor_asegurado"]
+                            item["Interés Asegurado"]: item["valor_asegurado"]
                             for item in poliza_actual_cuadro
                         }
                         valores_renovacion = {
-                            item["interes_asegurado"]: item["valor_asegurado"]
+                            item["Interés Asegurado"]: item["valor_asegurado"]
                             for item in poliza_renovacion_cuadro
                         }
 
@@ -965,7 +991,8 @@ async def main():
                             abs(
                                 total_actual
                                 - sum(
-                                    item["valor_asegurado"] for item in poliza_actual_cuadro
+                                    item["valor_asegurado"]
+                                    for item in poliza_actual_cuadro
                                 )
                             )
                             > 0.01
@@ -978,7 +1005,8 @@ async def main():
                             abs(
                                 total_renovacion
                                 - sum(
-                                    item["valor_asegurado"] for item in poliza_renovacion_cuadro
+                                    item["valor_asegurado"]
+                                    for item in poliza_renovacion_cuadro
                                 )
                             )
                             > 0.01
