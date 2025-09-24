@@ -41,7 +41,7 @@ class DocAdicionalDict(TypedDict):
 class DetalleCobertura(TypedDict):
     interes_asegurado: str
     valor_asegurado: int
-    tipo: str
+    tipo: List[str]
 
 
 class RiesgoDict(TypedDict):
@@ -52,7 +52,7 @@ class RiesgoDict(TypedDict):
 class Amparo(TypedDict):
     amparo: str
     deducible: str
-    tipo: str
+    tipo: List[str]
 
 
 class AmparosDict(TypedDict):
@@ -253,32 +253,6 @@ def generar_excel_analisis_polizas(
     """
 
     output = BytesIO()
-
-    # Create expander to show all parameters
-    with st.expander("View All Parameters"):
-        st.write("**Current Policy Parameters:**")
-        st.json([p for p in poliza_actual])
-
-        st.write("**Renewal Policy Parameters:**")
-        st.json([p for p in poliza_renovacion])
-
-        st.write("**Current Risks:**")
-        st.json([r for r in riesgos_actuales])
-
-        st.write("**Renewal Risks:**")
-        st.json([r for r in riesgos_renovacion])
-
-        st.write("**Current Coverage:**")
-        st.json(amparos_actuales)
-
-        st.write("**Renewal Coverage:**")
-        st.json(amparos_renovacion)
-
-        st.write("**Additional Coverage:**")
-        st.json([a for a in amparos_adicionales])
-
-        st.write("**Output Path:**")
-        st.code(output_path)
 
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         # ===== estilos =====
@@ -531,16 +505,24 @@ def generar_excel_analisis_polizas(
 
             # Procesar amparos actuales
             for amp in amparos_actuales["amparos"]:
-                tipos_encontrados.add(amp["tipo"])
+                tipos = amp["tipo"] if isinstance(amp["tipo"], list) else [amp["tipo"]]
+                for t in tipos:
+                    tipos_encontrados.add(t)
 
             # Procesar amparos renovación
             for amp in amparos_renovacion["amparos"]:
-                tipos_encontrados.add(amp["tipo"])
+                tipos = amp["tipo"] if isinstance(amp["tipo"], list) else [amp["tipo"]]
+                for t in tipos:
+                    tipos_encontrados.add(t)
 
             # Procesar amparos adicionales
             for doc in amparos_adicionales:
                 for amp in doc["amparos"]:
-                    tipos_encontrados.add(amp["tipo"])
+                    tipos = (
+                        amp["tipo"] if isinstance(amp["tipo"], list) else [amp["tipo"]]
+                    )
+                    for t in tipos:
+                        tipos_encontrados.add(t)
 
             # Ordenar tipos para crear secciones consistentes
             tipos_ordenados = sorted(tipos_encontrados)
@@ -566,13 +548,14 @@ def generar_excel_analisis_polizas(
                         amparos_unicos.append(amp)
                         amparos_vistos.add(amp["amparo"])
 
-            # Organizar por tipo
+            # Organizar por tipo (cada amparo puede pertenecer a múltiples tipos)
             amparos_por_tipo = {}
             for amp in amparos_unicos:
-                tipo = amp["tipo"]
-                if tipo not in amparos_por_tipo:
-                    amparos_por_tipo[tipo] = []
-                amparos_por_tipo[tipo].append(amp)
+                tipos_amp = (
+                    amp["tipo"] if isinstance(amp["tipo"], list) else [amp["tipo"]]
+                )
+                for t in tipos_amp:
+                    amparos_por_tipo.setdefault(t, []).append(amp)
 
             # Crear estructura de datos para Excel
             for tipo in tipos_ordenados:

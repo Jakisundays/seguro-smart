@@ -63,24 +63,19 @@ Devuelve únicamente los campos `detalle_cobertura`, `amparos`, `total_valores_a
                                 "description": "Porcentaje o valor mínimo que debe asumir el asegurado en caso de una pérdida o siniestro cubierto antes de que la aseguradora realice el pago correspondiente. Generalmente expresado como un porcentaje del valor de la pérdida con un monto mínimo en SMLMV.",
                             },
                             "tipo": {
-                                "type": "STRING",
-                                "description": """
-                                Tipo de amparo: categoría del amparo según su cobertura. Opciones disponibles:
-                                - 'Incendio': daños por fuego o explosiones.
-                                - 'Sustracción': robo o hurto de bienes asegurados.
-                                - 'Equipo y Maquinaria': daños a equipos y maquinaria de la empresa.
-                                - 'Transporte de Valores': protección durante traslado de dinero o bienes de alto riesgo.
-                                - 'Manejo de Dinero': pérdidas o errores en la custodia y manejo de dinero.
-                                - 'Responsabilidad Civil': daños ocasionados a terceros por el asegurado.
-                                """,
-                                "enum": [
-                                    "Incendio",
-                                    "Sustracción",
-                                    "Equipo y Maquinaria",
-                                    "Transporte de Valores",
-                                    "Manejo de Dinero",
-                                    "Responsabilidad Civil",
-                                ],
+                                "type": "ARRAY",
+                                "description": "Tipos de amparo: categorías del amparo según su cobertura. Opciones disponibles: 'Incendio', 'Sustracción', 'Equipo y Maquinaria', 'Transporte de Valores', 'Manejo de Dinero', 'Responsabilidad Civil'.",
+                                "items": {
+                                    "type": "STRING",
+                                    "enum": [
+                                        "Incendio",
+                                        "Sustracción",
+                                        "Equipo y Maquinaria",
+                                        "Transporte de Valores",
+                                        "Manejo de Dinero",
+                                        "Responsabilidad Civil",
+                                    ],
+                                },
                             },
                         },
                         "required": ["amparo", "deducible", "tipo"],
@@ -111,24 +106,19 @@ Devuelve únicamente los campos `detalle_cobertura`, `amparos`, `total_valores_a
                                             "description": "Valor monetario asegurado correspondiente al interés.",
                                         },
                                         "tipo": {
-                                            "type": "STRING",
-                                            "description": """
-                                            Tipo de interés asegurado dentro del riesgo: categoría que describe la cobertura del interés asegurado. Opciones disponibles:
-                                            - 'Incendio': daños al interés asegurado por fuego o explosiones.
-                                            - 'Sustracción': robo o hurto del interés asegurado.
-                                            - 'Equipo y Maquinaria': daños a equipos o maquinaria incluidos en este riesgo.
-                                            - 'Transporte de Valores': protección del interés asegurado durante traslado de dinero o bienes de alto riesgo.
-                                            - 'Manejo de Dinero': pérdidas o errores relacionados con la custodia y manejo de dinero de este riesgo.
-                                            - 'Responsabilidad Civil': daños ocasionados a terceros por el interés asegurado dentro de este riesgo.
-                                            """,
-                                            "enum": [
-                                                "Incendio",
-                                                "Sustracción",
-                                                "Equipo y Maquinaria",
-                                                "Transporte de Valores",
-                                                "Manejo de Dinero",
-                                                "Responsabilidad Civil",
-                                            ],
+                                            "type": "ARRAY",
+                                            "description": "Tipos de amparo: categorías del amparo según su cobertura. Opciones disponibles: 'Incendio', 'Sustracción', 'Equipo y Maquinaria', 'Transporte de Valores', 'Manejo de Dinero', 'Responsabilidad Civil'.",
+                                            "items": {
+                                                "type": "STRING",
+                                                "enum": [
+                                                    "Incendio",
+                                                    "Sustracción",
+                                                    "Equipo y Maquinaria",
+                                                    "Transporte de Valores",
+                                                    "Manejo de Dinero",
+                                                    "Responsabilidad Civil",
+                                                ],
+                                            },
                                         },
                                     },
                                     "required": [
@@ -204,24 +194,19 @@ No agregues explicaciones ni contenido adicional fuera del JSON.
                                 "description": "Porcentaje o valor mínimo que debe asumir el asegurado en caso de una pérdida o siniestro cubierto antes de que la aseguradora realice el pago correspondiente. Generalmente expresado como un porcentaje del valor de la pérdida con un monto mínimo en SMLMV.",
                             },
                             "tipo": {
-                                "type": "STRING",
-                                "description": """
-Tipo de amparo: categoría del amparo según su cobertura. Opciones disponibles:
-- 'Incendio': daños por fuego o explosiones.
-- 'Sustracción': robo o hurto de bienes asegurados.
-- 'Equipo y Maquinaria': daños a equipos y maquinaria de la empresa.
-- 'Transporte de Valores': protección durante traslado de dinero o bienes de alto riesgo.
-- 'Manejo de Dinero': pérdidas o errores en la custodia y manejo de dinero.
-- 'Responsabilidad Civil': daños ocasionados a terceros por el asegurado.
-""",
-                                "enum": [
-                                    "Incendio",
-                                    "Sustracción",
-                                    "Equipo y Maquinaria",
-                                    "Transporte de Valores",
-                                    "Manejo de Dinero",
-                                    "Responsabilidad Civil",
-                                ],
+                                "type": "ARRAY",
+                                "description": "Tipos de amparo: categorías del amparo según su cobertura. Opciones disponibles: 'Incendio', 'Sustracción', 'Equipo y Maquinaria', 'Transporte de Valores', 'Manejo de Dinero', 'Responsabilidad Civil'.",
+                                "items": {
+                                    "type": "STRING",
+                                    "enum": [
+                                        "Incendio",
+                                        "Sustracción",
+                                        "Equipo y Maquinaria",
+                                        "Transporte de Valores",
+                                        "Manejo de Dinero",
+                                        "Responsabilidad Civil",
+                                    ],
+                                },
                             },
                         },
                         "required": ["amparo", "deducible", "tipo"],
