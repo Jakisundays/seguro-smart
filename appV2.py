@@ -129,6 +129,8 @@ def mostrar_riesgos(riesgos: list, titulo: str):
         riesgos (list): Lista de riesgos con ubicacion y detalle_cobertura.
         titulo (str): Título a mostrar arriba de la tabla.
     """
+    with st.expander(titulo):
+        st.write(riesgos)
     # Normalizar datos en filas planas
     rows = []
     for riesgo in riesgos:
@@ -1402,9 +1404,14 @@ async def main():
                             .get("parts", [{}])[0]
                             .get("text", "")
                         )
-                        doc_conjuntos["file_name"] = obtener_nombres_archivos(
-                            archivos_conjuntos
-                        )
+                        nombre = obtener_nombres_archivos(archivos_conjuntos)
+                        doc_conjuntos["file_name"] = nombre
+                        doc_conjuntos["Archivo"] = nombre
+                        doc_conjuntos["Prima Sin IVA"] = doc_conjuntos["prima_sin_iva"]
+                        doc_conjuntos["IVA"] = doc_conjuntos["iva"]
+                        doc_conjuntos["Prima Con IVA"] = doc_conjuntos["prima_con_iva"]
+                        doc_conjuntos["Tipo de Documento"] = "Adicional"
+
                         amparos_adicionales.append(
                             {
                                 "archivo": doc_conjuntos.get("file_name"),
@@ -1431,9 +1438,18 @@ async def main():
                         "Prima Sin IVA": doc.get("prima_sin_iva", 0),
                         "IVA": doc.get("iva", 0),
                         "Prima Con IVA": doc.get("prima_con_iva", 0),
+                        "tasa": doc.get("tasa", "No encontrada"),
+                        "amparos": doc.get("amparos", []),
+                        "danos_materiales": doc.get("danos_materiales", ""),
+                        "manejo_global_comercial": doc.get(
+                            "manejo_global_comercial", ""
+                        ),
+                        "transporte_valores": doc.get("transporte_valores", ""),
+                        "responsabilidad_civil": doc.get("responsabilidad_civil", ""),
                     }
                     for doc in docs_adicionales
                 ]
+
             else:
                 docs_adicionales_data = []
 
@@ -1574,6 +1590,15 @@ async def main():
             mostrar_amparos(amparos_renovacion, "📄 Amparos de Renovación")
 
             mostrar_amparos_adicionales(amparos_adicionales, "📂 Amparos Adicionales")
+
+            # Pasar poliza_actual, poliza_renovacion y docs_adicionales_data
+
+            docs_adicionales_conjuntos = docs_adicionales_data
+            if doc_conjuntos:
+                docs_adicionales_conjuntos.append(doc_conjuntos)
+
+            with st.expander("DOCS ADICIONALES CON CONJUNTOS"):
+                st.write(docs_adicionales_conjuntos)
 
             if poliza_data_actual or docs_adicionales_data:
                 st.subheader("📥 Descargar Resultados")
