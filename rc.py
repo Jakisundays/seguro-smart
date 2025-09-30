@@ -1,11 +1,21 @@
+# Clasificación de imports por bloques funcionales
+# 1) Librerías estándar
 import json
+import os
+import datetime
+from copy import copy as _copy
+from typing import List, Dict, Any, Optional
 
+# 2) Ciencia de datos
 import pandas as pd
-from typing import List, Dict, Any
-from openpyxl import Workbook
+
+# 3) openpyxl – manipulación de Excel
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Side, Border
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.worksheet import Worksheet
+from openpyxl.worksheet.datavalidation import DataValidation
 
 
 def clasificar_por_tipo(detalles):
@@ -685,6 +695,208 @@ def generar_tabla_excel_rc(
         )
 
     return output_path
+
+
+def _safe_sheet_title(wb, desired_title: str) -> str:
+    """
+    Ensure the sheet title is unique within the workbook.
+    If a conflict exists, append an incrementing suffix.
+    """
+    title = desired_title or "Sheet"
+    if title not in wb.sheetnames:
+        return title
+    base = title
+    i = 2
+    while True:
+        candidate = f"{base} ({i})"
+        if candidate not in wb.sheetnames:
+            return candidate
+        i += 1
+
+
+def _copy_sheet_contents(src: Worksheet, dst: Worksheet) -> None:
+    """
+    Copy values, styles, merges, dimensions and common sheet settings
+    from src worksheet to dst worksheet, aiming to preserve appearance.
+    """
+    # Copy cell values and styles
+    for row in src.iter_rows():
+        for cell in row:
+            dcell = dst.cell(row=cell.row, column=cell.column, value=cell.value)
+            # Styles and formatting
+            if cell.has_style:
+                dcell.font = _copy(cell.font)
+                dcell.border = _copy(cell.border)
+                dcell.fill = _copy(cell.fill)
+                dcell.number_format = cell.number_format
+                dcell.protection = _copy(cell.protection)
+                dcell.alignment = _copy(cell.alignment)
+            # Hyperlinks and comments
+            if cell.hyperlink:
+                dcell.hyperlink = cell.hyperlink
+            if cell.comment:
+                dcell.comment = _copy(cell.comment)
+
+    # Merged cells
+    for merged_range in src.merged_cells.ranges:
+        dst.merge_cells(str(merged_range))
+
+    # Column dimensions (widths, hidden, etc.)
+    for key, col_dim in src.column_dimensions.items():
+        dd = dst.column_dimensions[key]
+        # Width triggers customWidth internally in openpyxl; no direct setter for customWidth
+        try:
+            dd.width = col_dim.width
+        except Exception:
+            pass
+        try:
+            dd.min = col_dim.min
+            dd.max = col_dim.max
+        except Exception:
+            pass
+        try:
+            dd.hidden = col_dim.hidden
+            dd.bestFit = col_dim.bestFit
+        except Exception:
+            pass
+
+    # Row dimensions (heights, hidden)
+    for idx, row_dim in src.row_dimensions.items():
+        dd = dst.row_dimensions[idx]
+        dd.height = row_dim.height
+        dd.hidden = row_dim.hidden
+
+    # Freeze panes
+    dst.freeze_panes = src.freeze_panes
+
+    # Print options and page setup/margins
+    try:
+        dst.print_options.horizontalCentered = src.print_options.horizontalCentered
+        dst.print_options.verticalCentered = src.print_options.verticalCentered
+    except Exception:
+        pass
+
+    try:
+        pm = src.page_margins
+        dpm = dst.page_margins
+        dpm.left = pm.left
+        dpm.right = pm.right
+        dpm.top = pm.top
+        dpm.bottom = pm.bottom
+        dpm.header = pm.header
+        dpm.footer = pm.footer
+    except Exception:
+        pass
+
+    try:
+        ps = src.page_setup
+        dps = dst.page_setup
+        dps.orientation = ps.orientation
+        dps.paperSize = ps.paperSize
+        dps.fitToPage = ps.fitToPage
+        dps.fitToHeight = ps.fitToHeight
+        dps.fitToWidth = ps.fitToWidth
+        dps.scale = ps.scale
+    except Exception:
+        pass
+
+    # Sheet view (zoom, gridlines)
+    try:
+        dst.sheet_view.zoomScale = src.sheet_view.zoomScale
+        dst.sheet_view.showGridLines = src.sheet_view.showGridLines
+    except Exception:
+        pass
+
+    # Auto filter
+    try:
+        if src.auto_filter and src.auto_filter.ref:
+            dst.auto_filter.ref = src.auto_filter.ref
+    except Exception:
+        pass
+
+    # Conditional formatting rules
+    try:
+        cf = src.conditional_formatting
+        for rng in cf:
+            for rule in cf[rng]:
+                # rule objects can be reused; openpyxl will rebind as needed
+                dst.conditional_formatting.add(rng, rule)
+    except Exception:
+        pass
+
+    # Data validations
+    try:
+        if src.data_validations is not None:
+            for dv in src.data_validations.dataValidation:
+                ndv = DataValidation(
+                    type=dv.type,
+                    formula1=dv.formula1,
+                    formula2=dv.formula2,
+                    allow_blank=dv.allow_blank,
+                    operator=dv.operator,
+                    showErrorMessage=dv.showErrorMessage,
+                    showInputMessage=dv.showInputMessage,
+                    error=dv.error,
+                    errorTitle=dv.errorTitle,
+                    prompt=dv.prompt,
+                    promptTitle=dv.promptTitle,
+                )
+                # Copy ranges
+                for sqref in dv.sqref:
+                    ndv.add(str(sqref))
+                dst.add_data_validation(ndv)
+    except Exception:
+        pass
+
+
+def integrar_hoja_en_libro(
+    ruta_libro_principal: str,
+    ruta_libro_origen: str,
+    nombre_hoja_origen: Optional[str] = None,
+    nombre_hoja_nueva: Optional[str] = None,
+    crear_respaldo: bool = False,
+) -> str:
+    """
+    Abre `ruta_libro_principal` (loli.xlsx) y agrega como nueva hoja el contenido
+    de `ruta_libro_origen` (Resumen_RC.xlsx), preservando formatos y estructura.
+
+    Retorna la ruta del archivo principal guardado.
+    """
+    # Cargar libros
+    wb_dest = load_workbook(ruta_libro_principal)
+    wb_src = load_workbook(ruta_libro_origen)
+
+    # Selección de hoja de origen
+    if nombre_hoja_origen:
+        if nombre_hoja_origen not in wb_src.sheetnames:
+            raise ValueError(
+                f"La hoja '{nombre_hoja_origen}' no existe en el libro de origen."
+            )
+        ws_src = wb_src[nombre_hoja_origen]
+    else:
+        ws_src = wb_src.active
+
+    # Determinar título de nueva hoja
+    desired_title = nombre_hoja_nueva or ws_src.title
+    new_title = _safe_sheet_title(wb_dest, desired_title)
+
+    # Crear nueva hoja y copiar contenido
+    ws_dst = wb_dest.create_sheet(title=new_title)
+    _copy_sheet_contents(ws_src, ws_dst)
+
+    # Respaldo antes de sobrescribir
+    if crear_respaldo:
+        base = os.path.basename(ruta_libro_principal)
+        root, ext = os.path.splitext(base)
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_name = f"{root}_backup_{timestamp}{ext}"
+        backup_path = os.path.join(os.path.dirname(ruta_libro_principal), backup_name)
+        wb_backup = load_workbook(ruta_libro_principal)
+        wb_backup.save(backup_path)
+
+    # Guardar cambios en el libro principal
+    wb_dest.save(ruta_libro_principal)
+    return ruta_libro_principal
 
 
 # poliza_actual
@@ -2345,11 +2557,6 @@ if __name__ == "__main__":
     clasificacion_renovacion = clasificar_por_tipo(
         poliza_renovacion["detalle_cobertura"]
     )
-
-    # amparos_adicionales = []
-
-    # for doc in docs_adicionales_data:
-    #     amparos_adicionales.append(clasificar_por_tipo(doc["amparos"]))
 
     try:
         ruta_excel = generar_tabla_excel_rc(

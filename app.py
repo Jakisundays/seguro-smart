@@ -24,6 +24,7 @@ import copy
 
 # Local imports
 from polizas_toolsV2 import tools as tools_standard
+from rc import clasificar_por_tipo, generar_tabla_excel_rc, integrar_hoja_en_libro
 
 
 class PolizaDict(TypedDict):
@@ -129,6 +130,8 @@ def mostrar_riesgos(riesgos: list, titulo: str):
         riesgos (list): Lista de riesgos con ubicacion y detalle_cobertura.
         titulo (str): Título a mostrar arriba de la tabla.
     """
+    with st.expander(titulo):
+        st.write(riesgos)
     # Normalizar datos en filas planas
     rows = []
     for riesgo in riesgos:
@@ -1402,9 +1405,14 @@ async def main():
                             .get("parts", [{}])[0]
                             .get("text", "")
                         )
-                        doc_conjuntos["file_name"] = obtener_nombres_archivos(
-                            archivos_conjuntos
-                        )
+                        nombre = obtener_nombres_archivos(archivos_conjuntos)
+                        doc_conjuntos["file_name"] = nombre
+                        doc_conjuntos["Archivo"] = nombre
+                        doc_conjuntos["Prima Sin IVA"] = doc_conjuntos["prima_sin_iva"]
+                        doc_conjuntos["IVA"] = doc_conjuntos["iva"]
+                        doc_conjuntos["Prima Con IVA"] = doc_conjuntos["prima_con_iva"]
+                        doc_conjuntos["Tipo de Documento"] = "Adicional"
+
                         amparos_adicionales.append(
                             {
                                 "archivo": doc_conjuntos.get("file_name"),
@@ -1431,9 +1439,18 @@ async def main():
                         "Prima Sin IVA": doc.get("prima_sin_iva", 0),
                         "IVA": doc.get("iva", 0),
                         "Prima Con IVA": doc.get("prima_con_iva", 0),
+                        "tasa": doc.get("tasa", "No encontrada"),
+                        "amparos": doc.get("amparos", []),
+                        "danos_materiales": doc.get("danos_materiales", ""),
+                        "manejo_global_comercial": doc.get(
+                            "manejo_global_comercial", ""
+                        ),
+                        "transporte_valores": doc.get("transporte_valores", ""),
+                        "responsabilidad_civil": doc.get("responsabilidad_civil", ""),
                     }
                     for doc in docs_adicionales
                 ]
+
             else:
                 docs_adicionales_data = []
 
@@ -1575,14 +1592,47 @@ async def main():
 
             mostrar_amparos_adicionales(amparos_adicionales, "📂 Amparos Adicionales")
 
+            # Pasar poliza_actual, poliza_renovacion y docs_adicionales_data
+
+            docs_adicionales_conjuntos = docs_adicionales_data
+            if doc_conjuntos:
+                docs_adicionales_conjuntos.append(doc_conjuntos)
+
+            with st.expander("DOCS ADICIONALES CON CONJUNTOS"):
+                st.write(docs_adicionales_conjuntos)
+
             if poliza_data_actual or docs_adicionales_data:
                 st.subheader("📥 Descargar Resultados")
-                tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
-                tmp_path = tmp.name
-                tmp.close()
+                # Archivo Excel principal
+                main_excel_file = tempfile.NamedTemporaryFile(
+                    suffix=".xlsx", delete=False
+                )
+                main_excel_path = main_excel_file.name
+                main_excel_file.close()
+
+                # Archivo Excel resumen
+                summary_excel_file = tempfile.NamedTemporaryFile(
+                    suffix=".xlsx", delete=False
+                )
+                summary_excel_path = summary_excel_file.name
+                summary_excel_file.close()
+
+                # Clasificaciones por tipo para el resumen RC (no sobrescribir AmparosDict)
+                amparos_actuales_por_tipo = (
+                    clasificar_por_tipo(poliza_actual["amparos"]) if poliza_actual else {}
+                )
+                amparos_renovacion_por_tipo = (
+                    clasificar_por_tipo(poliza_renovacion["amparos"]) if poliza_renovacion else {}
+                )
+                clasificacion_actual = (
+                    clasificar_por_tipo(poliza_actual["detalle_cobertura"]) if poliza_actual else {}
+                )
+                clasificacion_renovacion = (
+                    clasificar_por_tipo(poliza_renovacion["detalle_cobertura"]) if poliza_renovacion else {}
+                )
 
                 try:
-                    output_path = generar_excel_analisis_polizas(
+                    main_output_path = generar_excel_analisis_polizas(
                         poliza_actual=poliza_actual_cuadro,
                         poliza_renovacion=poliza_renovacion_cuadro,
                         riesgos_actuales=riesgos_actuales,
@@ -1590,9 +1640,26 @@ async def main():
                         amparos_actuales=amparos_actuales,
                         amparos_renovacion=amparos_renovacion,
                         amparos_adicionales=amparos_adicionales,
-                        output_path=tmp_path,
+                        output_path=main_excel_path,
                     )
-                    with open(output_path, "rb") as f:
+
+                    summary_output_path = generar_tabla_excel_rc(
+                        amparos_actuales_por_tipo,
+                        amparos_renovacion_por_tipo,
+                        clasificacion_actual,
+                        clasificacion_renovacion,
+                        output_path=summary_excel_path,
+                    )
+
+                    integrar_hoja_en_libro(
+                        ruta_libro_principal=main_output_path,
+                        ruta_libro_origen=summary_output_path,
+                        nombre_hoja_origen=None,
+                        nombre_hoja_nueva=None,
+                        crear_respaldo=False,
+                    )
+
+                    with open(main_output_path, "rb") as f:
                         excel_bytes = f.read()
                         b64_excel = base64.b64encode(excel_bytes).decode()
                         href = (
