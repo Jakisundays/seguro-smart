@@ -23,7 +23,7 @@ import tempfile
 import copy
 
 # Local imports
-from polizas_toolsV2 import tools as tools_standard
+from polizas_tools import tools as tools_standard
 from rc import clasificar_por_tipo, generar_tabla_excel_rc, integrar_hoja_en_libro
 
 
@@ -359,144 +359,8 @@ def generar_excel_analisis_polizas(
             ws.auto_filter.ref = f"A1:{get_column_letter(len(df.columns))}{len(df) + 1}"
             ws.freeze_panes = "A2"
 
-        # ===== hoja Análisis_Estructurado =====
-        intereses_unicos = list(
-            set(
-                [item["Interés Asegurado"] for item in poliza_actual]
-                + [item["Interés Asegurado"] for item in poliza_renovacion]
-            )
-        )
-        valores_actuales = {
-            item["Interés Asegurado"]: item["Valor Asegurado"] for item in poliza_actual
-        }
-        valores_renovacion = {
-            item["Interés Asegurado"]: item["Valor Asegurado"]
-            for item in poliza_renovacion
-        }
-        total_actual = sum(valores_actuales.values())
-        total_renovacion = sum(valores_renovacion.values())
-
-        coberturas = [
-            "Incendio y/o Rayo Edificios",
-            "Explosión Mejoras Locativas",
-            "Terremoto, temblor Muebles y Enseres",
-            "Asonada, motin, conm. Civil/popular huelga Mercancias Fijas",
-            "Extension de amparo",
-            "Daños por agua, Anegación Dineros",
-            "Incendio y/o Rayo en aparatos electricos Equipo Electronico",
-        ]
-
-        columnas_analisis = [
-            "Coberturas",
-            "Interés Asegurado",
-            "Valor Asegurado Actual",
-            "Valor Asegurado Renovado",
-        ]
-        intereses_ordenados = sorted(intereses_unicos)
-        max_filas = max(len(intereses_ordenados), len(coberturas))
-
-        datos_estructurados = []
-        for i in range(max_filas):
-            fila = {
-                "Coberturas": coberturas[i] if i < len(coberturas) else "",
-                "Interés Asegurado": (
-                    intereses_ordenados[i] if i < len(intereses_ordenados) else ""
-                ),
-                "Valor Asegurado Actual": (
-                    valores_actuales.get(intereses_ordenados[i], 0)
-                    if i < len(intereses_ordenados)
-                    else ""
-                ),
-                "Valor Asegurado Renovado": (
-                    valores_renovacion.get(intereses_ordenados[i], 0)
-                    if i < len(intereses_ordenados)
-                    else ""
-                ),
-            }
-            datos_estructurados.append(fila)
-
-        datos_estructurados.append(
-            {
-                "Coberturas": "",
-                "Interés Asegurado": "TOTAL",
-                "Valor Asegurado Actual": total_actual,
-                "Valor Asegurado Renovado": total_renovacion,
-            }
-        )
-
-        # forzar solo columnas definidas
-        df_estructurado = pd.DataFrame(datos_estructurados)[columnas_analisis]
-
-        df_estructurado.to_excel(
-            writer, sheet_name="Análisis_Estructurado", index=False
-        )
-        format_worksheet(
-            writer.sheets["Análisis_Estructurado"], df_estructurado, "polizas"
-        )
-
-        # ===== hoja Polizas_Consolidadas =====
-        def crear_hoja_consolidada():
-            def procesar_poliza(poliza_data):
-                if not poliza_data:
-                    return None, None
-                intereses_valores = {}
-                total_poliza = sum(item["Valor Asegurado"] for item in poliza_data)
-                for item in poliza_data:
-                    intereses_valores[item["Interés Asegurado"]] = item[
-                        "Valor Asegurado"
-                    ]
-                columnas = list(intereses_valores.keys()) + ["Total Póliza"]
-                valores = [f"${valor:,.0f}" for valor in intereses_valores.values()] + [
-                    f"${total_poliza:,.0f}"
-                ]
-                return columnas, valores
-
-            columnas_actuales, valores_actuales = procesar_poliza(poliza_actual)
-            columnas_renovacion, valores_renovacion = procesar_poliza(poliza_renovacion)
-
-            datos_consolidados = []
-            if columnas_actuales and valores_actuales:
-                datos_consolidados.append(
-                    ["PÓLIZAS ACTUALES"] + [""] * (len(columnas_actuales) - 1)
-                )
-                datos_consolidados.append(columnas_actuales)
-                datos_consolidados.append(valores_actuales)
-                datos_consolidados.append([""] * len(columnas_actuales))
-
-            if columnas_renovacion and valores_renovacion:
-                max_cols = max(
-                    (len(columnas_actuales) if columnas_actuales else 0),
-                    len(columnas_renovacion),
-                )
-                datos_consolidados.append(
-                    ["PÓLIZAS DE RENOVACIÓN"] + [""] * (max_cols - 1)
-                )
-                columnas_renovacion_ajustadas = columnas_renovacion + [""] * (
-                    max_cols - len(columnas_renovacion)
-                )
-                valores_renovacion_ajustados = valores_renovacion + [""] * (
-                    max_cols - len(valores_renovacion)
-                )
-                datos_consolidados.append(columnas_renovacion_ajustadas)
-                datos_consolidados.append(valores_renovacion_ajustados)
-
-            if datos_consolidados:
-                max_cols = max(len(fila) for fila in datos_consolidados)
-                for i, fila in enumerate(datos_consolidados):
-                    if len(fila) < max_cols:
-                        datos_consolidados[i] = fila + [""] * (max_cols - len(fila))
-                columnas_genericas = [f"Columna_{i+1}" for i in range(max_cols)]
-                df_consolidado = pd.DataFrame(
-                    datos_consolidados, columns=columnas_genericas
-                )
-                df_consolidado.to_excel(
-                    writer, sheet_name="Polizas_Consolidadas", index=False, header=False
-                )
-                format_worksheet(
-                    writer.sheets["Polizas_Consolidadas"], df_consolidado, "polizas"
-                )
-
-        crear_hoja_consolidada()
+        # Se omite la creación de las hojas 'Análisis_Estructurado' y 'Polizas_Consolidadas'
+        # según requerimiento. El resto del documento permanece intacto.
 
         # ===== hoja Amparos (tercera hoja) =====
         def crear_hoja_amparos():
