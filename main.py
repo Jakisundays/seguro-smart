@@ -1392,12 +1392,12 @@ async def main():
             riesgos_renovacion = poliza_renovacion.get("data", []).get("riesgos", [])
 
             amparos_actuales = {
-                "archivo": poliza_actual.get("data").get("file_name"),
+                "archivo": poliza_actual.get("file_name"),
                 "amparos": poliza_actual.get("data", []).get("amparos", []),
             }
 
             amparos_renovacion = {
-                "archivo": poliza_renovacion.get("data").get("file_name"),
+                "archivo": poliza_renovacion.get("file_name"),
                 "amparos": poliza_renovacion.get("data", []).get("amparos", []),
             }
 
