@@ -660,14 +660,14 @@ def generar_tabla_excel_rc(
                 tasa_col = prima_col + 1
                 # PRIMA
                 c_prima = ws.cell(row=fila, column=prima_col)
-                c_prima.value = _fmt_money(prima)
+                c_prima.value = str(tasa_val)
                 c_prima.border = thin_border
                 c_prima.fill = total_fill
                 c_prima.font = Font(bold=True)
                 # TASA
                 tasa_val = doc_tasas[j] if j < len(doc_tasas) else None
                 c_tasa = ws.cell(row=fila, column=tasa_col)
-                c_tasa.value = str(tasa_val) if tasa_val is not None else ""
+                c_tasa.value = _fmt_money(prima) if prima is not None else ""
                 c_tasa.border = thin_border
                 c_tasa.fill = total_fill
                 c_tasa.font = Font(bold=True)

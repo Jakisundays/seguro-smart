@@ -32,7 +32,6 @@ from tools_actual import tools as tools_actuales
 from tools_adicionales import tools as tools_adicionales
 from rc import (
     clasificar_por_tipo,
-    docs_adicionales_data,
     generar_tabla_excel_rc,
     integrar_hoja_en_libro,
 )
