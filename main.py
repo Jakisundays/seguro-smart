@@ -311,85 +311,6 @@ def generar_excel_analisis_polizas(
             horizontal="left", vertical="center", wrap_text=True, shrink_to_fit=True
         )
 
-        def format_worksheet(ws, df, sheet_type):
-            ws.insert_rows(1, 2)
-            title_cell = ws.cell(row=1, column=1)
-            title_cell.value = "CENTRO DE DIAGNOSTICO AUTOMOTOR DE PALMIRA"
-            title_cell.font = Font(name="Arial", size=16, bold=True, color="FFFFFF")
-            title_cell.fill = PatternFill(
-                start_color="1F4E79", end_color="1F4E79", fill_type="solid"
-            )
-            title_cell.alignment = Alignment(horizontal="center", vertical="center")
-            ws.merge_cells(
-                start_row=1, start_column=1, end_row=1, end_column=len(df.columns)
-            )
-
-            if sheet_type == "polizas":
-                label_font = Font(name="Arial", size=14, bold=True, color="FFFFFF")
-                label_fill = PatternFill(
-                    start_color="4472C4", end_color="4472C4", fill_type="solid"
-                )
-                for row_num in range(3, ws.max_row + 1):
-                    cell_value = ws.cell(row=row_num, column=1).value
-                    if cell_value and (
-                        "PÓLIZAS ACTUALES" in str(cell_value)
-                        or "PÓLIZAS DE RENOVACIÓN" in str(cell_value)
-                    ):
-                        label_cell = ws.cell(row=row_num, column=1)
-                        label_cell.font = label_font
-                        label_cell.fill = label_fill
-                        label_cell.alignment = Alignment(
-                            horizontal="center", vertical="center"
-                        )
-                        ws.merge_cells(
-                            start_row=row_num,
-                            start_column=1,
-                            end_row=row_num,
-                            end_column=len(df.columns),
-                        )
-
-            for col_num in range(1, len(df.columns) + 1):
-                cell = ws.cell(row=3, column=col_num)
-                cell.font = header_font
-                cell.fill = header_fill
-                cell.border = border
-                cell.alignment = center_alignment
-
-            for row_num in range(4, len(df) + 4):
-                for col_num in range(1, len(df.columns) + 1):
-                    cell = ws.cell(row=row_num, column=col_num)
-                    cell.font = data_font
-                    cell.border = border
-                    col_name = df.columns[col_num - 1]
-                    if any(x in col_name.lower() for x in ["valor", "prima", "iva"]):
-                        cell.alignment = currency_alignment
-                        if isinstance(cell.value, (int, float)):
-                            cell.number_format = "$#,##0"
-                    elif col_name.lower() == "coberturas":
-                        cell.alignment = left_alignment
-                    else:
-                        cell.alignment = center_alignment
-
-            for col_num in range(1, len(df.columns) + 1):
-                column_letter = get_column_letter(col_num)
-                col_name = df.columns[col_num - 1]
-                max_length = max(
-                    len(str(col_name)),
-                    len("CENTRO DE DIAGNOSTICO AUTOMOTOR DE PALMIRA")
-                    // len(df.columns),
-                )
-                for row_num in range(4, len(df) + 4):
-                    cell_value = str(ws.cell(row=row_num, column=col_num).value or "")
-                    max_length = max(max_length, len(cell_value))
-                if col_name.lower() == "coberturas":
-                    width = 45
-                else:
-                    width = min(max(max_length + 2, 15), 40)
-                ws.column_dimensions[column_letter].width = width
-
-            ws.auto_filter.ref = f"A1:{get_column_letter(len(df.columns))}{len(df) + 1}"
-            ws.freeze_panes = "A2"
-
         # Se omite la creación de las hojas 'Análisis_Estructurado' y 'Polizas_Consolidadas'
         # según requerimiento. El resto del documento permanece intacto.
 
@@ -1413,8 +1334,13 @@ async def main():
             )
 
             clasificacion_renovacion = clasificar_por_tipo(
-                poliza_actual.get("data", {}).get("detalle_cobertura", {})
+                poliza_renovacion.get("data", {}).get("detalle_cobertura", {})
             )
+            with st.expander("Riesgos actuales"):
+                st.write(riesgos_actuales)
+
+            with st.expander("Riesgos renovacion"):
+                st.write(riesgos_renovacion)
             try:
                 main_output_path = generar_excel_analisis_polizas(
                     riesgos_actuales=riesgos_actuales,
