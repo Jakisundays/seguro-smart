@@ -634,7 +634,7 @@ def generar_excel_analisis_polizas(
             for row_num in range(1, len(df_amparos) + 4):
                 ws.row_dimensions[row_num].height = 20
 
-        crear_hoja_amparos()
+        # Nota: la hoja de Amparos se generará después de Riesgos para priorizar su orden
 
         # ===== hoja Riesgos (cuarta hoja) =====
         def crear_hoja_riesgos():
@@ -771,6 +771,9 @@ def generar_excel_analisis_polizas(
                     ws.column_dimensions[letter].width = 20
 
         crear_hoja_riesgos()
+
+        # Generar hoja de Amparos después de Riesgos para que aparezca luego en el libro
+        crear_hoja_amparos()
 
     with open(output_path, "wb") as f:
         f.write(output.getvalue())
@@ -1336,11 +1339,54 @@ async def main():
             clasificacion_renovacion = clasificar_por_tipo(
                 poliza_renovacion.get("data", {}).get("detalle_cobertura", {})
             )
+
             with st.expander("Riesgos actuales"):
                 st.write(riesgos_actuales)
 
             with st.expander("Riesgos renovacion"):
                 st.write(riesgos_renovacion)
+
+            with st.expander("clasificacion_actual"):
+                st.write(clasificacion_actual)
+
+            with st.expander("clasificacion_renovacion"):
+                st.write(clasificacion_renovacion)
+
+            with st.expander("documentos_adicionales"):
+                st.write(documentos_adicionales)
+
+            with st.expander("Poliza actual"):
+                st.write(poliza_actual)
+
+            with st.expander("Poliza renovacion"):
+                st.write(poliza_renovacion)
+
+            docs_adicionales_data = [
+                {
+                    "Archivo": doc.get("file_name"),
+                    "Tipo de Documento": doc.get("doc_type"),
+                    "Prima Sin IVA": doc.get("data", {}).get("prima_sin_iva", ""),
+                    "IVA": doc.get("data", {}).get("iva", ""),
+                    "Prima Con IVA": doc.get("data", {}).get("prima_con_iva", ""),
+                    "tasa": doc.get("data", {}).get("tasa", ""),
+                    "amparos": doc.get("data", {}).get("amparos", []),
+                    "danos_materiales": doc.get("data", {}).get("danos_materiales", {}),
+                    "manejo_global_comercial": doc.get("data", {}).get(
+                        "manejo_global_comercial", {}
+                    ),
+                    "transporte_valores": doc.get("data", {}).get(
+                        "transporte_valores", {}
+                    ),
+                    "responsabilidad_civil": doc.get("data", {}).get(
+                        "responsabilidad_civil", {}
+                    ),
+                }
+                for doc in documentos_adicionales
+            ]
+
+            with st.expander("docs_adicionales_data"):
+                st.write(docs_adicionales_data)
+
             try:
                 main_output_path = generar_excel_analisis_polizas(
                     riesgos_actuales=riesgos_actuales,
@@ -1352,10 +1398,13 @@ async def main():
                 )
 
                 summary_output_path = generar_tabla_excel_rc(
-                    amparos_actuales_por_tipo,
-                    amparos_renovacion_por_tipo,
-                    clasificacion_actual,
-                    clasificacion_renovacion,
+                    amparos_actuales=amparos_actuales_por_tipo,
+                    amparos_renovacion=amparos_renovacion_por_tipo,
+                    clasificacion_actual=clasificacion_actual,
+                    clasificacion_renovacion=clasificacion_renovacion,
+                    docs_adicionales_data=docs_adicionales_data,
+                    poliza_actual=poliza_actual.get("data", {}),
+                    poliza_renovacion=poliza_renovacion.get("data", {}),
                     output_path=summary_excel_path,
                 )
 

@@ -9,15 +9,4 @@
 - [ ] Verificar que la función de lectura no esté apuntando a la misma lista.
 - [ ] Agregar logs para validar qué documentos se leen en cada conjunto.
 
----
 
-## 4️⃣ Modificar orden de hojas
-**Nuevo orden de hojas:**  
-1. Riesgo  
-2. Amparo  
-3. Resumen  
-
-**Pasos a revisar:**
-- [ ] Localizar el código donde se generan las hojas del reporte.
-- [ ] Modificar el orden según la lista anterior.
-- [ ] Verificar que la generación del PDF/Excel respete este nuevo orden.

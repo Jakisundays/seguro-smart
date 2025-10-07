@@ -65,6 +65,9 @@ def generar_tabla_excel_rc(
     amparos_renovacion: Dict[str, List[Dict[str, Any]]],
     clasificacion_actual: Dict[str, List[Dict[str, Any]]],
     clasificacion_renovacion: Dict[str, List[Dict[str, Any]]],
+    docs_adicionales_data: Optional[List[Dict[str, Any]]] = None,
+    poliza_actual: Optional[Dict[str, Any]] = None,
+    poliza_renovacion: Optional[Dict[str, Any]] = None,
     output_path: str = "Resumen_RC.xlsx",
 ) -> str:
     """
@@ -77,6 +80,8 @@ def generar_tabla_excel_rc(
       - Todo se agrupa por categoría/tipo. Cada tipo se imprime como sección.
       - Se evita duplicidad tanto en coberturas como en intereses (por nombre normalizado).
       - Cuando un interés existe en una sola póliza, el valor de la otra queda en blanco.
+      - Parámetros opcionales `poliza_actual` y `poliza_renovacion` permiten agregar detalles
+        en columnas de "PRIMA" para condiciones actuales y de renovación sin depender de variables globales.
     """
     # Validaciones
     if not isinstance(amparos_actuales, dict) or not isinstance(
@@ -284,7 +289,7 @@ def generar_tabla_excel_rc(
         c.border = thin_border
 
     # Columnas dinámicas para COTIZACIONES (documentos adicionales)
-    docs = globals().get("docs_adicionales_data", []) or []
+    docs = docs_adicionales_data or []
     doc_headers = [
         str(d.get("Archivo", f"Documento {i+1}")) for i, d in enumerate(docs)
     ]
@@ -451,7 +456,7 @@ def generar_tabla_excel_rc(
 
         # Insertar detalles en columnas dinámicas (I en adelante) usando filas de la sección
         tipo_norm = str(tipo).strip().lower()
-        docs = globals().get("docs_adicionales_data", []) or []
+        docs = docs_adicionales_data or []
         for j, doc in enumerate(docs):
             tasa_col = 9 + (j * 2)
             prima_col = tasa_col + 1
@@ -539,8 +544,8 @@ def generar_tabla_excel_rc(
 
         # Insertar detalles en "PRIMA" de CONDICIONES ACTUALES (col 6) y RENOVACIÓN (col 8)
         for pol, dest_col in (
-            (globals().get("poliza_actual", {}) or {}, 6),
-            (globals().get("poliza_renovacion", {}) or {}, 8),
+            (poliza_actual or {}, 6),
+            (poliza_renovacion or {}, 8),
         ):
             details = []
             if tipo_norm == "incendio":
@@ -628,8 +633,8 @@ def generar_tabla_excel_rc(
         total_ren = sum(v[2] for v in interes_list)
         tipo_norm = str(tipo).strip().lower()
         # Extraer tasas y primas para INCENDIO desde poliza_actual y poliza_renovacion
-        p_act = globals().get("poliza_actual", {}) or {}
-        p_ren = globals().get("poliza_renovacion", {}) or {}
+        p_act = poliza_actual
+        p_ren = poliza_renovacion
         tasa_act = p_act.get("tasa", "") if tipo_norm == "incendio" else ""
         prima_act = p_act.get("prima_sin_iva", "") if tipo_norm == "incendio" else ""
         tasa_ren = p_ren.get("tasa", "") if tipo_norm == "incendio" else ""
@@ -899,1673 +904,1676 @@ def integrar_hoja_en_libro(
     return ruta_libro_principal
 
 
-# poliza_actual
-poliza_actual = {
-    "detalle_cobertura": [
-        {
-            "interes_asegurado": "Edificios",
-            "valor_asegurado": 22615066519,
-            "tipo": ["Incendio", "Responsabilidad Civil"],
-        },
-        {
-            "interes_asegurado": "Equipo Electrónico",
-            "valor_asegurado": 1204502680,
-            "tipo": ["Equipo Electronico", "Sustracción", "Incendio"],
-        },
-        {
-            "interes_asegurado": "Muebles y Enseres",
-            "valor_asegurado": 1621213188,
-            "tipo": ["Incendio", "Sustracción"],
-        },
-        {
-            "interes_asegurado": "Maquinaria y Equipo",
-            "valor_asegurado": 2928485866,
-            "tipo": ["Rotura de Maquinaria", "Incendio", "Sustracción"],
-        },
-        {
-            "interes_asegurado": "Mercancías",
-            "valor_asegurado": 46200000,
-            "tipo": ["Incendio", "Sustracción"],
-        },
-        {
-            "interes_asegurado": "Dinero",
-            "valor_asegurado": 196000000,
-            "tipo": ["Manejo de Dinero", "Sustracción", "Transporte de Valores"],
-        },
-        {
-            "interes_asegurado": "Eq. Móviles y Portátiles",
-            "valor_asegurado": 82695800,
-            "tipo": ["Equipo Electronico", "Sustracción"],
-        },
-    ],
-    "total_valores_asegurados": 28694164053,
-    "amparos": [
-        {
-            "amparo": "Incendio y/o Impacto Directo De Rayo",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Explosión",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Extensión de Amparos",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Explosión de Calderas u Otros Aparatos Generadores de Vapor",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Rotura de Maquinaria", "Incendio"],
-        },
-        {
-            "amparo": "Rotura Accidental De Vidrios",
-            "deducible": "0,25 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Terremoto, Temblor De Tierra, Erupción Volcánica, Tsunami, Maremoto",
-            "deducible": "2% del valor asegurable del artículo mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Anegación",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Daños Por Agua",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "AMIT Y Terrorismo",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "HMACC",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Productos Almacenados En Frigoríficos",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Daño Interno Equipos Eléctricos Y Electrónicos",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Equipo Electronico"],
-        },
-        {
-            "amparo": "Portadores Externos de Datos",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Equipo Electronico"],
-        },
-        {
-            "amparo": "Equipos Móviles Y Portátiles",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Equipo Electronico"],
-        },
-        {
-            "amparo": "Incremento en Costos De Operación",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Daños por Fallas En Equipos De Climatización",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Rotura de Maquinaria", "Equipo Electronico"],
-        },
-        {
-            "amparo": "Rotura De Maquinaria",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Rotura de Maquinaria"],
-        },
-        {
-            "amparo": "Pérdida de Contenido en Tanques",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio", "Sustracción"],
-        },
-        {
-            "amparo": "Deterioro de Bienes Refrigerados",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Rotura de Maquinaria", "Incendio"],
-        },
-        {
-            "amparo": "Hurto Calificado",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Sustracción"],
-        },
-        {
-            "amparo": "Hurto Simple para Equipo Eléctrico Y Electrónico Fijo de Oficina",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Sustracción", "Equipo Electronico"],
-        },
-        {
-            "amparo": "Bienes de Propiedad de Empleados del Asegurado",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Manejo de Dinero", "Sustracción"],
-        },
-        {
-            "amparo": "Traslado Temporal de Bienes",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Sustracción", "Incendio"],
-        },
-        {
-            "amparo": "Construcciones y Montajes Nuevos",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio", "Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Bienes a la Intemperie",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio", "Sustracción"],
-        },
-        {
-            "amparo": "Actos de Autoridad",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Remoción de Escombros",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Honorarios de Profesionales como Arquitectos, Interventores, Ingenieros y Consultores",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Gastos para la Preservación de Bienes",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Gastos para la Reproducción y/o Reemplazo de la Información",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Equipo Electronico"],
-        },
-        {
-            "amparo": "Gastos para Demostrar la Pérdida",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Transporte De Valores",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Transporte de Valores"],
-        },
-        {
-            "amparo": "Asistencia",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Labores y Materiales",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Gastos de Extinción del siniestro",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Daños o pérdidas de Mercancías a Granel",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio", "Sustracción"],
-        },
-        {
-            "amparo": "Manejo",
-            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
-            "tipo": ["Manejo de Dinero"],
-        },
-        {
-            "amparo": "Empleados de Carácter Temporal y/o de Firmas Especializadas",
-            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
-            "tipo": ["Manejo de Dinero"],
-        },
-        {
-            "amparo": "Empleados no Identificados",
-            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
-            "tipo": ["Manejo de Dinero"],
-        },
-        {
-            "amparo": "Bienes de Propiedad de Terceros",
-            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
-            "tipo": ["Manejo de Dinero", "Sustracción"],
-        },
-        {
-            "amparo": "Protección para Depósitos Bancarios",
-            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
-            "tipo": ["Manejo de Dinero"],
-        },
-        {
-            "amparo": "Predios Labores y Operaciones",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Contratistas y Subcontratistas",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Responsabilidad Civil Patronal",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Vehículos Propios y no Propios",
-            "deducible": "En exceso del SOAT y RCE autos mínimo 100.000.000/100.000.000/200.000.000 COP",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Propietarios, Arrendatarios y Poseedores",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Gastos Médicos",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Responsabilidad Civil Cruzada",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Responsabilidad Civil Parqueaderos",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Responsabilidad Civil"],
-        },
-    ],
-    "riesgos": [
-        {
-            "ubicacion": "1 Calle 28 # 30-15 PALMIRA",
-            "detalle_cobertura": [
-                {
-                    "interes_asegurado": "EDIFICIO",
-                    "valor_asegurado": 3061592832,
-                    "tipo": ["Incendio", "Responsabilidad Civil"],
-                },
-                {
-                    "interes_asegurado": "MAQUINARIA Y EQUIPO",
-                    "valor_asegurado": 141240000,
-                    "tipo": ["Rotura de Maquinaria", "Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
-                    "valor_asegurado": 58850000,
-                    "tipo": ["Equipo Electronico", "Incendio", "Sustracción"],
-                },
-            ],
-        },
-        {
-            "ubicacion": "2 Carrera 18 #8-31 FLORIDA",
-            "detalle_cobertura": [
-                {
-                    "interes_asegurado": "EDIFICIO",
-                    "valor_asegurado": 505019752,
-                    "tipo": ["Incendio", "Responsabilidad Civil"],
-                },
-                {
-                    "interes_asegurado": "MUEBLES Y ENSERES",
-                    "valor_asegurado": 100145560,
-                    "tipo": ["Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "MAQUINARIA Y EQUIPO",
-                    "valor_asegurado": 77255146,
-                    "tipo": ["Rotura de Maquinaria", "Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
-                    "valor_asegurado": 59352677,
-                    "tipo": ["Equipo Electronico", "Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "MERCANCIAS",
-                    "valor_asegurado": 11000000,
-                    "tipo": ["Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "DINEROS",
-                    "valor_asegurado": 22000000,
-                    "tipo": [
-                        "Manejo de Dinero",
-                        "Sustracción",
-                        "Transporte de Valores",
-                    ],
-                },
-            ],
-        },
-        {
-            "ubicacion": "3 Calle 6 # 12-50 PRADERA",
-            "detalle_cobertura": [
-                {
-                    "interes_asegurado": "EDIFICIO",
-                    "valor_asegurado": 586566851,
-                    "tipo": ["Incendio", "Responsabilidad Civil"],
-                },
-                {
-                    "interes_asegurado": "MUEBLES Y ENSERES",
-                    "valor_asegurado": 123035974,
-                    "tipo": ["Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "MAQUINARIA Y EQUIPO",
-                    "valor_asegurado": 77255146,
-                    "tipo": ["Rotura de Maquinaria", "Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
-                    "valor_asegurado": 55386331,
-                    "tipo": ["Equipo Electronico", "Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "MERCANCIAS",
-                    "valor_asegurado": 11000000,
-                    "tipo": ["Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "DINEROS",
-                    "valor_asegurado": 22000000,
-                    "tipo": [
-                        "Manejo de Dinero",
-                        "Sustracción",
-                        "Transporte de Valores",
-                    ],
-                },
-            ],
-        },
-        {
-            "ubicacion": "4 Carrera 7 #. 11-56 CANDELARIA",
-            "detalle_cobertura": [
-                {
-                    "interes_asegurado": "EDIFICIO",
-                    "valor_asegurado": 806887083,
-                    "tipo": ["Incendio", "Responsabilidad Civil"],
-                },
-                {
-                    "interes_asegurado": "MUEBLES Y ENSERES",
-                    "valor_asegurado": 91561655,
-                    "tipo": ["Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "MAQUINARIA Y EQUIPO",
-                    "valor_asegurado": 38627573,
-                    "tipo": ["Rotura de Maquinaria", "Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
-                    "valor_asegurado": 46705241,
-                    "tipo": ["Equipo Electronico", "Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "MERCANCIAS",
-                    "valor_asegurado": 2200000,
-                    "tipo": ["Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "DINEROS",
-                    "valor_asegurado": 22000000,
-                    "tipo": [
-                        "Manejo de Dinero",
-                        "Sustracción",
-                        "Transporte de Valores",
-                    ],
-                },
-            ],
-        },
-        {
-            "ubicacion": "5 Carrera 31 # 28-00 y Calle 28 #31-30 Esq PALMIRA",
-            "detalle_cobertura": [
-                {
-                    "interes_asegurado": "EDIFICIO",
-                    "valor_asegurado": 17655000000,
-                    "tipo": ["Incendio", "Responsabilidad Civil"],
-                },
-                {
-                    "interes_asegurado": "MUEBLES Y ENSERES",
-                    "valor_asegurado": 921591000,
-                    "tipo": ["Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "OBRAS DE ARTE",
-                    "valor_asegurado": 384879000,
-                    "tipo": ["Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "MAQUINARIA Y EQUIPO",
-                    "valor_asegurado": 2594108000,
-                    "tipo": ["Rotura de Maquinaria", "Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
-                    "valor_asegurado": 977178797,
-                    "tipo": ["Equipo Electronico", "Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO MOVIL",
-                    "valor_asegurado": 73562500,
-                    "tipo": ["Equipo Electronico", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "MERCANCIAS",
-                    "valor_asegurado": 22000000,
-                    "tipo": ["Incendio", "Sustracción"],
-                },
-                {
-                    "interes_asegurado": "DINEROS",
-                    "valor_asegurado": 130000000,
-                    "tipo": [
-                        "Manejo de Dinero",
-                        "Sustracción",
-                        "Transporte de Valores",
-                    ],
-                },
-            ],
-        },
-    ],
-    "danos_materiales": {
-        "incendio_maximo": "28.694.164.053,00",
-        "terremoto_maximo": "28.694.164.053,00",
-        "terrorismo_maximo": "28.694.164.053,00",
-        "sustraccion_maximo": "5.996.401.734,00",
-        "dinero_fuera_caja_fuerte": "1.000.000.000,00",
-        "dinero_dentro_caja_fuerte": "130.000.000,00",
-        "sustraccion_sin_violencia": "1.204.502.680,00",
-        "equipo_electronico": "1.204.502.680,00",
-        "equipos_moviles_portatiles": "82.695.800,00",
-        "rotura_maquinaria": "2.928.485.866,00",
-    },
-    "manejo_global_comercial": {
-        "perdidas_maximo_anual": "20.000.000,00",
-        "empleados_no_identificados": "20.000.000,00",
-        "empleados_temporales_firma": "20.000.000,00",
-    },
-    "transporte_valores": {
-        "limite_maximo_despacho": "20.000.000,00",
-        "presupuesto_anual_movilizaciones": "1.000.000.000,00",
-    },
-    "responsabilidad_civil": {
-        "vehiculos_propios_no_propios": "2.000.000.000,00",
-        "gastos_urgencias_medicas": "100.000.000,00",
-        "contratistas_subcontratistas": "2.000.000.000,00",
-        "parqueaderos": "200.000.000,00",
-        "cruzada": "1.000.000.000,00",
-        "productos": "N/A",
-        "patronal": "2.000.000.000,00",
-    },
-    "tasa": 0.10797434778,
-    "iva": 5882492.62,
-    "prima_con_iva": 36842980.11,
-    "prima_sin_iva": 30960487.49,
-    "file_name": "POLIZA ACTUAL EMPRESARIAL 128663630-0 CAMARA DE COMERCIO DE PALMIRA 2024-2025 (1).pdf",
-}
+# # poliza_actual
+# poliza_actual = {
+#     "detalle_cobertura": [
+#         {
+#             "interes_asegurado": "Edificios",
+#             "valor_asegurado": 22615066519,
+#             "tipo": ["Incendio", "Responsabilidad Civil"],
+#         },
+#         {
+#             "interes_asegurado": "Equipo Electrónico",
+#             "valor_asegurado": 1204502680,
+#             "tipo": ["Equipo Electronico", "Sustracción", "Incendio"],
+#         },
+#         {
+#             "interes_asegurado": "Muebles y Enseres",
+#             "valor_asegurado": 1621213188,
+#             "tipo": ["Incendio", "Sustracción"],
+#         },
+#         {
+#             "interes_asegurado": "Maquinaria y Equipo",
+#             "valor_asegurado": 2928485866,
+#             "tipo": ["Rotura de Maquinaria", "Incendio", "Sustracción"],
+#         },
+#         {
+#             "interes_asegurado": "Mercancías",
+#             "valor_asegurado": 46200000,
+#             "tipo": ["Incendio", "Sustracción"],
+#         },
+#         {
+#             "interes_asegurado": "Dinero",
+#             "valor_asegurado": 196000000,
+#             "tipo": ["Manejo de Dinero", "Sustracción", "Transporte de Valores"],
+#         },
+#         {
+#             "interes_asegurado": "Eq. Móviles y Portátiles",
+#             "valor_asegurado": 82695800,
+#             "tipo": ["Equipo Electronico", "Sustracción"],
+#         },
+#     ],
+#     "total_valores_asegurados": 28694164053,
+#     "amparos": [
+#         {
+#             "amparo": "Incendio y/o Impacto Directo De Rayo",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Explosión",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Extensión de Amparos",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Explosión de Calderas u Otros Aparatos Generadores de Vapor",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Rotura de Maquinaria", "Incendio"],
+#         },
+#         {
+#             "amparo": "Rotura Accidental De Vidrios",
+#             "deducible": "0,25 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Terremoto, Temblor De Tierra, Erupción Volcánica, Tsunami, Maremoto",
+#             "deducible": "2% del valor asegurable del artículo mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Anegación",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Daños Por Agua",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "AMIT Y Terrorismo",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "HMACC",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Productos Almacenados En Frigoríficos",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Daño Interno Equipos Eléctricos Y Electrónicos",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Equipo Electronico"],
+#         },
+#         {
+#             "amparo": "Portadores Externos de Datos",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Equipo Electronico"],
+#         },
+#         {
+#             "amparo": "Equipos Móviles Y Portátiles",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Equipo Electronico"],
+#         },
+#         {
+#             "amparo": "Incremento en Costos De Operación",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Daños por Fallas En Equipos De Climatización",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Rotura de Maquinaria", "Equipo Electronico"],
+#         },
+#         {
+#             "amparo": "Rotura De Maquinaria",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Rotura de Maquinaria"],
+#         },
+#         {
+#             "amparo": "Pérdida de Contenido en Tanques",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio", "Sustracción"],
+#         },
+#         {
+#             "amparo": "Deterioro de Bienes Refrigerados",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Rotura de Maquinaria", "Incendio"],
+#         },
+#         {
+#             "amparo": "Hurto Calificado",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Sustracción"],
+#         },
+#         {
+#             "amparo": "Hurto Simple para Equipo Eléctrico Y Electrónico Fijo de Oficina",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Sustracción", "Equipo Electronico"],
+#         },
+#         {
+#             "amparo": "Bienes de Propiedad de Empleados del Asegurado",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Manejo de Dinero", "Sustracción"],
+#         },
+#         {
+#             "amparo": "Traslado Temporal de Bienes",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Sustracción", "Incendio"],
+#         },
+#         {
+#             "amparo": "Construcciones y Montajes Nuevos",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio", "Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Bienes a la Intemperie",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio", "Sustracción"],
+#         },
+#         {
+#             "amparo": "Actos de Autoridad",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Remoción de Escombros",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Honorarios de Profesionales como Arquitectos, Interventores, Ingenieros y Consultores",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Gastos para la Preservación de Bienes",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Gastos para la Reproducción y/o Reemplazo de la Información",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Equipo Electronico"],
+#         },
+#         {
+#             "amparo": "Gastos para Demostrar la Pérdida",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Transporte De Valores",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Transporte de Valores"],
+#         },
+#         {
+#             "amparo": "Asistencia",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Labores y Materiales",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Gastos de Extinción del siniestro",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Daños o pérdidas de Mercancías a Granel",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio", "Sustracción"],
+#         },
+#         {
+#             "amparo": "Manejo",
+#             "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+#             "tipo": ["Manejo de Dinero"],
+#         },
+#         {
+#             "amparo": "Empleados de Carácter Temporal y/o de Firmas Especializadas",
+#             "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+#             "tipo": ["Manejo de Dinero"],
+#         },
+#         {
+#             "amparo": "Empleados no Identificados",
+#             "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+#             "tipo": ["Manejo de Dinero"],
+#         },
+#         {
+#             "amparo": "Bienes de Propiedad de Terceros",
+#             "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+#             "tipo": ["Manejo de Dinero", "Sustracción"],
+#         },
+#         {
+#             "amparo": "Protección para Depósitos Bancarios",
+#             "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+#             "tipo": ["Manejo de Dinero"],
+#         },
+#         {
+#             "amparo": "Predios Labores y Operaciones",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Contratistas y Subcontratistas",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Responsabilidad Civil Patronal",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Vehículos Propios y no Propios",
+#             "deducible": "En exceso del SOAT y RCE autos mínimo 100.000.000/100.000.000/200.000.000 COP",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Propietarios, Arrendatarios y Poseedores",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Gastos Médicos",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Responsabilidad Civil Cruzada",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Responsabilidad Civil Parqueaderos",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#     ],
+#     "riesgos": [
+#         {
+#             "ubicacion": "1 Calle 28 # 30-15 PALMIRA",
+#             "detalle_cobertura": [
+#                 {
+#                     "interes_asegurado": "EDIFICIO",
+#                     "valor_asegurado": 3061592832,
+#                     "tipo": ["Incendio", "Responsabilidad Civil"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MAQUINARIA Y EQUIPO",
+#                     "valor_asegurado": 141240000,
+#                     "tipo": ["Rotura de Maquinaria", "Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
+#                     "valor_asegurado": 58850000,
+#                     "tipo": ["Equipo Electronico", "Incendio", "Sustracción"],
+#                 },
+#             ],
+#         },
+#         {
+#             "ubicacion": "2 Carrera 18 #8-31 FLORIDA",
+#             "detalle_cobertura": [
+#                 {
+#                     "interes_asegurado": "EDIFICIO",
+#                     "valor_asegurado": 505019752,
+#                     "tipo": ["Incendio", "Responsabilidad Civil"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MUEBLES Y ENSERES",
+#                     "valor_asegurado": 100145560,
+#                     "tipo": ["Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MAQUINARIA Y EQUIPO",
+#                     "valor_asegurado": 77255146,
+#                     "tipo": ["Rotura de Maquinaria", "Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
+#                     "valor_asegurado": 59352677,
+#                     "tipo": ["Equipo Electronico", "Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MERCANCIAS",
+#                     "valor_asegurado": 11000000,
+#                     "tipo": ["Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "DINEROS",
+#                     "valor_asegurado": 22000000,
+#                     "tipo": [
+#                         "Manejo de Dinero",
+#                         "Sustracción",
+#                         "Transporte de Valores",
+#                     ],
+#                 },
+#             ],
+#         },
+#         {
+#             "ubicacion": "3 Calle 6 # 12-50 PRADERA",
+#             "detalle_cobertura": [
+#                 {
+#                     "interes_asegurado": "EDIFICIO",
+#                     "valor_asegurado": 586566851,
+#                     "tipo": ["Incendio", "Responsabilidad Civil"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MUEBLES Y ENSERES",
+#                     "valor_asegurado": 123035974,
+#                     "tipo": ["Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MAQUINARIA Y EQUIPO",
+#                     "valor_asegurado": 77255146,
+#                     "tipo": ["Rotura de Maquinaria", "Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
+#                     "valor_asegurado": 55386331,
+#                     "tipo": ["Equipo Electronico", "Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MERCANCIAS",
+#                     "valor_asegurado": 11000000,
+#                     "tipo": ["Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "DINEROS",
+#                     "valor_asegurado": 22000000,
+#                     "tipo": [
+#                         "Manejo de Dinero",
+#                         "Sustracción",
+#                         "Transporte de Valores",
+#                     ],
+#                 },
+#             ],
+#         },
+#         {
+#             "ubicacion": "4 Carrera 7 #. 11-56 CANDELARIA",
+#             "detalle_cobertura": [
+#                 {
+#                     "interes_asegurado": "EDIFICIO",
+#                     "valor_asegurado": 806887083,
+#                     "tipo": ["Incendio", "Responsabilidad Civil"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MUEBLES Y ENSERES",
+#                     "valor_asegurado": 91561655,
+#                     "tipo": ["Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MAQUINARIA Y EQUIPO",
+#                     "valor_asegurado": 38627573,
+#                     "tipo": ["Rotura de Maquinaria", "Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
+#                     "valor_asegurado": 46705241,
+#                     "tipo": ["Equipo Electronico", "Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MERCANCIAS",
+#                     "valor_asegurado": 2200000,
+#                     "tipo": ["Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "DINEROS",
+#                     "valor_asegurado": 22000000,
+#                     "tipo": [
+#                         "Manejo de Dinero",
+#                         "Sustracción",
+#                         "Transporte de Valores",
+#                     ],
+#                 },
+#             ],
+#         },
+#         {
+#             "ubicacion": "5 Carrera 31 # 28-00 y Calle 28 #31-30 Esq PALMIRA",
+#             "detalle_cobertura": [
+#                 {
+#                     "interes_asegurado": "EDIFICIO",
+#                     "valor_asegurado": 17655000000,
+#                     "tipo": ["Incendio", "Responsabilidad Civil"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MUEBLES Y ENSERES",
+#                     "valor_asegurado": 921591000,
+#                     "tipo": ["Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "OBRAS DE ARTE",
+#                     "valor_asegurado": 384879000,
+#                     "tipo": ["Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MAQUINARIA Y EQUIPO",
+#                     "valor_asegurado": 2594108000,
+#                     "tipo": ["Rotura de Maquinaria", "Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
+#                     "valor_asegurado": 977178797,
+#                     "tipo": ["Equipo Electronico", "Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO MOVIL",
+#                     "valor_asegurado": 73562500,
+#                     "tipo": ["Equipo Electronico", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MERCANCIAS",
+#                     "valor_asegurado": 22000000,
+#                     "tipo": ["Incendio", "Sustracción"],
+#                 },
+#                 {
+#                     "interes_asegurado": "DINEROS",
+#                     "valor_asegurado": 130000000,
+#                     "tipo": [
+#                         "Manejo de Dinero",
+#                         "Sustracción",
+#                         "Transporte de Valores",
+#                     ],
+#                 },
+#             ],
+#         },
+#     ],
+#     "danos_materiales": {
+#         "incendio_maximo": "28.694.164.053,00",
+#         "terremoto_maximo": "28.694.164.053,00",
+#         "terrorismo_maximo": "28.694.164.053,00",
+#         "sustraccion_maximo": "5.996.401.734,00",
+#         "dinero_fuera_caja_fuerte": "1.000.000.000,00",
+#         "dinero_dentro_caja_fuerte": "130.000.000,00",
+#         "sustraccion_sin_violencia": "1.204.502.680,00",
+#         "equipo_electronico": "1.204.502.680,00",
+#         "equipos_moviles_portatiles": "82.695.800,00",
+#         "rotura_maquinaria": "2.928.485.866,00",
+#     },
+#     "manejo_global_comercial": {
+#         "perdidas_maximo_anual": "20.000.000,00",
+#         "empleados_no_identificados": "20.000.000,00",
+#         "empleados_temporales_firma": "20.000.000,00",
+#     },
+#     "transporte_valores": {
+#         "limite_maximo_despacho": "20.000.000,00",
+#         "presupuesto_anual_movilizaciones": "1.000.000.000,00",
+#     },
+#     "responsabilidad_civil": {
+#         "vehiculos_propios_no_propios": "2.000.000.000,00",
+#         "gastos_urgencias_medicas": "100.000.000,00",
+#         "contratistas_subcontratistas": "2.000.000.000,00",
+#         "parqueaderos": "200.000.000,00",
+#         "cruzada": "1.000.000.000,00",
+#         "productos": "N/A",
+#         "patronal": "2.000.000.000,00",
+#     },
+#     "tasa": 0.10797434778,
+#     "iva": 5882492.62,
+#     "prima_con_iva": 36842980.11,
+#     "prima_sin_iva": 30960487.49,
+#     "file_name": "POLIZA ACTUAL EMPRESARIAL 128663630-0 CAMARA DE COMERCIO DE PALMIRA 2024-2025 (1).pdf",
+# }
 
-# poliza_renovacion
-poliza_renovacion = {
-    "detalle_cobertura": [
-        {
-            "interes_asegurado": "Edificios",
-            "valor_asegurado": 24876573170,
-            "tipo": ["Incendio"],
-        },
-        {
-            "interes_asegurado": "Equipo Electrónico",
-            "valor_asegurado": 1245453104,
-            "tipo": ["Equipo Electronico"],
-        },
-        {
-            "interes_asegurado": "Muebles y Enseres",
-            "valor_asegurado": 1783334507,
-            "tipo": ["Incendio"],
-        },
-        {
-            "interes_asegurado": "Maquinaria y Equipo",
-            "valor_asegurado": 3221334452,
-            "tipo": ["Rotura de Maquinaria"],
-        },
-        {
-            "interes_asegurado": "Mercancías",
-            "valor_asegurado": 46200000,
-            "tipo": ["Incendio"],
-        },
-        {
-            "interes_asegurado": "Dinero",
-            "valor_asegurado": 196000000,
-            "tipo": ["Manejo de Dinero"],
-        },
-        {
-            "interes_asegurado": "Eq. Móviles y Portátiles",
-            "valor_asegurado": 94156337,
-            "tipo": ["Equipo Electronico"],
-        },
-    ],
-    "total_valores_asegurados": 31463051570,
-    "amparos": [
-        {
-            "amparo": "Incendio y/o Impacto Directo De Rayo",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Explosión",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Extensión de Amparos",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Explosión de Calderas u Otros Aparatos Generadores de Vapor",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Rotura de Maquinaria"],
-        },
-        {
-            "amparo": "Rotura Accidental De Vidrios",
-            "deducible": "0,25 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Terremoto, Temblor De Tierra, Erupción Volcánica, Tsunami, Maremoto",
-            "deducible": "2% del valor asegurable del artículo mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Anegación",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Daños Por Agua",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "AMIT Y Terrorismo",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "HMACC",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Productos Almacenados En Frigoríficos",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Daño Interno Equipos Eléctricos Y Electrónicos",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Equipo Electronico"],
-        },
-        {
-            "amparo": "Portadores Externos de Datos",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Equipo Electronico"],
-        },
-        {
-            "amparo": "Equipos Móviles Y Portátiles",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Equipo Electronico"],
-        },
-        {
-            "amparo": "Incremento en Costos De Operación",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Daños por Fallas En Equipos De Climatización",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Rotura de Maquinaria"],
-        },
-        {
-            "amparo": "Rotura De Maquinaria",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Rotura de Maquinaria"],
-        },
-        {
-            "amparo": "Pérdida de Contenido en Tanques",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Deterioro de Bienes Refrigerados",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Hurto Calificado",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Sustracción"],
-        },
-        {
-            "amparo": "Hurto Simple para Equipo Eléctrico Y Electrónico Fijo de Oficina",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Sustracción", "Equipo Electronico"],
-        },
-        {
-            "amparo": "Bienes de Propiedad de Empleados del Asegurado",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Sustracción"],
-        },
-        {
-            "amparo": "Traslado Temporal de Bienes",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Sustracción"],
-        },
-        {
-            "amparo": "Construcciones y Montajes Nuevos",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Bienes a la Intemperie",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Actos de Autoridad",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Remoción de Escombros",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Honorarios de Profesionales como Arquitectos, Interventores, Ingenieros y Consultores",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Gastos para la Preservación de Bienes",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Gastos para la Reproducción y/o Reemplazo de la Información",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Equipo Electronico"],
-        },
-        {
-            "amparo": "Gastos para Demostrar la Pérdida",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Transporte De Valores",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Transporte de Valores"],
-        },
-        {
-            "amparo": "Asistencia",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Labores y Materiales",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Gastos de Extinción del siniestro",
-            "deducible": "Aplica el de la cobertura afectada",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Daños o pérdidas de Mercancías a Granel",
-            "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Incendio"],
-        },
-        {
-            "amparo": "Manejo",
-            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
-            "tipo": ["Manejo de Dinero"],
-        },
-        {
-            "amparo": "Empleados de Carácter Temporal y/o de Firmas Especializadas",
-            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
-            "tipo": ["Manejo de Dinero"],
-        },
-        {
-            "amparo": "Empleados no Identificados",
-            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
-            "tipo": ["Manejo de Dinero"],
-        },
-        {
-            "amparo": "Bienes de Propiedad de Terceros",
-            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
-            "tipo": ["Manejo de Dinero"],
-        },
-        {
-            "amparo": "Protección para Depósitos Bancarios",
-            "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
-            "tipo": ["Manejo de Dinero"],
-        },
-        {
-            "amparo": "Predios Labores y Operaciones",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Contratistas y Subcontratistas",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Responsabilidad Civil Patronal",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Vehículos Propios y no Propios",
-            "deducible": "En exceso del SOAT y RCE autos mínimo 100.000.000/100.000.000/200.000.000 COP",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Propietarios, Arrendatarios y Poseedores",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Gastos Médicos",
-            "deducible": "N/A",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Responsabilidad Civil Cruzada",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Responsabilidad Civil"],
-        },
-        {
-            "amparo": "Responsabilidad Civil Parqueaderos",
-            "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-            "tipo": ["Responsabilidad Civil"],
-        },
-    ],
-    "riesgos": [
-        {
-            "ubicacion": "CLL 28 #30-15 PALMIRA",
-            "detalle_cobertura": [
-                {
-                    "interes_asegurado": "EDIFICIO",
-                    "valor_asegurado": 24876573170,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "MUEBLES Y ENSERES",
-                    "valor_asegurado": 1783334507,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "MAQUINARIA Y EQUIPO",
-                    "valor_asegurado": 3221334452,
-                    "tipo": ["Rotura de Maquinaria"],
-                },
-                {
-                    "interes_asegurado": "MERCANCÍAS",
-                    "valor_asegurado": 46200000,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "DINERO",
-                    "valor_asegurado": 196000000,
-                    "tipo": ["Manejo de Dinero"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO ELECTRONICO",
-                    "valor_asegurado": 1245453104,
-                    "tipo": ["Equipo Electronico"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO MOVIL Y PORTATIL",
-                    "valor_asegurado": 94156337,
-                    "tipo": ["Equipo Electronico"],
-                },
-            ],
-        },
-        {
-            "ubicacion": "CALLE 28 # 18-44 FLORIDA",
-            "detalle_cobertura": [
-                {
-                    "interes_asegurado": "EDIFICIO",
-                    "valor_asegurado": 1367732116,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "MUEBLES Y ENSERES",
-                    "valor_asegurado": 155364000,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
-                    "valor_asegurado": 64735000,
-                    "tipo": ["Equipo Electronico"],
-                },
-                {
-                    "interes_asegurado": "DINEROS",
-                    "valor_asegurado": 22000000,
-                    "tipo": ["Manejo de Dinero"],
-                },
-            ],
-        },
-        {
-            "ubicacion": "CALLE 28 A # 18-64 FLORIDA",
-            "detalle_cobertura": [
-                {
-                    "interes_asegurado": "MAQUINARIA Y EQUIPO",
-                    "valor_asegurado": 84980661,
-                    "tipo": ["Rotura de Maquinaria"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO ELECTRONICO",
-                    "valor_asegurado": 69072144,
-                    "tipo": ["Equipo Electronico"],
-                },
-                {
-                    "interes_asegurado": "MERCANCIAS",
-                    "valor_asegurado": 11000000,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "DINEROS",
-                    "valor_asegurado": 22000000,
-                    "tipo": ["Manejo de Dinero"],
-                },
-            ],
-        },
-        {
-            "ubicacion": "CALLE 6 # 12-50 PRADERA",
-            "detalle_cobertura": [
-                {
-                    "interes_asegurado": "EDIFICIO Y MEJORAS",
-                    "valor_asegurado": 597000,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "MUEBLES Y ENSERES",
-                    "valor_asegurado": 135339571,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "MAQUINARIA Y EQUIPO",
-                    "valor_asegurado": 188880661,
-                    "tipo": ["Rotura de Maquinaria"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
-                    "valor_asegurado": 64709165,
-                    "tipo": ["Equipo Electronico"],
-                },
-                {
-                    "interes_asegurado": "MERCANCIAS",
-                    "valor_asegurado": 11000000,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "DINEROS",
-                    "valor_asegurado": 22000000,
-                    "tipo": ["Manejo de Dinero"],
-                },
-            ],
-        },
-        {
-            "ubicacion": "CARRERA 38 # 32-34 CANDELARIA",
-            "detalle_cobertura": [
-                {
-                    "interes_asegurado": "EDIFICIO",
-                    "valor_asegurado": 381575791,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "MUEBLES Y ENSERES",
-                    "valor_asegurado": 100717820,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "MAQUINARIA Y EQUIPO",
-                    "valor_asegurado": 42490830,
-                    "tipo": ["Rotura de Maquinaria"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO ELECTRONICO",
-                    "valor_asegurado": 35159965,
-                    "tipo": ["Equipo Electronico"],
-                },
-                {
-                    "interes_asegurado": "MERCANCIAS",
-                    "valor_asegurado": 11000000,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "DINEROS",
-                    "valor_asegurado": 22000000,
-                    "tipo": ["Manejo de Dinero"],
-                },
-            ],
-        },
-        {
-            "ubicacion": "CARRERA 31 # 28-00 Y CALLE 28 #31-30 ESA PALMIRA",
-            "detalle_cobertura": [
-                {
-                    "interes_asegurado": "EDIFICIO Y OBRAS DE ARTE",
-                    "valor_asegurado": 2437117000,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "MUEBLES Y ENSERES",
-                    "valor_asegurado": 1013750100,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "MAQUINARIA Y EQUIPO",
-                    "valor_asegurado": 283850000,
-                    "tipo": ["Rotura de Maquinaria"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO ELECTRONICO",
-                    "valor_asegurado": 991776830,
-                    "tipo": ["Equipo Electronico"],
-                },
-                {
-                    "interes_asegurado": "EQUIPO MOVIL",
-                    "valor_asegurado": 94156337,
-                    "tipo": ["Equipo Electronico"],
-                },
-                {
-                    "interes_asegurado": "MERCANCIAS",
-                    "valor_asegurado": 23100000,
-                    "tipo": ["Incendio"],
-                },
-                {
-                    "interes_asegurado": "DINEROS",
-                    "valor_asegurado": 130000000,
-                    "tipo": ["Manejo de Dinero"],
-                },
-            ],
-        },
-    ],
-    "danos_materiales": {
-        "incendio_maximo": "31.463.051.570,00",
-        "terremoto_maximo": "31.463.051.570,00",
-        "terrorismo_maximo": "31.463.051.570,00",
-        "sustraccion_maximo": "6.492.322.063,00",
-        "dinero_fuera_caja_fuerte": "null",
-        "dinero_dentro_caja_fuerte": "null",
-        "sustraccion_sin_violencia": "null",
-        "equipo_electronico": "1.245.453.104,00",
-        "equipos_moviles_portatiles": "94.156.337,00",
-        "rotura_maquinaria": "3.221.334.452,00",
-    },
-    "manejo_global_comercial": {
-        "perdidas_maximo_anual": "20.000.000,00",
-        "empleados_no_identificados": "20.000.000,00",
-        "empleados_temporales_firma": "20.000.000,00",
-    },
-    "transporte_valores": {
-        "limite_maximo_despacho": "20.000.000,00",
-        "presupuesto_anual_movilizaciones": "1.000.000.000,00",
-    },
-    "responsabilidad_civil": {
-        "vehiculos_propios_no_propios": "2.000.000.000,00",
-        "gastos_urgencias_medicas": "100.000.000,00",
-        "contratistas_subcontratistas": "2.000.000.000,00",
-        "parqueaderos": "200.000.000,00",
-        "cruzada": "1.000.000.000,00",
-        "productos": "null",
-        "patronal": "2.000.000.000,00",
-    },
-    "tasa": 0,
-    "iva": 0,
-    "prima_con_iva": 0,
-    "prima_sin_iva": 40653811.84,
-    "file_name": "PR336-186756401-26358662 COT CyC PALMIRA.pdf",
-}
-# docs_adicionales_data
-docs_adicionales_data = [
-    {
-        "Archivo": "Slip Cotización 2500008845 Pyme Segura 10+AXA COLPATRIA.pdf",
-        "Tipo de Documento": "Adicional",
-        "Prima Sin IVA": 10636637,
-        "IVA": 2020961,
-        "Prima Con IVA": 12657598,
-        "tasa": 0.002,
-        "amparos": [
-            {
-                "amparo": "Todo riesgo incendio",
-                "deducible": "10% de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Terremoto, Temblor, Erupción Volcánica y Maremoto, Marejada, Tsunami",
-                "deducible": "2% valor asegurable del ítem afectado, mínimo 2 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Hmac-Amit/terrorismo",
-                "deducible": "15% de la pérdida, mínimo 3 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Sustracción con violencia para dinero en efectivo y títulos valores",
-                "deducible": "10% de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Sustracción", "Manejo de Dinero"],
-            },
-            {
-                "amparo": "Sustracción con violencia",
-                "deducible": "10% de la pérdida, mínimo 2 SMMLV",
-                "tipo": ["Sustracción"],
-            },
-            {
-                "amparo": "Sustracción sin violencia - Contenido",
-                "deducible": "20% de la pérdida, mínimo 2 SMMLV",
-                "tipo": ["Sustracción"],
-            },
-            {
-                "amparo": "Equipo eléctrico y electrónico",
-                "deducible": "10% de la pérdida, mínimo 2 SMMLV",
-                "tipo": ["Equipo Electronico"],
-            },
-            {
-                "amparo": "Rotura de maquinarias",
-                "deducible": "10% de la pérdida, mínimo 2 SMMLV",
-                "tipo": ["Rotura de Maquinaria"],
-            },
-            {
-                "amparo": "Pérdida arrendamiento",
-                "deducible": "Sin deducible",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Gastos alojamiento temporal",
-                "deducible": "Sin deducible",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Índice variable edificio",
-                "deducible": "Sin deducible",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Índice variable maquinaria",
-                "deducible": "Sin deducible",
-                "tipo": ["Rotura de Maquinaria"],
-            },
-            {
-                "amparo": "Manejo básico (Manejo global comercial)",
-                "deducible": "10% de la pérdida, mínimo 2 SMMLV",
-                "tipo": ["Manejo de Dinero"],
-            },
-            {
-                "amparo": "Manejo demás (Manejo global comercial)",
-                "deducible": "15% de la pérdida, mínimo 2 SMMLV",
-                "tipo": ["Manejo de Dinero"],
-            },
-            {
-                "amparo": "Transporte de valores",
-                "deducible": "5% de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Transporte de Valores"],
-            },
-            {
-                "amparo": "Predios, labores y operaciones (Responsabilidad Civil)",
-                "deducible": "$1.000.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Gastos médicos (Responsabilidad Civil)",
-                "deducible": "Sin deducible",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Gastos de defensa (Responsabilidad Civil)",
-                "deducible": "Sin deducible",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Parqueaderos (Responsabilidad Civil)",
-                "deducible": "$1.000.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Viajes al exterior (Responsabilidad Civil)",
-                "deducible": "$1.000.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Responsabilidad civil patronal (por accidentes de trabajo)",
-                "deducible": "En exceso Seguridad Social",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Responsabilidad civil por vehículos propios y no propios",
-                "deducible": "En exceso de $100.000.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Responsabilidad civil contratistas y subcontratistas (Incluye RCE Cruzada)",
-                "deducible": "En exceso de $10.000.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Responsabilidad civil por contaminación accidental",
-                "deducible": "$1.000.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "RCE bienes bajo cuidado, tenencia y control",
-                "deducible": "$1.000.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "RC productos y/o trabajos terminados",
-                "deducible": "$1.500.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-        ],
-        "danos_materiales": {
-            "incendio_maximo": "$ 5.304.471.886",
-            "terremoto_maximo": "$ 5.304.471.886",
-            "terrorismo_maximo": "$ 5.304.471.886",
-            "sustraccion_maximo": "$ 2.542.798.438",
-            "dinero_fuera_caja_fuerte": "$ 17.500.000",
-            "dinero_dentro_caja_fuerte": "$ 17.500.000",
-            "sustraccion_sin_violencia": "No especificado",
-            "equipo_electronico": "$ 454.777.139",
-            "equipos_moviles_portatiles": "No especificado",
-            "rotura_maquinaria": "$ 66.770.519",
-        },
-        "manejo_global_comercial": {
-            "perdidas_maximo_anual": "$ 10.000.000",
-            "empleados_no_identificados": "$ 5.000.000",
-            "empleados_temporales_firma": "$ 5.000.000",
-        },
-        "transporte_valores": {
-            "limite_maximo_despacho": "$ 20.000.000",
-            "presupuesto_anual_movilizaciones": "$ 1.050.000.000",
-        },
-        "responsabilidad_civil": {
-            "vehiculos_propios_no_propios": "$ 1.500.000.000",
-            "gastos_urgencias_medicas": "$ 1.500.000.000",
-            "contratistas_subcontratistas": "$ 1.500.000.000",
-            "parqueaderos": "$ 1.500.000.000",
-            "cruzada": "$ 1.500.000.000",
-            "productos": "$ 1.500.000.000",
-            "patronal": "$ 1.500.000.000",
-        },
-    },
-    {
-        "Archivo": "SLIP TRDM OFICINAS_CAMARA DE COMERCIO.pdf",
-        "Tipo de Documento": "Adicional",
-        "Prima Sin IVA": 28289403,
-        "IVA": 0,
-        "Prima Con IVA": 28289403,
-        "tasa": 0.09,
-        "amparos": [
-            {
-                "amparo": "Incendio y/o rayo o sus efectos inmediatos como calor y humo",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Explosión",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Extensión de Amparos (Huracán, tifón, tornado, ciclón, granizo, vientos fuertes, caída de aeronaves, choque de vehículos terrestres)",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Inundación, anegación, avalancha, enlodamiento y daños por agua",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Terremoto, temblor, erupción volcánica, maremoto, marejada y/o tsunami",
-                "deducible": "2% del valor asegurable del artículo afectado por el siniestro, mínimo 1 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Huelga, asonada, motín, conmoción civil o popular, actos mal intencionados de terceros, sabotaje y terrorismo (HMACC y AMIT)",
-                "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Sustracción con violencia (bienes diferentes a equipos eléctricos y electrónicos)",
-                "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Sustracción"],
-            },
-            {
-                "amparo": "Sustracción con violencia (dineros dentro de caja fuerte)",
-                "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-                "tipo": ["Manejo de Dinero"],
-            },
-            {
-                "amparo": "Sustracción con violencia (dineros fuera de caja fuerte)",
-                "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-                "tipo": ["Manejo de Dinero"],
-            },
-            {
-                "amparo": "Rotura de maquinaria",
-                "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
-                "tipo": ["Rotura de Maquinaria"],
-            },
-            {
-                "amparo": "Equipo Eléctrico y Electrónico (Daño interno y hurto calificado)",
-                "deducible": "Hurto calificado: 10% del valor de la pérdida, mínimo 1 SMMLV. Demás eventos: 20% del valor de la pérdida, mínimo 3 SMMLV",
-                "tipo": ["Equipo Electronico"],
-            },
-            {
-                "amparo": "Hurto simple (equipos fijos de oficina)",
-                "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Sustracción"],
-            },
-            {
-                "amparo": "Equipos de cómputo móviles y portátiles",
-                "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Equipo Electronico"],
-            },
-            {
-                "amparo": "Amparo automático de nuevos bienes o propiedades",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Remoción de escombros",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Propiedad personal de empleados",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Sustracción"],
-            },
-            {
-                "amparo": "Gastos para la extinción del siniestro",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Gastos para evitar la propagación del siniestro",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Gastos para la preservación de bienes",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Gastos para acelerar la reparación o reemplazo",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Gastos de viaje y estadía",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Honorarios de auditores, revisores y contadores",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Gastos por concepto de horas extras, trabajo nocturno, trabajo en días feriados y flete expreso",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Gastos por reparaciones provisionales o construcciones transitorias y/o temporales",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Honorarios profesionales",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Incendio y/o rayo en aparatos eléctricos",
-                "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
-                "tipo": ["Equipo Electronico"],
-            },
-            {
-                "amparo": "Portadores externos de datos",
-                "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
-                "tipo": ["Equipo Electronico"],
-            },
-            {
-                "amparo": "Gastos para la reposición de documentos",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Rotura accidental de vidrios",
-                "deducible": "Sin deducible",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Traslados temporales de maquinaria y equipos (excluyendo transporte, cargue y descargue)",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Rotura de Maquinaria"],
-            },
-            {
-                "amparo": "Nuevas construcciones y montajes menores",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Amparo automático de ferias y eventos",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Daños a calderas y/o aparatos generadores de vapor",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Rotura de Maquinaria"],
-            },
-            {
-                "amparo": "Daños a cimentaciones",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Daños por fallas en equipos de climatización",
-                "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
-                "tipo": ["Equipo Electronico"],
-            },
-            {
-                "amparo": "Pérdida de contenidos en tanques",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Flete aéreo",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Gastos adicionales derivados del siniestro",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Gastos para demostración de la ocurrencia y cuantía del siniestro",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Gastos para la obtención de licencias y permisos",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Incremento en el costo de operación para equipos electrónicos procesadores",
-                "deducible": "3 días calendario",
-                "tipo": ["Equipo Electronico"],
-            },
-            {
-                "amparo": "Bienes bajo cuidado, tenencia y control",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Sustracción"],
-            },
-            {
-                "amparo": "Amparo automático para equipos de reemplazo temporal",
-                "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
-                "tipo": ["Equipo Electronico"],
-            },
-            {
-                "amparo": "Amparo automático de máquinas y equipos en demostración",
-                "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
-                "tipo": ["Equipo Electronico"],
-            },
-            {
-                "amparo": "Obras de arte o murales decorativos",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Cobertura para aceites, lubricantes y refrigerantes",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Rotura de Maquinaria"],
-            },
-            {
-                "amparo": "Reparación estética del inmueble",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Gastos para el reacondicionamiento de jardines naturales u ornamentales y/o urbanismo",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Bienes de propiedad de visitantes",
-                "deducible": "15% de la pérdida, mínimo 5 SMMLV",
-                "tipo": ["Sustracción"],
-            },
-        ],
-        "danos_materiales": {
-            "incendio_maximo": "$31.432.470.033 por evento y en el agregado anual",
-            "terremoto_maximo": "$31.432.470.033 por evento y en el agregado anual",
-            "terrorismo_maximo": "$31.432.470.033 por evento y en el agregado anual",
-            "sustraccion_maximo": "$4.627.502.059 por evento y en el agregado anual",
-            "dinero_fuera_caja_fuerte": "$10.000.000 por evento y en el agregado anual",
-            "dinero_dentro_caja_fuerte": "$30.000.000 por evento y en el agregado anual",
-            "sustraccion_sin_violencia": "$984.208.430 por evento y en el agregado anual",
-            "equipo_electronico": "$1.309.227.904 por evento y en el agregado anual",
-            "equipos_moviles_portatiles": "$20.000.000 por evento y $50.000.000 en el agregado anual",
-            "rotura_maquinaria": "$3.221.334.452 por evento y en el agregado anual",
-        },
-        "manejo_global_comercial": {
-            "perdidas_maximo_anual": "No especificado en el documento",
-            "empleados_no_identificados": "No especificado en el documento",
-            "empleados_temporales_firma": "No especificado en el documento",
-        },
-        "transporte_valores": {
-            "limite_maximo_despacho": "No especificado en el documento",
-            "presupuesto_anual_movilizaciones": "No especificado en el documento",
-        },
-        "responsabilidad_civil": {
-            "vehiculos_propios_no_propios": "No especificado en el documento",
-            "gastos_urgencias_medicas": "No especificado en el documento",
-            "contratistas_subcontratistas": "No especificado en el documento",
-            "parqueaderos": "No especificado en el documento",
-            "cruzada": "No especificado en el documento",
-            "productos": "No especificado en el documento",
-            "patronal": "No especificado en el documento",
-        },
-    },
-    {
-        "prima_sin_iva": 10636637,
-        "iva": 2020961,
-        "prima_con_iva": 12657598,
-        "tasa": 0.09,
-        "amparos": [
-            {
-                "amparo": "Todo riesgo incendio",
-                "deducible": "10% de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Terremoto, temblor, erupción volcánica y maremoto, marejada, tsunami",
-                "deducible": "2% del valor asegurable del artículo afectado, mínimo 1 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Huelga, motín, asonada, conmoción civil y/o popular y actos mal intencionados de terceros, incluido actos terroristas y terrorismo (HMACC - AMIT)",
-                "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Sustracción con violencia",
-                "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
-                "tipo": ["Sustracción"],
-            },
-            {
-                "amparo": "Sustracción sin violencia - Contenido",
-                "deducible": "20% de la pérdida, mínimo 2 SMMLV",
-                "tipo": ["Sustracción"],
-            },
-            {
-                "amparo": "Equipo electrónico (Daño interno y hurto calificado)",
-                "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Equipo Electronico"],
-            },
-            {
-                "amparo": "Equipo electrónico (Hurto simple)",
-                "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Equipo Electronico"],
-            },
-            {
-                "amparo": "Equipo electrónico (Equipos de cómputo móviles y portátiles)",
-                "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Equipo Electronico"],
-            },
-            {
-                "amparo": "Rotura de Maquinaria",
-                "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
-                "tipo": ["Rotura de Maquinaria"],
-            },
-            {
-                "amparo": "Rotura de vidrios",
-                "deducible": "Sin deducible",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Pérdida arrendamiento",
-                "deducible": "Sin deducible",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Gastos alojamiento temporal",
-                "deducible": "Sin deducible",
-                "tipo": ["Incendio"],
-            },
-            {
-                "amparo": "Manejo Global Comercial (Hurto, Abuso de confianza, Falsedad, Estafa)",
-                "deducible": "10% de la pérdida, mínimo 2 SMMLV",
-                "tipo": ["Manejo de Dinero"],
-            },
-            {
-                "amparo": "Manejo Global Comercial (Empleados no identificados / Temporales)",
-                "deducible": "15% de la pérdida, mínimo 2 SMMLV",
-                "tipo": ["Manejo de Dinero"],
-            },
-            {
-                "amparo": "Transporte de Valores (Pérdida o daño material)",
-                "deducible": "5% de la pérdida, mínimo 1 SMMLV",
-                "tipo": ["Transporte de Valores"],
-            },
-            {
-                "amparo": "Responsabilidad Civil - Predios, labores y operaciones",
-                "deducible": "$1.000.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Responsabilidad Civil - Gastos médicos",
-                "deducible": "Sin deducible",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Responsabilidad Civil - Parqueaderos",
-                "deducible": "$1.000.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Responsabilidad Civil - Vehículos propios y no propios",
-                "deducible": "En exceso de $100.000.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Responsabilidad Civil - Contratistas y Subcontratistas (Incluye Cruzada)",
-                "deducible": "En exceso de $10.000.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Responsabilidad Civil - Productos y/o trabajos terminados",
-                "deducible": "$1.500.000",
-                "tipo": ["Responsabilidad Civil"],
-            },
-            {
-                "amparo": "Responsabilidad Civil - Patronal",
-                "deducible": "En exceso Seguridad Social",
-                "tipo": ["Responsabilidad Civil"],
-            },
-        ],
-        "danos_materiales": {
-            "incendio_maximo": "$31.432.470.033",
-            "terremoto_maximo": "$31.432.470.033",
-            "terrorismo_maximo": "$31.432.470.033",
-            "sustraccion_maximo": "$4.627.502.059",
-            "dinero_fuera_caja_fuerte": "$10.000.000",
-            "dinero_dentro_caja_fuerte": "$30.000.000",
-            "sustraccion_sin_violencia": "$984.208.430",
-            "equipo_electronico": "$1.309.227.904",
-            "equipos_moviles_portatiles": "$50.000.000",
-            "rotura_maquinaria": "$3.221.334.452",
-        },
-        "manejo_global_comercial": {
-            "perdidas_maximo_anual": "$10.000.000",
-            "empleados_no_identificados": "$5.000.000",
-            "empleados_temporales_firma": "$5.000.000",
-        },
-        "transporte_valores": {
-            "limite_maximo_despacho": "$20.000.000",
-            "presupuesto_anual_movilizaciones": "$1.050.000.000",
-        },
-        "responsabilidad_civil": {
-            "vehiculos_propios_no_propios": "Límite único $1.500.000.000 por evento y vigencia",
-            "gastos_urgencias_medicas": "Límite único $1.500.000.000 por evento y vigencia",
-            "contratistas_subcontratistas": "Límite único $1.500.000.000 por evento y vigencia",
-            "parqueaderos": "Límite único $1.500.000.000 por evento y vigencia",
-            "cruzada": "Límite único $1.500.000.000 por evento y vigencia",
-            "productos": "Límite único $1.500.000.000 por evento y vigencia",
-            "patronal": "Límite único $1.500.000.000 por evento y vigencia",
-        },
-        "file_name": "Slip Cotización 2500008845 Pyme Segura 10+AXA COLPATRIA.pdf, SLIP TRDM OFICINAS_CAMARA DE COMERCIO.pdf",
-        "Archivo": "Slip Cotización 2500008845 Pyme Segura 10+AXA COLPATRIA.pdf, SLIP TRDM OFICINAS_CAMARA DE COMERCIO.pdf",
-        "Prima Sin IVA": 10636637,
-        "IVA": 2020961,
-        "Prima Con IVA": 12657598,
-        "Tipo de Documento": "Adicional",
-    },
-]
+# # poliza_renovacion
+# poliza_renovacion = {
+#     "detalle_cobertura": [
+#         {
+#             "interes_asegurado": "Edificios",
+#             "valor_asegurado": 24876573170,
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "interes_asegurado": "Equipo Electrónico",
+#             "valor_asegurado": 1245453104,
+#             "tipo": ["Equipo Electronico"],
+#         },
+#         {
+#             "interes_asegurado": "Muebles y Enseres",
+#             "valor_asegurado": 1783334507,
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "interes_asegurado": "Maquinaria y Equipo",
+#             "valor_asegurado": 3221334452,
+#             "tipo": ["Rotura de Maquinaria"],
+#         },
+#         {
+#             "interes_asegurado": "Mercancías",
+#             "valor_asegurado": 46200000,
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "interes_asegurado": "Dinero",
+#             "valor_asegurado": 196000000,
+#             "tipo": ["Manejo de Dinero"],
+#         },
+#         {
+#             "interes_asegurado": "Eq. Móviles y Portátiles",
+#             "valor_asegurado": 94156337,
+#             "tipo": ["Equipo Electronico"],
+#         },
+#     ],
+#     "total_valores_asegurados": 31463051570,
+#     "amparos": [
+#         {
+#             "amparo": "Incendio y/o Impacto Directo De Rayo",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Explosión",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Extensión de Amparos",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Explosión de Calderas u Otros Aparatos Generadores de Vapor",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Rotura de Maquinaria"],
+#         },
+#         {
+#             "amparo": "Rotura Accidental De Vidrios",
+#             "deducible": "0,25 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Terremoto, Temblor De Tierra, Erupción Volcánica, Tsunami, Maremoto",
+#             "deducible": "2% del valor asegurable del artículo mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Anegación",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Daños Por Agua",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "AMIT Y Terrorismo",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "HMACC",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Productos Almacenados En Frigoríficos",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Daño Interno Equipos Eléctricos Y Electrónicos",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Equipo Electronico"],
+#         },
+#         {
+#             "amparo": "Portadores Externos de Datos",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Equipo Electronico"],
+#         },
+#         {
+#             "amparo": "Equipos Móviles Y Portátiles",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Equipo Electronico"],
+#         },
+#         {
+#             "amparo": "Incremento en Costos De Operación",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Daños por Fallas En Equipos De Climatización",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Rotura de Maquinaria"],
+#         },
+#         {
+#             "amparo": "Rotura De Maquinaria",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Rotura de Maquinaria"],
+#         },
+#         {
+#             "amparo": "Pérdida de Contenido en Tanques",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Deterioro de Bienes Refrigerados",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Hurto Calificado",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Sustracción"],
+#         },
+#         {
+#             "amparo": "Hurto Simple para Equipo Eléctrico Y Electrónico Fijo de Oficina",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Sustracción", "Equipo Electronico"],
+#         },
+#         {
+#             "amparo": "Bienes de Propiedad de Empleados del Asegurado",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Sustracción"],
+#         },
+#         {
+#             "amparo": "Traslado Temporal de Bienes",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Sustracción"],
+#         },
+#         {
+#             "amparo": "Construcciones y Montajes Nuevos",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Bienes a la Intemperie",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Actos de Autoridad",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Remoción de Escombros",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Honorarios de Profesionales como Arquitectos, Interventores, Ingenieros y Consultores",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Gastos para la Preservación de Bienes",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Gastos para la Reproducción y/o Reemplazo de la Información",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Equipo Electronico"],
+#         },
+#         {
+#             "amparo": "Gastos para Demostrar la Pérdida",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Transporte De Valores",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Transporte de Valores"],
+#         },
+#         {
+#             "amparo": "Asistencia",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Labores y Materiales",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Gastos de Extinción del siniestro",
+#             "deducible": "Aplica el de la cobertura afectada",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Daños o pérdidas de Mercancías a Granel",
+#             "deducible": "5% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Incendio"],
+#         },
+#         {
+#             "amparo": "Manejo",
+#             "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+#             "tipo": ["Manejo de Dinero"],
+#         },
+#         {
+#             "amparo": "Empleados de Carácter Temporal y/o de Firmas Especializadas",
+#             "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+#             "tipo": ["Manejo de Dinero"],
+#         },
+#         {
+#             "amparo": "Empleados no Identificados",
+#             "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+#             "tipo": ["Manejo de Dinero"],
+#         },
+#         {
+#             "amparo": "Bienes de Propiedad de Terceros",
+#             "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+#             "tipo": ["Manejo de Dinero"],
+#         },
+#         {
+#             "amparo": "Protección para Depósitos Bancarios",
+#             "deducible": "10% del valor de la pérdida mínimo 2 SMMLV",
+#             "tipo": ["Manejo de Dinero"],
+#         },
+#         {
+#             "amparo": "Predios Labores y Operaciones",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Contratistas y Subcontratistas",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Responsabilidad Civil Patronal",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Vehículos Propios y no Propios",
+#             "deducible": "En exceso del SOAT y RCE autos mínimo 100.000.000/100.000.000/200.000.000 COP",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Propietarios, Arrendatarios y Poseedores",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Gastos Médicos",
+#             "deducible": "N/A",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Responsabilidad Civil Cruzada",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#         {
+#             "amparo": "Responsabilidad Civil Parqueaderos",
+#             "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#             "tipo": ["Responsabilidad Civil"],
+#         },
+#     ],
+#     "riesgos": [
+#         {
+#             "ubicacion": "CLL 28 #30-15 PALMIRA",
+#             "detalle_cobertura": [
+#                 {
+#                     "interes_asegurado": "EDIFICIO",
+#                     "valor_asegurado": 24876573170,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MUEBLES Y ENSERES",
+#                     "valor_asegurado": 1783334507,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MAQUINARIA Y EQUIPO",
+#                     "valor_asegurado": 3221334452,
+#                     "tipo": ["Rotura de Maquinaria"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MERCANCÍAS",
+#                     "valor_asegurado": 46200000,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "DINERO",
+#                     "valor_asegurado": 196000000,
+#                     "tipo": ["Manejo de Dinero"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO ELECTRONICO",
+#                     "valor_asegurado": 1245453104,
+#                     "tipo": ["Equipo Electronico"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO MOVIL Y PORTATIL",
+#                     "valor_asegurado": 94156337,
+#                     "tipo": ["Equipo Electronico"],
+#                 },
+#             ],
+#         },
+#         {
+#             "ubicacion": "CALLE 28 # 18-44 FLORIDA",
+#             "detalle_cobertura": [
+#                 {
+#                     "interes_asegurado": "EDIFICIO",
+#                     "valor_asegurado": 1367732116,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MUEBLES Y ENSERES",
+#                     "valor_asegurado": 155364000,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
+#                     "valor_asegurado": 64735000,
+#                     "tipo": ["Equipo Electronico"],
+#                 },
+#                 {
+#                     "interes_asegurado": "DINEROS",
+#                     "valor_asegurado": 22000000,
+#                     "tipo": ["Manejo de Dinero"],
+#                 },
+#             ],
+#         },
+#         {
+#             "ubicacion": "CALLE 28 A # 18-64 FLORIDA",
+#             "detalle_cobertura": [
+#                 {
+#                     "interes_asegurado": "MAQUINARIA Y EQUIPO",
+#                     "valor_asegurado": 84980661,
+#                     "tipo": ["Rotura de Maquinaria"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO ELECTRONICO",
+#                     "valor_asegurado": 69072144,
+#                     "tipo": ["Equipo Electronico"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MERCANCIAS",
+#                     "valor_asegurado": 11000000,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "DINEROS",
+#                     "valor_asegurado": 22000000,
+#                     "tipo": ["Manejo de Dinero"],
+#                 },
+#             ],
+#         },
+#         {
+#             "ubicacion": "CALLE 6 # 12-50 PRADERA",
+#             "detalle_cobertura": [
+#                 {
+#                     "interes_asegurado": "EDIFICIO Y MEJORAS",
+#                     "valor_asegurado": 597000,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MUEBLES Y ENSERES",
+#                     "valor_asegurado": 135339571,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MAQUINARIA Y EQUIPO",
+#                     "valor_asegurado": 188880661,
+#                     "tipo": ["Rotura de Maquinaria"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO ELECTRICO Y ELECTRONICO",
+#                     "valor_asegurado": 64709165,
+#                     "tipo": ["Equipo Electronico"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MERCANCIAS",
+#                     "valor_asegurado": 11000000,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "DINEROS",
+#                     "valor_asegurado": 22000000,
+#                     "tipo": ["Manejo de Dinero"],
+#                 },
+#             ],
+#         },
+#         {
+#             "ubicacion": "CARRERA 38 # 32-34 CANDELARIA",
+#             "detalle_cobertura": [
+#                 {
+#                     "interes_asegurado": "EDIFICIO",
+#                     "valor_asegurado": 381575791,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MUEBLES Y ENSERES",
+#                     "valor_asegurado": 100717820,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MAQUINARIA Y EQUIPO",
+#                     "valor_asegurado": 42490830,
+#                     "tipo": ["Rotura de Maquinaria"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO ELECTRONICO",
+#                     "valor_asegurado": 35159965,
+#                     "tipo": ["Equipo Electronico"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MERCANCIAS",
+#                     "valor_asegurado": 11000000,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "DINEROS",
+#                     "valor_asegurado": 22000000,
+#                     "tipo": ["Manejo de Dinero"],
+#                 },
+#             ],
+#         },
+#         {
+#             "ubicacion": "CARRERA 31 # 28-00 Y CALLE 28 #31-30 ESA PALMIRA",
+#             "detalle_cobertura": [
+#                 {
+#                     "interes_asegurado": "EDIFICIO Y OBRAS DE ARTE",
+#                     "valor_asegurado": 2437117000,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MUEBLES Y ENSERES",
+#                     "valor_asegurado": 1013750100,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MAQUINARIA Y EQUIPO",
+#                     "valor_asegurado": 283850000,
+#                     "tipo": ["Rotura de Maquinaria"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO ELECTRONICO",
+#                     "valor_asegurado": 991776830,
+#                     "tipo": ["Equipo Electronico"],
+#                 },
+#                 {
+#                     "interes_asegurado": "EQUIPO MOVIL",
+#                     "valor_asegurado": 94156337,
+#                     "tipo": ["Equipo Electronico"],
+#                 },
+#                 {
+#                     "interes_asegurado": "MERCANCIAS",
+#                     "valor_asegurado": 23100000,
+#                     "tipo": ["Incendio"],
+#                 },
+#                 {
+#                     "interes_asegurado": "DINEROS",
+#                     "valor_asegurado": 130000000,
+#                     "tipo": ["Manejo de Dinero"],
+#                 },
+#             ],
+#         },
+#     ],
+#     "danos_materiales": {
+#         "incendio_maximo": "31.463.051.570,00",
+#         "terremoto_maximo": "31.463.051.570,00",
+#         "terrorismo_maximo": "31.463.051.570,00",
+#         "sustraccion_maximo": "6.492.322.063,00",
+#         "dinero_fuera_caja_fuerte": "null",
+#         "dinero_dentro_caja_fuerte": "null",
+#         "sustraccion_sin_violencia": "null",
+#         "equipo_electronico": "1.245.453.104,00",
+#         "equipos_moviles_portatiles": "94.156.337,00",
+#         "rotura_maquinaria": "3.221.334.452,00",
+#     },
+#     "manejo_global_comercial": {
+#         "perdidas_maximo_anual": "20.000.000,00",
+#         "empleados_no_identificados": "20.000.000,00",
+#         "empleados_temporales_firma": "20.000.000,00",
+#     },
+#     "transporte_valores": {
+#         "limite_maximo_despacho": "20.000.000,00",
+#         "presupuesto_anual_movilizaciones": "1.000.000.000,00",
+#     },
+#     "responsabilidad_civil": {
+#         "vehiculos_propios_no_propios": "2.000.000.000,00",
+#         "gastos_urgencias_medicas": "100.000.000,00",
+#         "contratistas_subcontratistas": "2.000.000.000,00",
+#         "parqueaderos": "200.000.000,00",
+#         "cruzada": "1.000.000.000,00",
+#         "productos": "null",
+#         "patronal": "2.000.000.000,00",
+#     },
+#     "tasa": 0,
+#     "iva": 0,
+#     "prima_con_iva": 0,
+#     "prima_sin_iva": 40653811.84,
+#     "file_name": "PR336-186756401-26358662 COT CyC PALMIRA.pdf",
+# }
+# # docs_adicionales_data
+# docs_adicionales_data = [
+#     {
+#         "Archivo": "Slip Cotización 2500008845 Pyme Segura 10+AXA COLPATRIA.pdf",
+#         "Tipo de Documento": "Adicional",
+#         "Prima Sin IVA": 10636637,
+#         "IVA": 2020961,
+#         "Prima Con IVA": 12657598,
+#         "tasa": 0.002,
+#         "amparos": [
+#             {
+#                 "amparo": "Todo riesgo incendio",
+#                 "deducible": "10% de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Terremoto, Temblor, Erupción Volcánica y Maremoto, Marejada, Tsunami",
+#                 "deducible": "2% valor asegurable del ítem afectado, mínimo 2 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Hmac-Amit/terrorismo",
+#                 "deducible": "15% de la pérdida, mínimo 3 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Sustracción con violencia para dinero en efectivo y títulos valores",
+#                 "deducible": "10% de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Sustracción", "Manejo de Dinero"],
+#             },
+#             {
+#                 "amparo": "Sustracción con violencia",
+#                 "deducible": "10% de la pérdida, mínimo 2 SMMLV",
+#                 "tipo": ["Sustracción"],
+#             },
+#             {
+#                 "amparo": "Sustracción sin violencia - Contenido",
+#                 "deducible": "20% de la pérdida, mínimo 2 SMMLV",
+#                 "tipo": ["Sustracción"],
+#             },
+#             {
+#                 "amparo": "Equipo eléctrico y electrónico",
+#                 "deducible": "10% de la pérdida, mínimo 2 SMMLV",
+#                 "tipo": ["Equipo Electronico"],
+#             },
+#             {
+#                 "amparo": "Rotura de maquinarias",
+#                 "deducible": "10% de la pérdida, mínimo 2 SMMLV",
+#                 "tipo": ["Rotura de Maquinaria"],
+#             },
+#             {
+#                 "amparo": "Pérdida arrendamiento",
+#                 "deducible": "Sin deducible",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Gastos alojamiento temporal",
+#                 "deducible": "Sin deducible",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Índice variable edificio",
+#                 "deducible": "Sin deducible",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Índice variable maquinaria",
+#                 "deducible": "Sin deducible",
+#                 "tipo": ["Rotura de Maquinaria"],
+#             },
+#             {
+#                 "amparo": "Manejo básico (Manejo global comercial)",
+#                 "deducible": "10% de la pérdida, mínimo 2 SMMLV",
+#                 "tipo": ["Manejo de Dinero"],
+#             },
+#             {
+#                 "amparo": "Manejo demás (Manejo global comercial)",
+#                 "deducible": "15% de la pérdida, mínimo 2 SMMLV",
+#                 "tipo": ["Manejo de Dinero"],
+#             },
+#             {
+#                 "amparo": "Transporte de valores",
+#                 "deducible": "5% de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Transporte de Valores"],
+#             },
+#             {
+#                 "amparo": "Predios, labores y operaciones (Responsabilidad Civil)",
+#                 "deducible": "$1.000.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Gastos médicos (Responsabilidad Civil)",
+#                 "deducible": "Sin deducible",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Gastos de defensa (Responsabilidad Civil)",
+#                 "deducible": "Sin deducible",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Parqueaderos (Responsabilidad Civil)",
+#                 "deducible": "$1.000.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Viajes al exterior (Responsabilidad Civil)",
+#                 "deducible": "$1.000.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Responsabilidad civil patronal (por accidentes de trabajo)",
+#                 "deducible": "En exceso Seguridad Social",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Responsabilidad civil por vehículos propios y no propios",
+#                 "deducible": "En exceso de $100.000.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Responsabilidad civil contratistas y subcontratistas (Incluye RCE Cruzada)",
+#                 "deducible": "En exceso de $10.000.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Responsabilidad civil por contaminación accidental",
+#                 "deducible": "$1.000.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "RCE bienes bajo cuidado, tenencia y control",
+#                 "deducible": "$1.000.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "RC productos y/o trabajos terminados",
+#                 "deducible": "$1.500.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#         ],
+#         "danos_materiales": {
+#             "incendio_maximo": "$ 5.304.471.886",
+#             "terremoto_maximo": "$ 5.304.471.886",
+#             "terrorismo_maximo": "$ 5.304.471.886",
+#             "sustraccion_maximo": "$ 2.542.798.438",
+#             "dinero_fuera_caja_fuerte": "$ 17.500.000",
+#             "dinero_dentro_caja_fuerte": "$ 17.500.000",
+#             "sustraccion_sin_violencia": "No especificado",
+#             "equipo_electronico": "$ 454.777.139",
+#             "equipos_moviles_portatiles": "No especificado",
+#             "rotura_maquinaria": "$ 66.770.519",
+#         },
+#         "manejo_global_comercial": {
+#             "perdidas_maximo_anual": "$ 10.000.000",
+#             "empleados_no_identificados": "$ 5.000.000",
+#             "empleados_temporales_firma": "$ 5.000.000",
+#         },
+#         "transporte_valores": {
+#             "limite_maximo_despacho": "$ 20.000.000",
+#             "presupuesto_anual_movilizaciones": "$ 1.050.000.000",
+#         },
+#         "responsabilidad_civil": {
+#             "vehiculos_propios_no_propios": "$ 1.500.000.000",
+#             "gastos_urgencias_medicas": "$ 1.500.000.000",
+#             "contratistas_subcontratistas": "$ 1.500.000.000",
+#             "parqueaderos": "$ 1.500.000.000",
+#             "cruzada": "$ 1.500.000.000",
+#             "productos": "$ 1.500.000.000",
+#             "patronal": "$ 1.500.000.000",
+#         },
+#     },
+#     {
+#         "Archivo": "SLIP TRDM OFICINAS_CAMARA DE COMERCIO.pdf",
+#         "Tipo de Documento": "Adicional",
+#         "Prima Sin IVA": 28289403,
+#         "IVA": 0,
+#         "Prima Con IVA": 28289403,
+#         "tasa": 0.09,
+#         "amparos": [
+#             {
+#                 "amparo": "Incendio y/o rayo o sus efectos inmediatos como calor y humo",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Explosión",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Extensión de Amparos (Huracán, tifón, tornado, ciclón, granizo, vientos fuertes, caída de aeronaves, choque de vehículos terrestres)",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Inundación, anegación, avalancha, enlodamiento y daños por agua",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Terremoto, temblor, erupción volcánica, maremoto, marejada y/o tsunami",
+#                 "deducible": "2% del valor asegurable del artículo afectado por el siniestro, mínimo 1 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Huelga, asonada, motín, conmoción civil o popular, actos mal intencionados de terceros, sabotaje y terrorismo (HMACC y AMIT)",
+#                 "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Sustracción con violencia (bienes diferentes a equipos eléctricos y electrónicos)",
+#                 "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Sustracción"],
+#             },
+#             {
+#                 "amparo": "Sustracción con violencia (dineros dentro de caja fuerte)",
+#                 "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#                 "tipo": ["Manejo de Dinero"],
+#             },
+#             {
+#                 "amparo": "Sustracción con violencia (dineros fuera de caja fuerte)",
+#                 "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#                 "tipo": ["Manejo de Dinero"],
+#             },
+#             {
+#                 "amparo": "Rotura de maquinaria",
+#                 "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
+#                 "tipo": ["Rotura de Maquinaria"],
+#             },
+#             {
+#                 "amparo": "Equipo Eléctrico y Electrónico (Daño interno y hurto calificado)",
+#                 "deducible": "Hurto calificado: 10% del valor de la pérdida, mínimo 1 SMMLV. Demás eventos: 20% del valor de la pérdida, mínimo 3 SMMLV",
+#                 "tipo": ["Equipo Electronico"],
+#             },
+#             {
+#                 "amparo": "Hurto simple (equipos fijos de oficina)",
+#                 "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Sustracción"],
+#             },
+#             {
+#                 "amparo": "Equipos de cómputo móviles y portátiles",
+#                 "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Equipo Electronico"],
+#             },
+#             {
+#                 "amparo": "Amparo automático de nuevos bienes o propiedades",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Remoción de escombros",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Propiedad personal de empleados",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Sustracción"],
+#             },
+#             {
+#                 "amparo": "Gastos para la extinción del siniestro",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Gastos para evitar la propagación del siniestro",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Gastos para la preservación de bienes",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Gastos para acelerar la reparación o reemplazo",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Gastos de viaje y estadía",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Honorarios de auditores, revisores y contadores",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Gastos por concepto de horas extras, trabajo nocturno, trabajo en días feriados y flete expreso",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Gastos por reparaciones provisionales o construcciones transitorias y/o temporales",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Honorarios profesionales",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Incendio y/o rayo en aparatos eléctricos",
+#                 "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
+#                 "tipo": ["Equipo Electronico"],
+#             },
+#             {
+#                 "amparo": "Portadores externos de datos",
+#                 "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
+#                 "tipo": ["Equipo Electronico"],
+#             },
+#             {
+#                 "amparo": "Gastos para la reposición de documentos",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Rotura accidental de vidrios",
+#                 "deducible": "Sin deducible",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Traslados temporales de maquinaria y equipos (excluyendo transporte, cargue y descargue)",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Rotura de Maquinaria"],
+#             },
+#             {
+#                 "amparo": "Nuevas construcciones y montajes menores",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Amparo automático de ferias y eventos",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Daños a calderas y/o aparatos generadores de vapor",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Rotura de Maquinaria"],
+#             },
+#             {
+#                 "amparo": "Daños a cimentaciones",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Daños por fallas en equipos de climatización",
+#                 "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
+#                 "tipo": ["Equipo Electronico"],
+#             },
+#             {
+#                 "amparo": "Pérdida de contenidos en tanques",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Flete aéreo",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Gastos adicionales derivados del siniestro",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Gastos para demostración de la ocurrencia y cuantía del siniestro",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Gastos para la obtención de licencias y permisos",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Incremento en el costo de operación para equipos electrónicos procesadores",
+#                 "deducible": "3 días calendario",
+#                 "tipo": ["Equipo Electronico"],
+#             },
+#             {
+#                 "amparo": "Bienes bajo cuidado, tenencia y control",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Sustracción"],
+#             },
+#             {
+#                 "amparo": "Amparo automático para equipos de reemplazo temporal",
+#                 "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
+#                 "tipo": ["Equipo Electronico"],
+#             },
+#             {
+#                 "amparo": "Amparo automático de máquinas y equipos en demostración",
+#                 "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
+#                 "tipo": ["Equipo Electronico"],
+#             },
+#             {
+#                 "amparo": "Obras de arte o murales decorativos",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Cobertura para aceites, lubricantes y refrigerantes",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Rotura de Maquinaria"],
+#             },
+#             {
+#                 "amparo": "Reparación estética del inmueble",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Gastos para el reacondicionamiento de jardines naturales u ornamentales y/o urbanismo",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Bienes de propiedad de visitantes",
+#                 "deducible": "15% de la pérdida, mínimo 5 SMMLV",
+#                 "tipo": ["Sustracción"],
+#             },
+#         ],
+#         "danos_materiales": {
+#             "incendio_maximo": "$31.432.470.033 por evento y en el agregado anual",
+#             "terremoto_maximo": "$31.432.470.033 por evento y en el agregado anual",
+#             "terrorismo_maximo": "$31.432.470.033 por evento y en el agregado anual",
+#             "sustraccion_maximo": "$4.627.502.059 por evento y en el agregado anual",
+#             "dinero_fuera_caja_fuerte": "$10.000.000 por evento y en el agregado anual",
+#             "dinero_dentro_caja_fuerte": "$30.000.000 por evento y en el agregado anual",
+#             "sustraccion_sin_violencia": "$984.208.430 por evento y en el agregado anual",
+#             "equipo_electronico": "$1.309.227.904 por evento y en el agregado anual",
+#             "equipos_moviles_portatiles": "$20.000.000 por evento y $50.000.000 en el agregado anual",
+#             "rotura_maquinaria": "$3.221.334.452 por evento y en el agregado anual",
+#         },
+#         "manejo_global_comercial": {
+#             "perdidas_maximo_anual": "No especificado en el documento",
+#             "empleados_no_identificados": "No especificado en el documento",
+#             "empleados_temporales_firma": "No especificado en el documento",
+#         },
+#         "transporte_valores": {
+#             "limite_maximo_despacho": "No especificado en el documento",
+#             "presupuesto_anual_movilizaciones": "No especificado en el documento",
+#         },
+#         "responsabilidad_civil": {
+#             "vehiculos_propios_no_propios": "No especificado en el documento",
+#             "gastos_urgencias_medicas": "No especificado en el documento",
+#             "contratistas_subcontratistas": "No especificado en el documento",
+#             "parqueaderos": "No especificado en el documento",
+#             "cruzada": "No especificado en el documento",
+#             "productos": "No especificado en el documento",
+#             "patronal": "No especificado en el documento",
+#         },
+#     },
+#     {
+#         "prima_sin_iva": 10636637,
+#         "iva": 2020961,
+#         "prima_con_iva": 12657598,
+#         "tasa": 0.09,
+#         "amparos": [
+#             {
+#                 "amparo": "Todo riesgo incendio",
+#                 "deducible": "10% de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Terremoto, temblor, erupción volcánica y maremoto, marejada, tsunami",
+#                 "deducible": "2% del valor asegurable del artículo afectado, mínimo 1 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Huelga, motín, asonada, conmoción civil y/o popular y actos mal intencionados de terceros, incluido actos terroristas y terrorismo (HMACC - AMIT)",
+#                 "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Sustracción con violencia",
+#                 "deducible": "10% del valor de la pérdida mínimo 1 SMMLV",
+#                 "tipo": ["Sustracción"],
+#             },
+#             {
+#                 "amparo": "Sustracción sin violencia - Contenido",
+#                 "deducible": "20% de la pérdida, mínimo 2 SMMLV",
+#                 "tipo": ["Sustracción"],
+#             },
+#             {
+#                 "amparo": "Equipo electrónico (Daño interno y hurto calificado)",
+#                 "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Equipo Electronico"],
+#             },
+#             {
+#                 "amparo": "Equipo electrónico (Hurto simple)",
+#                 "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Equipo Electronico"],
+#             },
+#             {
+#                 "amparo": "Equipo electrónico (Equipos de cómputo móviles y portátiles)",
+#                 "deducible": "10% del valor de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Equipo Electronico"],
+#             },
+#             {
+#                 "amparo": "Rotura de Maquinaria",
+#                 "deducible": "20% del valor de la pérdida, mínimo 3 SMMLV",
+#                 "tipo": ["Rotura de Maquinaria"],
+#             },
+#             {
+#                 "amparo": "Rotura de vidrios",
+#                 "deducible": "Sin deducible",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Pérdida arrendamiento",
+#                 "deducible": "Sin deducible",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Gastos alojamiento temporal",
+#                 "deducible": "Sin deducible",
+#                 "tipo": ["Incendio"],
+#             },
+#             {
+#                 "amparo": "Manejo Global Comercial (Hurto, Abuso de confianza, Falsedad, Estafa)",
+#                 "deducible": "10% de la pérdida, mínimo 2 SMMLV",
+#                 "tipo": ["Manejo de Dinero"],
+#             },
+#             {
+#                 "amparo": "Manejo Global Comercial (Empleados no identificados / Temporales)",
+#                 "deducible": "15% de la pérdida, mínimo 2 SMMLV",
+#                 "tipo": ["Manejo de Dinero"],
+#             },
+#             {
+#                 "amparo": "Transporte de Valores (Pérdida o daño material)",
+#                 "deducible": "5% de la pérdida, mínimo 1 SMMLV",
+#                 "tipo": ["Transporte de Valores"],
+#             },
+#             {
+#                 "amparo": "Responsabilidad Civil - Predios, labores y operaciones",
+#                 "deducible": "$1.000.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Responsabilidad Civil - Gastos médicos",
+#                 "deducible": "Sin deducible",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Responsabilidad Civil - Parqueaderos",
+#                 "deducible": "$1.000.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Responsabilidad Civil - Vehículos propios y no propios",
+#                 "deducible": "En exceso de $100.000.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Responsabilidad Civil - Contratistas y Subcontratistas (Incluye Cruzada)",
+#                 "deducible": "En exceso de $10.000.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Responsabilidad Civil - Productos y/o trabajos terminados",
+#                 "deducible": "$1.500.000",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#             {
+#                 "amparo": "Responsabilidad Civil - Patronal",
+#                 "deducible": "En exceso Seguridad Social",
+#                 "tipo": ["Responsabilidad Civil"],
+#             },
+#         ],
+#         "danos_materiales": {
+#             "incendio_maximo": "$31.432.470.033",
+#             "terremoto_maximo": "$31.432.470.033",
+#             "terrorismo_maximo": "$31.432.470.033",
+#             "sustraccion_maximo": "$4.627.502.059",
+#             "dinero_fuera_caja_fuerte": "$10.000.000",
+#             "dinero_dentro_caja_fuerte": "$30.000.000",
+#             "sustraccion_sin_violencia": "$984.208.430",
+#             "equipo_electronico": "$1.309.227.904",
+#             "equipos_moviles_portatiles": "$50.000.000",
+#             "rotura_maquinaria": "$3.221.334.452",
+#         },
+#         "manejo_global_comercial": {
+#             "perdidas_maximo_anual": "$10.000.000",
+#             "empleados_no_identificados": "$5.000.000",
+#             "empleados_temporales_firma": "$5.000.000",
+#         },
+#         "transporte_valores": {
+#             "limite_maximo_despacho": "$20.000.000",
+#             "presupuesto_anual_movilizaciones": "$1.050.000.000",
+#         },
+#         "responsabilidad_civil": {
+#             "vehiculos_propios_no_propios": "Límite único $1.500.000.000 por evento y vigencia",
+#             "gastos_urgencias_medicas": "Límite único $1.500.000.000 por evento y vigencia",
+#             "contratistas_subcontratistas": "Límite único $1.500.000.000 por evento y vigencia",
+#             "parqueaderos": "Límite único $1.500.000.000 por evento y vigencia",
+#             "cruzada": "Límite único $1.500.000.000 por evento y vigencia",
+#             "productos": "Límite único $1.500.000.000 por evento y vigencia",
+#             "patronal": "Límite único $1.500.000.000 por evento y vigencia",
+#         },
+#         "file_name": "Slip Cotización 2500008845 Pyme Segura 10+AXA COLPATRIA.pdf, SLIP TRDM OFICINAS_CAMARA DE COMERCIO.pdf",
+#         "Archivo": "Slip Cotización 2500008845 Pyme Segura 10+AXA COLPATRIA.pdf, SLIP TRDM OFICINAS_CAMARA DE COMERCIO.pdf",
+#         "Prima Sin IVA": 10636637,
+#         "IVA": 2020961,
+#         "Prima Con IVA": 12657598,
+#         "Tipo de Documento": "Adicional",
+#     },
+# ]
 
 
-if __name__ == "__main__":
-    amparos_actuales = clasificar_por_tipo(poliza_actual["amparos"])
-    amparos_renovacion = clasificar_por_tipo(poliza_renovacion["amparos"])
-    clasificacion_actual = clasificar_por_tipo(poliza_actual["detalle_cobertura"])
-    clasificacion_renovacion = clasificar_por_tipo(
-        poliza_renovacion["detalle_cobertura"]
-    )
+# if __name__ == "__main__":
+#     amparos_actuales = clasificar_por_tipo(poliza_actual["amparos"])
+#     amparos_renovacion = clasificar_por_tipo(poliza_renovacion["amparos"])
+#     clasificacion_actual = clasificar_por_tipo(poliza_actual["detalle_cobertura"])
+#     clasificacion_renovacion = clasificar_por_tipo(
+#         poliza_renovacion["detalle_cobertura"]
+#     )
 
-    try:
-        ruta_excel = generar_tabla_excel_rc(
-            amparos_actuales,
-            amparos_renovacion,
-            clasificacion_actual,
-            clasificacion_renovacion,
-            output_path="Resumen_RC.xlsx",
-        )
-        print(f"Tabla de Excel generada correctamente: {ruta_excel}")
-    except Exception as e:
-        print(f"Error al generar la tabla de Excel: {e}")
+#     try:
+#         ruta_excel = generar_tabla_excel_rc(
+#             amparos_actuales,
+#             amparos_renovacion,
+#             clasificacion_actual,
+#             clasificacion_renovacion,
+#             docs_adicionales_data,
+#             poliza_actual,
+#             poliza_renovacion,
+#             output_path="Resumen_RC.xlsx",
+#         )
+#         print(f"Tabla de Excel generada correctamente: {ruta_excel}")
+#     except Exception as e:
+#         print(f"Error al generar la tabla de Excel: {e}")
