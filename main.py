@@ -1267,8 +1267,8 @@ async def main():
 
         results = await asyncio.gather(*tasks)
 
-        with st.expander("results"):
-            st.write(results)
+        # with st.expander("results"):
+        #     st.write(results)
 
         poliza_actual = None
         poliza_renovacion = None
@@ -1279,10 +1279,10 @@ async def main():
         for item in results:
             if item["doc_type"] == "actual":
                 poliza_actual = item
-                mostrar_poliza(poliza_actual)
+                # mostrar_poliza(poliza_actual)
             elif item["doc_type"] == "renovacion":
                 poliza_renovacion = item
-                mostrar_poliza(poliza_renovacion)
+                # mostrar_poliza(poliza_renovacion)
             elif item["doc_type"] == "adicional" or item["doc_type"] == "conjunto":
                 documentos_adicionales.append(item)
                 amparos_adicionales.append(
@@ -1292,9 +1292,9 @@ async def main():
                     }
                 )
 
-        if documentos_adicionales:
-            for item in documentos_adicionales:
-                mostrar_poliza_adicional(item)
+        # if documentos_adicionales:
+        #     for item in documentos_adicionales:
+                # mostrar_poliza_adicional(item)
 
         # Crear excel y poder descargalo.
         if poliza_actual or poliza_renovacion or documentos_adicionales:
