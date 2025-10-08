@@ -292,14 +292,14 @@ def generar_excel_analisis_polizas(
         # ===== estilos =====
         header_font = Font(name="Calibri", size=12, bold=True, color="FFFFFF")
         header_fill = PatternFill(
-            start_color="2E75B6", end_color="2E75B6", fill_type="solid"
+            start_color="1F4E78", end_color="1F4E78", fill_type="solid"
         )
         data_font = Font(name="Calibri", size=11)
         border = Border(
-            left=Side(style="thin", color="D0D0D0"),
-            right=Side(style="thin", color="D0D0D0"),
-            top=Side(style="thin", color="D0D0D0"),
-            bottom=Side(style="thin", color="D0D0D0"),
+            left=Side(style="thin", color="000000"),
+            right=Side(style="thin", color="000000"),
+            top=Side(style="thin", color="000000"),
+            bottom=Side(style="thin", color="000000"),
         )
         center_alignment = Alignment(
             horizontal="center", vertical="center", wrap_text=True, shrink_to_fit=True
@@ -462,7 +462,7 @@ def generar_excel_analisis_polizas(
             title_cell.value = "DEDUCIBLES"
             title_cell.font = Font(name="Calibri", size=16, bold=True, color="FFFFFF")
             title_cell.fill = PatternFill(
-                start_color="1F4E79", end_color="1F4E79", fill_type="solid"
+                start_color="1F4E78", end_color="1F4E78", fill_type="solid"
             )
             title_cell.alignment = Alignment(horizontal="center", vertical="center")
             ws.merge_cells(
@@ -476,7 +476,7 @@ def generar_excel_analisis_polizas(
             a2.value = "RAMO"
             a2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
             a2.fill = PatternFill(
-                start_color="305496", end_color="305496", fill_type="solid"
+                start_color="1F4E78", end_color="1F4E78", fill_type="solid"
             )
             a2.alignment = Alignment(
                 horizontal="center", vertical="center", wrap_text=True
@@ -493,7 +493,7 @@ def generar_excel_analisis_polizas(
             b2.value = "CONDICIONES ACTUALES"
             b2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
             b2.fill = PatternFill(
-                start_color="70AD47", end_color="70AD47", fill_type="solid"
+                start_color="B7DEE8", end_color="B7DEE8", fill_type="solid"
             )
             b2.alignment = Alignment(
                 horizontal="center", vertical="center", wrap_text=True
@@ -513,7 +513,7 @@ def generar_excel_analisis_polizas(
             c2.value = "CONDICIONES DE RENOVACIÓN"
             c2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
             c2.fill = PatternFill(
-                start_color="2F75B5", end_color="2F75B5", fill_type="solid"
+                start_color="B7DEE8", end_color="B7DEE8", fill_type="solid"
             )
             c2.alignment = Alignment(
                 horizontal="center", vertical="center", wrap_text=True
@@ -537,7 +537,7 @@ def generar_excel_analisis_polizas(
                 d2.value = "ARCHIVOS ADICIONALES"
                 d2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
                 d2.fill = PatternFill(
-                    start_color="404040", end_color="404040", fill_type="solid"
+                    start_color="1F4E78", end_color="1F4E78", fill_type="solid"
                 )
                 d2.alignment = Alignment(
                     horizontal="center", vertical="center", wrap_text=True
@@ -562,9 +562,9 @@ def generar_excel_analisis_polizas(
                     color="000000" if col_num >= 4 else "FFFFFF",
                 )
                 fill_map = {
-                    1: "305496",  # RAMO
-                    2: "A9D08E",  # Actual
-                    3: "9DC3E6",  # Renovación
+                    1: "1F4E78",  # RAMO
+                    2: "B7DEE8",  # Actual
+                    3: "B7DEE8",  # Renovación
                 }
                 color = fill_map.get(col_num, "D9D9D9")
                 cell.fill = PatternFill(
@@ -594,7 +594,7 @@ def generar_excel_analisis_polizas(
                             name="Calibri", size=11, bold=True, color="FFFFFF"
                         )
                         cell.fill = PatternFill(
-                            start_color="4472C4", end_color="4472C4", fill_type="solid"
+                            start_color="B7DEE8", end_color="B7DEE8", fill_type="solid"
                         )
                         cell.alignment = Alignment(
                             horizontal="center", vertical="center", wrap_text=True
