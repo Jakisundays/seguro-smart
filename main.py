@@ -1046,36 +1046,42 @@ class InvoiceOrchestrator:
         return total_tokens
 
     def unificar_segmentos(self, actual, renovacion):
-        # Paso 1: construir mapa de interes -> tipos
+        # Paso 1: construir mapa de interes -> tipos (segmentos)
         mapa_actual = {}
-        for tipo, items in actual.items():
+        for segmento, items in actual.items():
             for item in items:
                 ia = item["interes_asegurado"]
-                mapa_actual.setdefault(ia, set()).add(tipo)
+                mapa_actual.setdefault(ia, set()).add(segmento)
 
         mapa_renov = {}
-        for tipo, items in renovacion.items():
+        for segmento, items in renovacion.items():
             for item in items:
                 ia = item["interes_asegurado"]
-                mapa_renov.setdefault(ia, set()).add(tipo)
+                mapa_renov.setdefault(ia, set()).add(segmento)
 
-        # Paso 2: obtener la union de tipos para cada interes
+        # Paso 2: obtener la union de segmentos para cada interes
         intereses = set(mapa_actual.keys()) | set(mapa_renov.keys())
         union_map = {}
         for ia in intereses:
             union_map[ia] = mapa_actual.get(ia, set()) | mapa_renov.get(ia, set())
 
-        # Paso 3: reasignar los tipos unificados a actual y renovacion
+        # Paso 3: reconstruir actual y renovacion con los segmentos unificados
         def aplicar_union(diccionario, mapa_union):
-            for tipo, items in diccionario.items():
+            nuevo_dicc = {seg: [] for seg in diccionario.keys()}
+            for segmento, items in diccionario.items():
                 for item in items:
                     ia = item["interes_asegurado"]
-                    item["tipo"] = list(mapa_union[ia])
+                    # expandir a todos los segmentos que le tocan
+                    for seg in mapa_union[ia]:
+                        nuevo_item = item.copy()
+                        nuevo_item["tipo"] = list(mapa_union[ia])
+                        nuevo_dicc.setdefault(seg, []).append(nuevo_item)
+            return nuevo_dicc
 
-        aplicar_union(actual, union_map)
-        aplicar_union(renovacion, union_map)
+        actual_unificado = aplicar_union(actual, union_map)
+        renov_unificado = aplicar_union(renovacion, union_map)
 
-        return actual, renovacion
+        return actual_unificado, renov_unificado
 
 
 orchestrator = InvoiceOrchestrator(
