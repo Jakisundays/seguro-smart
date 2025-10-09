@@ -4,8 +4,6 @@ tools = [
             Analiza el documento proporcionado y extrae la información relacionada con la prima y los amparos de la póliza. Para cada campo, se deben extraer los valores exactos que aparezcan en el documento, sin inventar datos. Los campos a extraer son:
 
             - Prima sin IVA (`prima_sin_iva`): valor numérico de la prima antes de aplicar el IVA.
-            - IVA (`iva`): valor numérico correspondiente al impuesto sobre la prima.
-            - Prima con IVA (`prima_con_iva`): valor numérico final de la prima con IVA incluido.
             - Tasa (`tasa`): porcentaje de la tasa aplicado en la póliza, que indica el costo del riesgo asumido por la aseguradora.
 
             - Amparos (`amparos`): listado de todos los amparos incluidos en la póliza. Para cada amparo, extrae:
@@ -30,14 +28,14 @@ tools = [
                     "type": "NUMBER",
                     "description": "Valor de la prima sin aplicar IVA.",
                 },
-                "iva": {
-                    "type": "NUMBER",
-                    "description": "Monto correspondiente al IVA.",
-                },
-                "prima_con_iva": {
-                    "type": "NUMBER",
-                    "description": "Valor de la prima final con IVA incluido.",
-                },
+                # "iva": {
+                #     "type": "NUMBER",
+                #     "description": "Monto correspondiente al IVA.",
+                # },
+                # "prima_con_iva": {
+                #     "type": "NUMBER",
+                #     "description": "Valor de la prima final con IVA incluido.",
+                # },
                 "tasa": {
                     "type": "NUMBER",
                     "description": "Porcentaje de la tasa aplicado en la póliza.",
@@ -79,8 +77,8 @@ tools = [
             },
             "required": [
                 "prima_sin_iva",
-                "iva",
-                "prima_con_iva",
+                # "iva",
+                # "prima_con_iva",
                 "tasa",
                 "amparos",
             ],

@@ -60,6 +60,87 @@ def clasificar_por_tipo(detalles):
     return resultado
 
 
+def unificar_segmentos(actual, renovacion):
+    # Paso 1: construir mapa de interes -> tipos
+    mapa_actual = {}
+    for tipo, items in actual.items():
+        for item in items:
+            ia = item["interes_asegurado"]
+            mapa_actual.setdefault(ia, set()).add(tipo)
+
+    mapa_renov = {}
+    for tipo, items in renovacion.items():
+        for item in items:
+            ia = item["interes_asegurado"]
+            mapa_renov.setdefault(ia, set()).add(tipo)
+
+    # Paso 2: obtener la union de tipos para cada interes
+    intereses = set(mapa_actual.keys()) | set(mapa_renov.keys())
+    union_map = {}
+    for ia in intereses:
+        union_map[ia] = mapa_actual.get(ia, set()) | mapa_renov.get(ia, set())
+
+    # Paso 3: reasignar los tipos unificados a actual y renovacion
+    def aplicar_union(diccionario, mapa_union):
+        for tipo, items in diccionario.items():
+            for item in items:
+                ia = item["interes_asegurado"]
+                item["tipo"] = list(mapa_union[ia])
+
+    aplicar_union(actual, union_map)
+    aplicar_union(renovacion, union_map)
+
+    return actual, renovacion
+
+
+def unificar_y_reportar(actual, renovacion):
+    # Paso 1: construir mapa de interes -> tipos
+    mapa_actual = {}
+    for tipo, items in actual.items():
+        for item in items:
+            ia = item["interes_asegurado"]
+            mapa_actual.setdefault(ia, set()).add(tipo)
+
+    mapa_renov = {}
+    for tipo, items in renovacion.items():
+        for item in items:
+            ia = item["interes_asegurado"]
+            mapa_renov.setdefault(ia, set()).add(tipo)
+
+    # Paso 2: obtener la union de tipos para cada interes
+    intereses = set(mapa_actual.keys()) | set(mapa_renov.keys())
+    union_map = {}
+    reporte = {}
+
+    for ia in intereses:
+        tipos_actual = mapa_actual.get(ia, set())
+        tipos_renov = mapa_renov.get(ia, set())
+        union = tipos_actual | tipos_renov
+        union_map[ia] = union
+
+        # Reporte de diferencias
+        agregados = union - tipos_renov
+        eliminados = union - tipos_actual
+
+        if agregados or eliminados:
+            reporte[ia] = {
+                "agregados_en_renovacion": list(agregados),
+                "faltantes_en_actual": list(eliminados),
+            }
+
+    # Paso 3: reasignar los tipos unificados a actual y renovacion
+    def aplicar_union(diccionario, mapa_union):
+        for _, items in diccionario.items():
+            for item in items:
+                ia = item["interes_asegurado"]
+                item["tipo"] = list(mapa_union[ia])
+
+    aplicar_union(actual, union_map)
+    aplicar_union(renovacion, union_map)
+
+    return actual, renovacion, reporte
+
+
 def generar_tabla_excel_rc(
     amparos_actuales: Dict[str, List[Dict[str, Any]]],
     amparos_renovacion: Dict[str, List[Dict[str, Any]]],
@@ -2558,22 +2639,38 @@ docs_adicionales_data = [
 if __name__ == "__main__":
     amparos_actuales = clasificar_por_tipo(poliza_actual["amparos"])
     amparos_renovacion = clasificar_por_tipo(poliza_renovacion["amparos"])
+
     clasificacion_actual = clasificar_por_tipo(poliza_actual["detalle_cobertura"])
+
     clasificacion_renovacion = clasificar_por_tipo(
         poliza_renovacion["detalle_cobertura"]
     )
 
-    try:
-        ruta_excel = generar_tabla_excel_rc(
-            amparos_actuales,
-            amparos_renovacion,
-            clasificacion_actual,
-            clasificacion_renovacion,
-            docs_adicionales_data,
-            poliza_actual,
-            poliza_renovacion,
-            output_path="Resumen_RC.xlsx",
-        )
-        print(f"Tabla de Excel generada correctamente: {ruta_excel}")
-    except Exception as e:
-        print(f"Error al generar la tabla de Excel: {e}")
+    actual_u, renovacion_u, reporte = unificar_y_reportar(
+        clasificacion_actual, clasificacion_renovacion
+    )
+    
+    print("Reporte de cambios:")
+    for interes, cambios in reporte.items():
+        print(interes, cambios)
+
+    with open("clasificacion_actual_unificada.json", "w", encoding="utf-8") as f:
+        json.dump(actual_u, f, ensure_ascii=False, indent=2)
+
+    with open("clasificacion_renovacion_unificada.json", "w", encoding="utf-8") as f:
+        json.dump(renovacion_u, f, ensure_ascii=False, indent=2)
+
+    # try:
+    #     ruta_excel = generar_tabla_excel_rc(
+    #         amparos_actuales,
+    #         amparos_renovacion,
+    #         clasificacion_actual,
+    #         clasificacion_renovacion,
+    #         docs_adicionales_data,
+    #         poliza_actual,
+    #         poliza_renovacion,
+    #         output_path="Resumen_RC.xlsx",
+    #     )
+    #     print(f"Tabla de Excel generada correctamente: {ruta_excel}")
+    # except Exception as e:
+    #     print(f"Error al generar la tabla de Excel: {e}")

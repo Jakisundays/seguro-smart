@@ -62,8 +62,8 @@ class PolizaDict(TypedDict):
 class DocAdicionalDict(TypedDict):
     archivo: str
     prima_sin_iva: int
-    iva: int
-    prima_con_iva: int
+    # iva: int
+    # prima_con_iva: int
 
 
 class DetalleCobertura(TypedDict):
@@ -128,8 +128,8 @@ def mostrar_poliza(res):
     # Prima y tasas
     st.header("Prima y Tasas")
     st.write(f"Prima sin IVA: {data.get('prima_sin_iva')}")
-    st.write(f"IVA: {data.get('iva')}")
-    st.write(f"Prima con IVA: {data.get('prima_con_iva')}")
+    # st.write(f"IVA: {data.get('iva')}")
+    # st.write(f"Prima con IVA: {data.get('prima_con_iva')}")
     st.write(f"Tasa: {data.get('tasa')}")
 
     # Daños Materiales
@@ -202,8 +202,8 @@ def mostrar_poliza_adicional(res):
     # Prima y tasas
     st.header("Prima y Tasas")
     st.write(f"Prima sin IVA: {data.get('prima_sin_iva'):,}")
-    st.write(f"IVA: {data.get('iva'):,}")
-    st.write(f"Prima con IVA: {data.get('prima_con_iva'):,}")
+    # st.write(f"IVA: {data.get('iva'):,}")
+    # st.write(f"Prima con IVA: {data.get('prima_con_iva'):,}")
     st.write(f"Tasa: {data.get('tasa')}")
 
     # Amparos
@@ -825,8 +825,8 @@ class InvoiceOrchestrator:
     async def handle_pdf(self, item: QueueItem, prompt: str, responseSchema: dict):
         encoded_pdf = item["b64_str"]
 
-        # URL del endpoint de la API de Gemini para generar contenido a partir del modelo gemini-2.5-flash
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        # URL del endpoint de la API de Gemini para generar contenido a partir del modelo especificado
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
 
         # Encabezados HTTP: autenticación con la clave de API y tipo de contenido JSON
         headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
@@ -875,7 +875,7 @@ class InvoiceOrchestrator:
             for doc in base64_docs
         ]
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={orchestrator.api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
 
         headers = {"Content-Type": "application/json"}
 
@@ -965,7 +965,7 @@ class InvoiceOrchestrator:
         else:
             return
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={orchestrator.api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
 
         headers = {"Content-Type": "application/json"}
 
@@ -1044,6 +1044,38 @@ class InvoiceOrchestrator:
                         if isinstance(sub_val, int):
                             total_tokens[key] += sub_val
         return total_tokens
+
+    def unificar_segmentos(self, actual, renovacion):
+        # Paso 1: construir mapa de interes -> tipos
+        mapa_actual = {}
+        for tipo, items in actual.items():
+            for item in items:
+                ia = item["interes_asegurado"]
+                mapa_actual.setdefault(ia, set()).add(tipo)
+
+        mapa_renov = {}
+        for tipo, items in renovacion.items():
+            for item in items:
+                ia = item["interes_asegurado"]
+                mapa_renov.setdefault(ia, set()).add(tipo)
+
+        # Paso 2: obtener la union de tipos para cada interes
+        intereses = set(mapa_actual.keys()) | set(mapa_renov.keys())
+        union_map = {}
+        for ia in intereses:
+            union_map[ia] = mapa_actual.get(ia, set()) | mapa_renov.get(ia, set())
+
+        # Paso 3: reasignar los tipos unificados a actual y renovacion
+        def aplicar_union(diccionario, mapa_union):
+            for tipo, items in diccionario.items():
+                for item in items:
+                    ia = item["interes_asegurado"]
+                    item["tipo"] = list(mapa_union[ia])
+
+        aplicar_union(actual, union_map)
+        aplicar_union(renovacion, union_map)
+
+        return actual, renovacion
 
 
 orchestrator = InvoiceOrchestrator(
@@ -1292,9 +1324,9 @@ async def main():
                     }
                 )
 
-        # if documentos_adicionales:
-        #     for item in documentos_adicionales:
-                # mostrar_poliza_adicional(item)
+        if documentos_adicionales:
+            for item in documentos_adicionales:
+                mostrar_poliza_adicional(item)
 
         # Crear excel y poder descargalo.
         if poliza_actual or poliza_renovacion or documentos_adicionales:
@@ -1340,34 +1372,34 @@ async def main():
                 poliza_renovacion.get("data", {}).get("detalle_cobertura", {})
             )
 
-            # with st.expander("Riesgos actuales"):
-            #     st.write(riesgos_actuales)
+            with st.expander("Riesgos actuales"):
+                st.write(riesgos_actuales)
 
-            # with st.expander("Riesgos renovacion"):
-            #     st.write(riesgos_renovacion)
+            with st.expander("Riesgos renovacion"):
+                st.write(riesgos_renovacion)
 
-            # with st.expander("clasificacion_actual"):
-            #     st.write(clasificacion_actual)
+            with st.expander("clasificacion_actual"):
+                st.write(clasificacion_actual)
 
-            # with st.expander("clasificacion_renovacion"):
-            #     st.write(clasificacion_renovacion)
+            with st.expander("clasificacion_renovacion"):
+                st.write(clasificacion_renovacion)
 
-            # with st.expander("documentos_adicionales"):
-            #     st.write(documentos_adicionales)
+            with st.expander("documentos_adicionales"):
+                st.write(documentos_adicionales)
 
-            # with st.expander("Poliza actual"):
-            #     st.write(poliza_actual)
+            with st.expander("Poliza actual"):
+                st.write(poliza_actual)
 
-            # with st.expander("Poliza renovacion"):
-            #     st.write(poliza_renovacion)
+            with st.expander("Poliza renovacion"):
+                st.write(poliza_renovacion)
 
             docs_adicionales_data = [
                 {
                     "Archivo": doc.get("file_name"),
                     "Tipo de Documento": doc.get("doc_type"),
                     "Prima Sin IVA": doc.get("data", {}).get("prima_sin_iva", ""),
-                    "IVA": doc.get("data", {}).get("iva", ""),
-                    "Prima Con IVA": doc.get("data", {}).get("prima_con_iva", ""),
+                    # "IVA": doc.get("data", {}).get("iva", ""),
+                    # "Prima Con IVA": doc.get("data", {}).get("prima_con_iva", ""),
                     "tasa": doc.get("data", {}).get("tasa", ""),
                     "amparos": doc.get("data", {}).get("amparos", []),
                     "danos_materiales": doc.get("data", {}).get("danos_materiales", {}),
@@ -1397,11 +1429,21 @@ async def main():
                     output_path=main_excel_path,
                 )
 
+                actual_u, renovacion_u = orchestrator.unificar_segmentos(
+                    clasificacion_actual, clasificacion_renovacion
+                )
+
+                with st.expander("actual_u"):
+                    st.write(actual_u)
+
+                with st.expander("renovacion_u"):
+                    st.write(renovacion_u)
+
                 summary_output_path = generar_tabla_excel_rc(
                     amparos_actuales=amparos_actuales_por_tipo,
                     amparos_renovacion=amparos_renovacion_por_tipo,
-                    clasificacion_actual=clasificacion_actual,
-                    clasificacion_renovacion=clasificacion_renovacion,
+                    clasificacion_actual=actual_u,
+                    clasificacion_renovacion=renovacion_u,
                     docs_adicionales_data=docs_adicionales_data,
                     poliza_actual=poliza_actual.get("data", {}),
                     poliza_renovacion=poliza_renovacion.get("data", {}),
