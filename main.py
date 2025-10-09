@@ -1324,9 +1324,9 @@ async def main():
                     }
                 )
 
-        if documentos_adicionales:
-            for item in documentos_adicionales:
-                mostrar_poliza_adicional(item)
+        # if documentos_adicionales:
+        #     for item in documentos_adicionales:
+        #         mostrar_poliza_adicional(item)
 
         # Crear excel y poder descargalo.
         if poliza_actual or poliza_renovacion or documentos_adicionales:
@@ -1372,26 +1372,26 @@ async def main():
                 poliza_renovacion.get("data", {}).get("detalle_cobertura", {})
             )
 
-            with st.expander("Riesgos actuales"):
-                st.write(riesgos_actuales)
+            # with st.expander("Riesgos actuales"):
+            #     st.write(riesgos_actuales)
 
-            with st.expander("Riesgos renovacion"):
-                st.write(riesgos_renovacion)
+            # with st.expander("Riesgos renovacion"):
+            #     st.write(riesgos_renovacion)
 
-            with st.expander("clasificacion_actual"):
-                st.write(clasificacion_actual)
+            # with st.expander("clasificacion_actual"):
+            #     st.write(clasificacion_actual)
 
-            with st.expander("clasificacion_renovacion"):
-                st.write(clasificacion_renovacion)
+            # with st.expander("clasificacion_renovacion"):
+            #     st.write(clasificacion_renovacion)
 
-            with st.expander("documentos_adicionales"):
-                st.write(documentos_adicionales)
+            # with st.expander("documentos_adicionales"):
+            #     st.write(documentos_adicionales)
 
-            with st.expander("Poliza actual"):
-                st.write(poliza_actual)
+            # with st.expander("Poliza actual"):
+            #     st.write(poliza_actual)
 
-            with st.expander("Poliza renovacion"):
-                st.write(poliza_renovacion)
+            # with st.expander("Poliza renovacion"):
+            #     st.write(poliza_renovacion)
 
             docs_adicionales_data = [
                 {
@@ -1433,11 +1433,11 @@ async def main():
                     clasificacion_actual, clasificacion_renovacion
                 )
 
-                with st.expander("actual_u"):
-                    st.write(actual_u)
+                # with st.expander("actual_u"):
+                #     st.write(actual_u)
 
-                with st.expander("renovacion_u"):
-                    st.write(renovacion_u)
+                # with st.expander("renovacion_u"):
+                #     st.write(renovacion_u)
 
                 summary_output_path = generar_tabla_excel_rc(
                     amparos_actuales=amparos_actuales_por_tipo,
