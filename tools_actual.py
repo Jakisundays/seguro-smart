@@ -7,6 +7,7 @@ tools = [
             - Monto del IVA (`iva`): valor numérico correspondiente al IVA.
             - Prima final con IVA (`prima_con_iva`): valor numérico de la prima incluyendo IVA.
             - Tasa (`tasa`): porcentaje aplicado en la póliza.
+            - Nombre del asegurado (`asegurado`): nombre completo del asegurado tal como aparece en la póliza o documento oficial.
 
             - Detalle de cobertura (`detalle_cobertura`): listado de intereses asegurados con:
                 - Nombre (`interes_asegurado`)
@@ -145,6 +146,10 @@ tools = [
                     "type": "NUMBER",
                     "description": "Porcentaje de la tasa aplicado en la póliza.",
                 },
+                "asegurado": {
+                    "type": "STRING",
+                    "description": "Nombre completo del asegurado tal como aparece en la póliza o documento oficial. Ejemplo: 'Juan Pérez S.A.', 'Compañía XYZ Ltda.', 'María Gómez'.",
+                },
             },
             "required": [
                 "detalle_cobertura",
@@ -154,6 +159,7 @@ tools = [
                 "iva",
                 "prima_con_iva",
                 "tasa",
+                "asegurado",
             ],
         },
     },

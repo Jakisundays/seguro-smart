@@ -4,6 +4,7 @@ tools = [
             Analiza el documento proporcionado y extrae la información relacionada con la prima y los amparos de la póliza. Para cada campo, se deben extraer los valores exactos que aparezcan en el documento, sin inventar datos. Los campos a extraer son:
 
             - Prima sin IVA (`prima_sin_iva`): valor numérico de la prima antes de aplicar el IVA.
+            - Nombre del asegurado (`asegurado`): nombre completo del asegurado tal como aparece en la póliza o documento oficial.
             - Tasa (`tasa`): porcentaje de la tasa aplicado en la póliza, que indica el costo del riesgo asumido por la aseguradora.
 
             - Amparos (`amparos`): listado de todos los amparos incluidos en la póliza. Para cada amparo, extrae:
@@ -36,6 +37,10 @@ tools = [
                 #     "type": "NUMBER",
                 #     "description": "Valor de la prima final con IVA incluido.",
                 # },
+                "asegurado": {
+                    "type": "STRING",
+                    "description": "Nombre completo del asegurado tal como aparece en la póliza o documento oficial. Ejemplo: 'Juan Pérez S.A.', 'Compañía XYZ Ltda.', 'María Gómez'.",
+                },
                 "tasa": {
                     "type": "NUMBER",
                     "description": "Porcentaje de la tasa aplicado en la póliza.",
@@ -79,6 +84,7 @@ tools = [
                 "prima_sin_iva",
                 # "iva",
                 # "prima_con_iva",
+                "asegurado",
                 "tasa",
                 "amparos",
             ],
@@ -120,7 +126,7 @@ tools = [
 
             No inventes información ni agregues explicaciones adicionales.  
             Devuelve únicamente los campos `danos_materiales`, `manejo_global_comercial`, `transporte_valores` y `responsabilidad_civil` en un JSON que respete la estructura indicada.
-""",
+            """,
         "data": {
             "type": "OBJECT",
             "properties": {

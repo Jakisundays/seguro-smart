@@ -90,6 +90,7 @@ class AmparosDict(TypedDict):
 
 def mostrar_poliza(res):
     st.subheader(f"Archivo: {res['file_name']}")
+    st.write(f"Asegurado: {res.get('data', {}).get('asegurado', '')}")
     st.text(f"Tipo de documento: {res['doc_type']}")
 
     data = res.get("data", {})
@@ -265,6 +266,14 @@ def mostrar_poliza_adicional(res):
         )
         st.dataframe(df_rc)
     st.write("---")
+
+
+def generar_prompt_nombres(nombres: list[str]) -> str:
+    """
+    Genera un string que pide crear un nombre para un documento
+    basado en una lista de nombres proporcionados.mbn
+    """
+    return f"Genera un nombre corto, claro y profesional para un documento que represente: {' | '.join(nombres)}."
 
 
 def generar_excel_analisis_polizas(
@@ -1007,22 +1016,6 @@ class InvoiceOrchestrator:
             "tokens": tokens,
         }
 
-        # payload = {
-        #     "contents": [{"parts": files_metadata_b64 + [{"text": prompt}]}],
-        #     "generationConfig": {
-        #         "responseMimeType": "application/json",
-        #         "responseSchema": responseSchema,
-        #     },
-        # }
-
-        # response = await self.make_api_request(
-        #     url=url, headers=headers, data=payload, process_id="Dinardi"
-        # )
-
-        # response["doc_type"] = input_files[0]["doc_type"]
-
-        # return response
-
     def sumar_tokens_por_tipo(self, data: List[Dict]) -> Dict[str, int]:
         """
         Suma los tokens por tipo en una lista de diccionarios que contienen 'usageMetadata'.
@@ -1082,6 +1075,34 @@ class InvoiceOrchestrator:
         renov_unificado = aplicar_union(renovacion, union_map)
 
         return actual_unificado, renov_unificado
+
+    async def action_item_tool(self, prompt: str, responseSchema: dict):
+        # URL del endpoint de la API de Gemini para generar contenido a partir del modelo especificado
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
+
+        # Encabezados HTTP: autenticación con la clave de API y tipo de contenido JSON
+        headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
+
+        # Cuerpo de la petición: incluye el PDF codificado y el texto del prompt
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "responseMimeType": "application/json",  # Forzar que la respuesta sea JSON
+                "responseSchema": responseSchema,  # Esquema JSON que debe respetar la respuesta
+            },
+        }
+
+        # Realizar la petición asíncrona a la API con reintentos incluidos
+        response = await self.make_api_request(url, headers, payload, uuid.uuid4().hex)
+
+        # Almacenar la respuesta de la API dentro del item bajo la clave "data"
+        return response
 
 
 orchestrator = InvoiceOrchestrator(
@@ -1170,6 +1191,8 @@ async def main():
         )
 
         st.markdown("---")
+
+        debug = st.toggle("Debug Mode", value=False)
 
     if st.sidebar.button(
         "🚀 Iniciar Proceso",
@@ -1305,8 +1328,9 @@ async def main():
 
         results = await asyncio.gather(*tasks)
 
-        # with st.expander("results"):
-        #     st.write(results)
+        if debug:
+            with st.expander("results"):
+                st.write(results)
 
         poliza_actual = None
         poliza_renovacion = None
@@ -1314,15 +1338,22 @@ async def main():
 
         amparos_adicionales = []
 
+        nombres_de_asegurados = []
+
         for item in results:
             if item["doc_type"] == "actual":
                 poliza_actual = item
-                # mostrar_poliza(poliza_actual)
+                nombres_de_asegurados.append(item.get("data", {}).get("asegurado", ""))
+                if debug:
+                    mostrar_poliza(poliza_actual)
             elif item["doc_type"] == "renovacion":
                 poliza_renovacion = item
-                # mostrar_poliza(poliza_renovacion)
+                nombres_de_asegurados.append(item.get("data", {}).get("asegurado", ""))
+                if debug:
+                    mostrar_poliza(poliza_renovacion)
             elif item["doc_type"] == "adicional" or item["doc_type"] == "conjunto":
                 documentos_adicionales.append(item)
+                nombres_de_asegurados.append(item.get("data", {}).get("asegurado", ""))
                 amparos_adicionales.append(
                     {
                         "archivo": item.get("file_name"),
@@ -1330,9 +1361,40 @@ async def main():
                     }
                 )
 
-        # if documentos_adicionales:
-        #     for item in documentos_adicionales:
-        #         mostrar_poliza_adicional(item)
+        if documentos_adicionales and debug:
+            for item in documentos_adicionales:
+                mostrar_poliza_adicional(item)
+
+        excel_title_prompt = generar_prompt_nombres(nombres_de_asegurados)
+        excel_title_schema = {
+            "type": "OBJECT",
+            "properties": {
+                "name": {
+                    "description": "Crea un nombre representativo para el asegurado basado en la información proporcionada",
+                    "title": "Nombre del Asegurado",
+                    "type": "string",
+                },
+            },
+            "required": ["name"],
+        }
+
+        excel_name_json = await orchestrator.action_item_tool(
+            prompt=excel_title_prompt, responseSchema=excel_title_schema
+        )
+
+        content_str = excel_name_json["candidates"][0]["content"]["parts"][0]["text"]
+        content_json = json.loads(content_str)  # parsea el string JSON
+        excel_name = content_json["name"]
+
+        if debug:
+            with st.expander("excel_name_json"):
+                st.write(excel_name_json)
+
+        if debug and nombres_de_asegurados:
+            with st.expander("Nombres de asegurados"):
+                st.write(nombres_de_asegurados)
+            with st.expander("Excel name"):
+                st.write(excel_name)
 
         # Crear excel y poder descargalo.
         if poliza_actual or poliza_renovacion or documentos_adicionales:
