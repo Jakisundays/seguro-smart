@@ -15,6 +15,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Side, Border
 from openpyxl.worksheet.table import Table, TableStyleInfo
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
+from openpyxl.worksheet.views import Selection
 from openpyxl.worksheet.datavalidation import DataValidation
 
 
@@ -149,6 +150,7 @@ def generar_tabla_excel_rc(
     docs_adicionales_data: Optional[List[Dict[str, Any]]] = None,
     poliza_actual: Optional[Dict[str, Any]] = None,
     poliza_renovacion: Optional[Dict[str, Any]] = None,
+    titulo_excel: Optional[str] = None,
     output_path: str = "Resumen_RC.xlsx",
 ) -> str:
     """
@@ -271,6 +273,28 @@ def generar_tabla_excel_rc(
     wb = Workbook()
     ws = wb.active
     ws.title = "Resumen"
+    
+
+    # Título general del reporte (fila superior)
+    num_docs_for_title = len(docs_adicionales_data or [])
+    last_col_for_title = 4
+    # last_col_for_title = 8 + (num_docs_for_title * 2)
+    ws.merge_cells(
+        start_row=1, start_column=1, end_row=1, end_column=last_col_for_title
+    )
+    title_cell = ws.cell(row=1, column=1)
+    # title_cell.value = titulo_excel or "RESUMEN RC"
+    title_cell.fill = PatternFill(
+        start_color="1F4E78", end_color="1F4E78", fill_type="solid"
+    )
+    title_cell.font = Font(name="Calibri", size=16, bold=True, color="FFFFFF")
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+    title_cell.border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
 
     # Encabezados
     headers = [
@@ -297,42 +321,42 @@ def generar_tabla_excel_rc(
     )
 
     # Encabezado base multi-fila: columnas simples con merge vertical; bloques de condiciones horizontales
-    # Columnas con merge vertical (mantienen título en fila 1)
+    # Columnas con merge vertical (mantienen título en fila 2)
     for c in [1, 2, 3, 4]:
-        for r in range(1, 3 + 1):
+        for r in range(2, 4 + 1):
             cell = ws.cell(row=r, column=c)
-            if r == 1:
+            if r == 2:
                 cell.value = headers[c - 1]
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = header_align
             cell.border = thin_border
-        ws.merge_cells(start_row=1, start_column=c, end_row=3, end_column=c)
+        ws.merge_cells(start_row=2, start_column=c, end_row=4, end_column=c)
 
     # Bloque "CONDICIONES ACTUALES" abarca columnas 5 y 6
-    ws.merge_cells(start_row=1, start_column=5, end_row=1, end_column=6)
-    title_cell = ws.cell(row=1, column=5)
+    ws.merge_cells(start_row=2, start_column=5, end_row=2, end_column=6)
+    title_cell = ws.cell(row=2, column=5)
     title_cell.value = "CONDICIONES ACTUALES"
     title_cell.fill = header_fill
     title_cell.font = header_font
     title_cell.alignment = header_align
     title_cell.border = thin_border
     for col in (5, 6):
-        c = ws.cell(row=1, column=col)
-        c.fill = header_fill
-        c.font = header_font
-        c.alignment = header_align
-        c.border = thin_border
-    ws.cell(row=2, column=5).value = "TASA"
-    ws.cell(row=2, column=6).value = "Prima"
-    for col in (5, 6):
         c = ws.cell(row=2, column=col)
         c.fill = header_fill
         c.font = header_font
         c.alignment = header_align
         c.border = thin_border
+    ws.cell(row=3, column=5).value = "TASA"
+    ws.cell(row=3, column=6).value = "Prima"
     for col in (5, 6):
         c = ws.cell(row=3, column=col)
+        c.fill = header_fill
+        c.font = header_font
+        c.alignment = header_align
+        c.border = thin_border
+    for col in (5, 6):
+        c = ws.cell(row=4, column=col)
         c.value = ""
         c.fill = header_fill
         c.font = header_font
@@ -340,29 +364,29 @@ def generar_tabla_excel_rc(
         c.border = thin_border
 
     # Bloque "CONDICIONES DE RENOVACIÓN" abarca columnas 7 y 8
-    ws.merge_cells(start_row=1, start_column=7, end_row=1, end_column=8)
-    title_cell = ws.cell(row=1, column=7)
+    ws.merge_cells(start_row=2, start_column=7, end_row=2, end_column=8)
+    title_cell = ws.cell(row=2, column=7)
     title_cell.value = "CONDICIONES DE RENOVACIÓN"
     title_cell.fill = header_fill
     title_cell.font = header_font
     title_cell.alignment = header_align
     title_cell.border = thin_border
     for col in (7, 8):
-        c = ws.cell(row=1, column=col)
-        c.fill = header_fill
-        c.font = header_font
-        c.alignment = header_align
-        c.border = thin_border
-    ws.cell(row=2, column=7).value = "TASA"
-    ws.cell(row=2, column=8).value = "Prima"
-    for col in (7, 8):
         c = ws.cell(row=2, column=col)
         c.fill = header_fill
         c.font = header_font
         c.alignment = header_align
         c.border = thin_border
+    ws.cell(row=3, column=7).value = "TASA"
+    ws.cell(row=3, column=8).value = "Prima"
     for col in (7, 8):
         c = ws.cell(row=3, column=col)
+        c.fill = header_fill
+        c.font = header_font
+        c.alignment = header_align
+        c.border = thin_border
+    for col in (7, 8):
+        c = ws.cell(row=4, column=col)
         c.value = ""
         c.fill = header_fill
         c.font = header_font
@@ -429,11 +453,11 @@ def generar_tabla_excel_rc(
     if num_docs > 0:
         first_doc_col = 9
         last_doc_col = 8 + (num_docs * 2)
-        # Fila 1: título COTIZACIONES (merge I1:Ultima)
+        # Fila 2: título COTIZACIONES (merge I2:Ultima)
         ws.merge_cells(
-            start_row=1, start_column=first_doc_col, end_row=1, end_column=last_doc_col
+            start_row=2, start_column=first_doc_col, end_row=2, end_column=last_doc_col
         )
-        title_cell = ws.cell(row=1, column=first_doc_col)
+        title_cell = ws.cell(row=2, column=first_doc_col)
         title_cell.value = "COTIZACIONES"
         title_cell.fill = header_fill
         title_cell.font = header_font
@@ -441,37 +465,37 @@ def generar_tabla_excel_rc(
         title_cell.border = thin_border
         # Asegurar estilo/borde en todo el rango merged
         for col in range(first_doc_col, last_doc_col + 1):
-            c = ws.cell(row=1, column=col)
+            c = ws.cell(row=2, column=col)
             c.fill = header_fill
             c.font = header_font
             c.alignment = header_align
             c.border = thin_border
-        # Fila 2: nombre de archivo por documento (merge 2 columnas por documento)
+        # Fila 3: nombre de archivo por documento (merge 2 columnas por documento)
         for j, h in enumerate(doc_headers):
             start_col = first_doc_col + (j * 2)
             end_col = start_col + 1
             ws.merge_cells(
-                start_row=2, start_column=start_col, end_row=2, end_column=end_col
+                start_row=3, start_column=start_col, end_row=3, end_column=end_col
             )
-            c1 = ws.cell(row=2, column=start_col)
+            c1 = ws.cell(row=3, column=start_col)
             c1.value = h
             for col in (start_col, end_col):
-                c = ws.cell(row=2, column=col)
+                c = ws.cell(row=3, column=col)
                 c.fill = header_fill
                 c.font = header_font
                 c.alignment = header_align
                 c.border = thin_border
-        # Fila 3: textos TASA y PRIMA en columnas por documento (TASA a la izquierda)
+        # Fila 4: textos TASA y PRIMA en columnas por documento (TASA a la izquierda)
         for j in range(num_docs):
             tasa_col = first_doc_col + (j * 2)
             prima_col = tasa_col + 1
-            c1 = ws.cell(row=3, column=tasa_col)
+            c1 = ws.cell(row=4, column=tasa_col)
             c1.value = "TASA"
             c1.fill = header_fill
             c1.font = header_font
             c1.alignment = header_align
             c1.border = thin_border
-            c2 = ws.cell(row=3, column=prima_col)
+            c2 = ws.cell(row=4, column=prima_col)
             c2.value = "PRIMA"
             c2.fill = header_fill
             c2.font = header_font
@@ -487,8 +511,8 @@ def generar_tabla_excel_rc(
         start_color="D9D9D9", end_color="D9D9D9", fill_type="solid"
     )
 
-    # Iniciar datos en la fila 4 debido a encabezados en filas 1-3
-    fila = 4
+    # Iniciar datos en la fila 5 debido a encabezados en filas 1-4 (título + 3 filas)
+    fila = 5
     for idx, tipo in enumerate(tipos_ordenados):
         # Espacio entre secciones
         if idx > 0:
@@ -760,7 +784,12 @@ def generar_tabla_excel_rc(
         fila += 1
 
     # Congelar encabezado y ajustar anchos
-    ws.freeze_panes = "A4"
+    ws.freeze_panes = "A5"
+    # Asegurar que la vista inicie desde la esquina superior izquierda
+    try:
+        ws.sheet_view.selection = [Selection(activeCell="A1", sqref="A1")]
+    except Exception:
+        pass
     for col in range(1, 9 + (num_docs * 2)):
         max_len = 0
         for r in range(1, ws.max_row + 1):
@@ -2649,28 +2678,29 @@ if __name__ == "__main__":
     actual_u, renovacion_u, reporte = unificar_y_reportar(
         clasificacion_actual, clasificacion_renovacion
     )
-    
+
     print("Reporte de cambios:")
     for interes, cambios in reporte.items():
         print(interes, cambios)
 
-    with open("clasificacion_actual_unificada.json", "w", encoding="utf-8") as f:
-        json.dump(actual_u, f, ensure_ascii=False, indent=2)
+    # with open("clasificacion_actual_unificada.json", "w", encoding="utf-8") as f:
+    #     json.dump(actual_u, f, ensure_ascii=False, indent=2)
 
-    with open("clasificacion_renovacion_unificada.json", "w", encoding="utf-8") as f:
-        json.dump(renovacion_u, f, ensure_ascii=False, indent=2)
+    # with open("clasificacion_renovacion_unificada.json", "w", encoding="utf-8") as f:
+    #     json.dump(renovacion_u, f, ensure_ascii=False, indent=2)
 
-    # try:
-    #     ruta_excel = generar_tabla_excel_rc(
-    #         amparos_actuales,
-    #         amparos_renovacion,
-    #         clasificacion_actual,
-    #         clasificacion_renovacion,
-    #         docs_adicionales_data,
-    #         poliza_actual,
-    #         poliza_renovacion,
-    #         output_path="Resumen_RC.xlsx",
-    #     )
-    #     print(f"Tabla de Excel generada correctamente: {ruta_excel}")
-    # except Exception as e:
-    #     print(f"Error al generar la tabla de Excel: {e}")
+    try:
+        ruta_excel = generar_tabla_excel_rc(
+            amparos_actuales,
+            amparos_renovacion,
+            clasificacion_actual,
+            clasificacion_renovacion,
+            docs_adicionales_data,
+            poliza_actual,
+            poliza_renovacion,
+            titulo_excel="JACOOOB",
+            output_path="Resumen_RC.xlsx",
+        )
+        print(f"Tabla de Excel generada correctamente: {ruta_excel}")
+    except Exception as e:
+        print(f"Error al generar la tabla de Excel: {e}")
