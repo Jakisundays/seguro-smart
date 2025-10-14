@@ -283,6 +283,7 @@ def generar_excel_analisis_polizas(
     amparos_renovacion: AmparosDict,
     amparos_adicionales: List[AmparosDict],
     output_path="reporte_polizas_riesgos.xlsx",
+    titulo_excel: Optional[str] = None,
 ):
     """
     Genera un archivo Excel con análisis de pólizas replicando la funcionalidad
@@ -293,6 +294,11 @@ def generar_excel_analisis_polizas(
 
     Returns:
         str: Ruta del archivo generado
+
+    Parámetros adicionales:
+        titulo_excel (Optional[str]): Título personalizado que se mostrará en la parte
+        superior de cada hoja para diferenciar visualmente el contenido. Si no se
+        especifica, se usará un título por defecto acorde a la hoja.
     """
 
     output = BytesIO()
@@ -468,7 +474,7 @@ def generar_excel_analisis_polizas(
 
             # 2. Título principal
             title_cell = ws.cell(row=1, column=1)
-            title_cell.value = "DEDUCIBLES"
+            title_cell.value = titulo_excel if titulo_excel else "DEDUCIBLES"
             title_cell.font = Font(name="Calibri", size=16, bold=True, color="FFFFFF")
             title_cell.fill = PatternFill(
                 start_color="1F4E78", end_color="1F4E78", fill_type="solid"
@@ -699,7 +705,8 @@ def generar_excel_analisis_polizas(
             df_renov = pivot_riesgos(riesgos_renovacion)
 
             # Escribir ambas tablas en la MISMA hoja, con los mismos encabezados
-            start_row = 0
+            # Reservamos la fila 1 para un título general de la hoja
+            start_row = 1
             sheet_name = "Riesgos"
 
             # Tabla 1: Póliza actual
@@ -707,6 +714,25 @@ def generar_excel_analisis_polizas(
                 writer, sheet_name=sheet_name, index=False, startrow=start_row + 1
             )
             ws = writer.sheets[sheet_name]
+
+            # Título principal de la hoja Riesgos (fila 1)
+            riesgos_title_cell = ws.cell(row=1, column=1)
+            riesgos_title_cell.value = titulo_excel if titulo_excel else "RIESGOS"
+            riesgos_title_cell.font = Font(
+                name="Calibri", size=16, bold=True, color="FFFFFF"
+            )
+            riesgos_title_cell.fill = PatternFill(
+                start_color="1F4E78", end_color="1F4E78", fill_type="solid"
+            )
+            riesgos_title_cell.alignment = Alignment(
+                horizontal="center", vertical="center"
+            )
+            ws.merge_cells(
+                start_row=1,
+                start_column=1,
+                end_row=1,
+                end_column=len(df_actual.columns),
+            )
             ws.cell(row=start_row + 1, column=1, value="Póliza actual").font = Font(
                 name="Arial", size=13, bold=True
             )
@@ -1495,6 +1521,7 @@ async def main():
                     amparos_renovacion=amparos_renovacion,
                     amparos_adicionales=amparos_adicionales,
                     output_path=main_excel_path,
+                    titulo_excel=excel_name,
                 )
 
                 actual_u, renovacion_u = orchestrator.unificar_segmentos(
