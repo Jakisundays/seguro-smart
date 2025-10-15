@@ -277,13 +277,13 @@ def generar_tabla_excel_rc(
 
     # Título general del reporte (fila superior)
     num_docs_for_title = len(docs_adicionales_data or [])
-    last_col_for_title = 4
-    # last_col_for_title = 8 + (num_docs_for_title * 2)
+    # last_col_for_title = 4
+    last_col_for_title = 8 + (num_docs_for_title * 2)
     ws.merge_cells(
         start_row=1, start_column=1, end_row=1, end_column=last_col_for_title
     )
     title_cell = ws.cell(row=1, column=1)
-    # title_cell.value = titulo_excel or "RESUMEN RC"
+    title_cell.value = titulo_excel or "RESUMEN RC"
     title_cell.fill = PatternFill(
         start_color="1F4E78", end_color="1F4E78", fill_type="solid"
     )

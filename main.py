@@ -1542,6 +1542,7 @@ async def main():
                     docs_adicionales_data=docs_adicionales_data,
                     poliza_actual=poliza_actual.get("data", {}),
                     poliza_renovacion=poliza_renovacion.get("data", {}),
+                    titulo_excel=excel_name,
                     output_path=summary_excel_path,
                 )
 
