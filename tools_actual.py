@@ -24,8 +24,7 @@ tools = [
             - Riesgos (`riesgos`): listado de riesgos asegurados, cada uno con:
                 - Dirección completa (`ubicacion`), tal como aparece en el documento.
                 - Su `detalle_cobertura` correspondiente, con intereses asegurados, valores y tipos.
-            Incluye coberturas de manejo de dinero, responsabilidad civil o transporte de valores, estas deben extraerse y añadirse explícitamente en el resultado dentro del riesgo correspondiente.
-
+            
             Devuelve únicamente los campos:  
             `prima_sin_iva`, `tasa`, `detalle_cobertura`, `total_valores_asegurados`, `riesgos`
 
@@ -392,6 +391,94 @@ tools = [
                 "transporte_valores",
                 "responsabilidad_civil",
                 "amparos",
+            ],
+        },
+    },
+    {
+        "prompt": """
+            Analiza el documento y extrae de forma explícita las coberturas especiales:
+            - Manejo de Dinero
+            - Responsabilidad Civil
+            - Transporte de Valores
+
+            Para cada cobertura, genera un objeto con:
+            - `ubicacion`: dirección completa tal como aparece en el documento (opcional).
+            - `detalle_cobertura`: lista de objetos con:
+                • `interes_asegurado`: descripción del interés asegurado (ej. "Caja fuerte", "Dinero en tránsito", "Edificio").
+                • `valor_asegurado`: monto monetario asegurado correspondiente al interés.
+                • `tipo`: lista de amparos aplicables, seleccionando de las siguientes opciones y explicando brevemente cada una:
+                    - "Incendio": cobertura contra daños por fuego.
+                    - "Sustracción": cobertura contra robo o hurto.
+                    - "Equipo Electronico": cobertura de equipos electrónicos y tecnológicos.
+                    - "Rotura de Maquinaria": cobertura de fallos o daños de maquinaria.
+                    - "Transporte de Valores": cobertura durante transporte de dinero u objetos de valor.
+                    - "Manejo de Dinero": cobertura para manipulación, custodia o transporte interno de dinero.
+                    - "Responsabilidad Civil": cobertura frente a daños a terceros por acción u omisión.
+
+            Asegúrate de que cada tipo relevante aparezca correctamente según la cobertura especial. Devuelve la salida estrictamente según el schema JSON proporcionado.
+            """,
+        "data": {
+            "type": "OBJECT",
+            "properties": {
+                "manejo_dinero_riesgo": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "ubicacion": {
+                            "type": "STRING",
+                            "description": "Dirección completa tal cual aparece en el documento (opcional).",
+                        },
+                        "interes_asegurado": {
+                            "type": "STRING",
+                            "description": "Descripción del interés asegurado relacionado con manejo de dinero.",
+                        },
+                        "valor_asegurado": {
+                            "type": "NUMBER",
+                            "description": "Valor monetario asegurado correspondiente al interés.",
+                        },
+                    },
+                    "required": ["ubicacion", "interes_asegurado", "valor_asegurado"],
+                },
+                "responsabilidad_civil_riesgo": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "ubicacion": {
+                            "type": "STRING",
+                            "description": "Dirección completa tal cual aparece en el documento (opcional).",
+                        },
+                        "interes_asegurado": {
+                            "type": "STRING",
+                            "description": "Descripción del interés asegurado relacionado con responsabilidad civil.",
+                        },
+                        "valor_asegurado": {
+                            "type": "NUMBER",
+                            "description": "Valor monetario asegurado correspondiente al interés.",
+                        },
+                    },
+                    "required": ["ubicacion", "interes_asegurado", "valor_asegurado"],
+                },
+                "transporte_valores_riesgo": {
+                    "type": "OBJECT",
+                    "properties": {
+                        "ubicacion": {
+                            "type": "STRING",
+                            "description": "Dirección completa tal cual aparece en el documento (opcional).",
+                        },
+                        "interes_asegurado": {
+                            "type": "STRING",
+                            "description": "Descripción del interés asegurado relacionado con transporte de valores.",
+                        },
+                        "valor_asegurado": {
+                            "type": "NUMBER",
+                            "description": "Valor monetario asegurado correspondiente al interés.",
+                        },
+                    },
+                    "required": ["ubicacion", "interes_asegurado", "valor_asegurado"],
+                },
+            },
+            "required": [
+                "manejo_dinero_riesgo",
+                "responsabilidad_civil_riesgo",
+                "transporte_valores_riesgo",
             ],
         },
     },
