@@ -4,8 +4,6 @@ tools = [
             Analiza el documento proporcionado y extrae la siguiente información:
 
             - Prima sin IVA (`prima_sin_iva`): valor numérico de la prima antes de IVA.
-            - Monto del IVA (`iva`): valor numérico correspondiente al IVA.
-            - Prima final con IVA (`prima_con_iva`): valor numérico de la prima incluyendo IVA.
             - Tasa (`tasa`): porcentaje aplicado en la póliza.
             - Nombre del asegurado (`asegurado`): nombre completo del asegurado tal como aparece en la póliza o documento oficial.
 
@@ -26,9 +24,10 @@ tools = [
             - Riesgos (`riesgos`): listado de riesgos asegurados, cada uno con:
                 - Dirección completa (`ubicacion`), tal como aparece en el documento.
                 - Su `detalle_cobertura` correspondiente, con intereses asegurados, valores y tipos.
+            Incluye coberturas de manejo de dinero, responsabilidad civil o transporte de valores, estas deben extraerse y añadirse explícitamente en el resultado dentro del riesgo correspondiente.
 
             Devuelve únicamente los campos:  
-            `prima_sin_iva`, `iva`, `prima_con_iva`, `tasa`, `detalle_cobertura`, `total_valores_asegurados`, `riesgos`
+            `prima_sin_iva`, `tasa`, `detalle_cobertura`, `total_valores_asegurados`, `riesgos`
 
             - Usa números para primas, IVA y tasa.  
             - Strings para nombres de intereses y ubicaciones.  
@@ -134,14 +133,14 @@ tools = [
                     "type": "NUMBER",
                     "description": "Valor de la prima sin aplicar IVA.",
                 },
-                "iva": {
-                    "type": "NUMBER",
-                    "description": "Monto correspondiente al IVA.",
-                },
-                "prima_con_iva": {
-                    "type": "NUMBER",
-                    "description": "Valor de la prima final con IVA incluido.",
-                },
+                # "iva": {
+                #     "type": "NUMBER",
+                #     "description": "Monto correspondiente al IVA.",
+                # },
+                # "prima_con_iva": {
+                #     "type": "NUMBER",
+                #     "description": "Valor de la prima final con IVA incluido.",
+                # },
                 "tasa": {
                     "type": "NUMBER",
                     "description": "Porcentaje de la tasa aplicado en la póliza.",
@@ -156,8 +155,8 @@ tools = [
                 "total_valores_asegurados",
                 "riesgos",
                 "prima_sin_iva",
-                "iva",
-                "prima_con_iva",
+                # "iva",
+                # "prima_con_iva",
                 "tasa",
                 "asegurado",
             ],
@@ -199,7 +198,7 @@ tools = [
                 - `patronal`
 
             Devuelve únicamente los campos:  
-            `prima_sin_iva`, `iva`, `prima_con_iva`, `amparos`, `danos_materiales`, `manejo_global_comercial`, `transporte_valores`, `responsabilidad_civil`
+            `prima_sin_iva`, `amparos`, `danos_materiales`, `manejo_global_comercial`, `transporte_valores`, `responsabilidad_civil`
 
             - Usa números para primas e IVA.  
             - Strings para amparos y coberturas.  
