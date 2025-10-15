@@ -166,7 +166,10 @@ tools = [
         "prompt": """
             Analiza el documento y extrae los siguientes datos:
 
-            - Amparos incluidos en la póliza, con su deducible y tipo correspondiente. Asigna cada amparo a un `tipo` según estas definiciones:
+            - Amparos incluidos en la póliza, con su deducible y tipo correspondiente.
+            - Solo genera líneas para amparos que tengan información válida.  
+            - Si un amparo no tiene datos, o su valor es "no especificado", "no encontrado" o "no aplica", **no lo incluyas en el resultado**.  
+            - Asigna cada amparo a un `tipo` según estas definiciones:
                 - 'Incendio': daños causados por fuego, explosiones o elementos relacionados.
                 - 'Sustracción': robo, hurto o sustracción de bienes asegurados.
                 - 'Equipo Electrónico': daños a equipos electrónicos de la empresa.
