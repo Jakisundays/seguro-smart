@@ -273,7 +273,10 @@ def generar_prompt_nombres(nombres: list[str]) -> str:
     Genera un string que pide crear un nombre para un documento
     basado en una lista de nombres proporcionados.mbn
     """
-    return f"Genera un nombre corto, claro y profesional para un documento que represente: {' | '.join(nombres)}."
+    return (
+        f"Genera un nombre claro, completo y profesional para un documento que represente: "
+        f"{' | '.join(nombres)}. No utilices abreviaciones ni siglas."
+    )
 
 
 def generar_excel_analisis_polizas(
@@ -391,6 +394,39 @@ def generar_excel_analisis_polizas(
                 for t in tipos_amp:
                     amparos_por_tipo.setdefault(t, []).append(amp)
 
+            # Consolidadores de deducibles para evitar pérdida de información
+            def _consolidar_deducibles(lista_amparos, nombre_amparo: str) -> str:
+                """Une deducibles de amparos duplicados del mismo nombre, sin repetir, conservando orden."""
+                vals = [
+                    (a.get("deducible") or "").strip()
+                    for a in lista_amparos
+                    if a.get("amparo") == nombre_amparo
+                ]
+                vals = [v for v in vals if v]
+                seen = set()
+                uniq = []
+                for v in vals:
+                    if v not in seen:
+                        seen.add(v)
+                        uniq.append(v)
+                return "\n".join(uniq)
+
+            def _consolidar_deducibles_doc(doc: dict, nombre_amparo: str) -> str:
+                """Une deducibles de un documento adicional para un amparo, sin repetir."""
+                vals = [
+                    (a.get("deducible") or "").strip()
+                    for a in doc.get("amparos", [])
+                    if a.get("amparo") == nombre_amparo
+                ]
+                vals = [v for v in vals if v]
+                seen = set()
+                uniq = []
+                for v in vals:
+                    if v not in seen:
+                        seen.add(v)
+                        uniq.append(v)
+                return "\n".join(uniq)
+
             # Crear estructura de datos para Excel
             for tipo in tipos_ordenados:
                 # Añadir fila de sección (encabezado del tipo)
@@ -408,45 +444,21 @@ def generar_excel_analisis_polizas(
                 # Añadir amparos de este tipo
                 if tipo in amparos_por_tipo:
                     for amp in amparos_por_tipo[tipo]:
-                        # Buscar deducibles en actuales, renovación y adicionales
-                        ded_actual = ""
-                        ded_renovacion = ""
-                        ded_adicional = ""
-
-                        # Buscar en actuales
-                        for a in amparos_actuales["amparos"]:
-                            if a["amparo"] == amp["amparo"]:
-                                ded_actual = a["deducible"]
-                                break
-
-                        # Buscar en renovación
-                        for a in amparos_renovacion["amparos"]:
-                            if a["amparo"] == amp["amparo"]:
-                                ded_renovacion = a["deducible"]
-                                break
-
-                        # Buscar en adicionales
-                        for doc in amparos_adicionales:
-                            for a in doc["amparos"]:
-                                if a["amparo"] == amp["amparo"]:
-                                    ded_adicional = a["deducible"]
-                                    break
-
+                        # Consolidar deducibles en actuales, renovación y por cada adicional
+                        ded_actual = _consolidar_deducibles(
+                            amparos_actuales.get("amparos", []), amp["amparo"]
+                        )
+                        ded_renovacion = _consolidar_deducibles(
+                            amparos_renovacion.get("amparos", []), amp["amparo"]
+                        )
                         datos_amparos.append(
                             {
                                 "RAMO": amp["amparo"],
                                 "CONDICIONES ACTUALES": ded_actual,
                                 "CONDICIONES DE RENOVACIÓN": ded_renovacion,
                                 **{
-                                    doc["archivo"]: (
-                                        next(
-                                            (
-                                                a["deducible"]
-                                                for a in doc["amparos"]
-                                                if a["amparo"] == amp["amparo"]
-                                            ),
-                                            "",
-                                        )
+                                    doc.get("archivo", ""): _consolidar_deducibles_doc(
+                                        doc, amp["amparo"]
                                     )
                                     for doc in amparos_adicionales
                                 },
@@ -684,16 +696,23 @@ def generar_excel_analisis_polizas(
             )
 
             def pivot_riesgos(dataset):
-                filas = []
+                # Agregar por ubicación para evitar filas duplicadas
+                agregados = {}
                 for r in dataset:
-                    fila = {"Ubicación": r.get("ubicacion", "")}
-                    for col in intereses_cols:
-                        fila[col] = 0
+                    ubic = r.get("ubicacion", "")
+                    if ubic not in agregados:
+                        agregados[ubic] = {col: 0 for col in intereses_cols}
                     for det in r.get("detalle_cobertura", []):
                         k = normalizar_interes(det.get("interes_asegurado", ""))
-                        if k in fila:
-                            fila[k] += det.get("valor_asegurado", 0)
+                        if k in agregados[ubic]:
+                            agregados[ubic][k] += det.get("valor_asegurado", 0)
+
+                filas = []
+                for ubic, valores in agregados.items():
+                    fila = {"Ubicación": ubic}
+                    fila.update(valores)
                     filas.append(fila)
+
                 # Totales
                 tot = {"Ubicación": "TOTAL VALORES"}
                 for col in intereses_cols:

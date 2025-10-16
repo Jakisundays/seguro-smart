@@ -21,14 +21,9 @@ tools = [
 
             - Total de valores asegurados (`total_valores_asegurados`): suma total de todos los valores asegurados listados en el detalle.
 
-            - Riesgos (`riesgos`): listado de riesgos asegurados, cada uno con:
-                - Dirección completa (`ubicacion`), tal como aparece en el documento.
-                - Su `detalle_cobertura` correspondiente, con intereses asegurados, valores y tipos.
-            Incluye coberturas de manejo de dinero, responsabilidad civil o transporte de valores, estas deben extraerse y añadirse explícitamente en el resultado dentro del riesgo correspondiente.
-
             Devuelve únicamente los campos:  
-            `prima_sin_iva`, `tasa`, `detalle_cobertura`, `total_valores_asegurados`, `riesgos`
-
+            `prima_sin_iva`, `tasa`, `detalle_cobertura`, `total_valores_asegurados`
+            
             - Usa números para primas, IVA y tasa.  
             - Strings para nombres de intereses y ubicaciones.  
             - Listas y objetos según la estructura indicada.  
@@ -77,70 +72,10 @@ tools = [
                     "type": "STRING",
                     "description": "Suma total de todos los valores asegurados listados en el detalle.",
                 },
-                "riesgos": {
-                    "type": "ARRAY",
-                    "description": "Listado de riesgos asegurados, identificado por su calle y con los valores asegurados por tipo de interés.",
-                    "items": {
-                        "type": "OBJECT",
-                        "properties": {
-                            "ubicacion": {
-                                "type": "STRING",
-                                "description": "Dirección completa tal cual aparece en el documento (opcional).",
-                            },
-                            "detalle_cobertura": {
-                                "type": "ARRAY",
-                                "description": "Intereses asegurados y valores asociados para este riesgo específico.",
-                                "items": {
-                                    "type": "OBJECT",
-                                    "properties": {
-                                        "interes_asegurado": {
-                                            "type": "STRING",
-                                            "description": "Descripción del interés asegurado (ej.: 'Edificio', 'Maquinaria', 'Equipos').",
-                                        },
-                                        "valor_asegurado": {
-                                            "type": "NUMBER",
-                                            "description": "Valor monetario asegurado correspondiente al interés.",
-                                        },
-                                        "tipo": {
-                                            "type": "ARRAY",
-                                            "description": "Tipos de amparo: categorías del amparo según su cobertura. Opciones disponibles: 'Incendio', 'Sustracción', 'Equipo y Maquinaria', 'Transporte de Valores', 'Manejo de Dinero', 'Responsabilidad Civil'.",
-                                            "items": {
-                                                "type": "STRING",
-                                                "enum": [
-                                                    "Incendio",
-                                                    "Sustracción",
-                                                    "Equipo Electronico",
-                                                    "Rotura de Maquinaria",
-                                                    "Transporte de Valores",
-                                                    "Manejo de Dinero",
-                                                    "Responsabilidad Civil",
-                                                ],
-                                            },
-                                        },
-                                    },
-                                    "required": [
-                                        "interes_asegurado",
-                                        "valor_asegurado",
-                                        "tipo",
-                                    ],
-                                },
-                            },
-                        },
-                        "required": ["ubicacion", "detalle_cobertura"],
-                    },
-                },
                 "prima_sin_iva": {
                     "type": "NUMBER",
                     "description": "Valor de la prima sin aplicar IVA.",
                 },
-                # "iva": {
-                #     "type": "NUMBER",
-                #     "description": "Monto correspondiente al IVA.",
-                # },
-                # "prima_con_iva": {
-                #     "type": "NUMBER",
-                #     "description": "Valor de la prima final con IVA incluido.",
-                # },
                 "tasa": {
                     "type": "NUMBER",
                     "description": "Porcentaje de la tasa aplicado en la póliza.",
@@ -151,14 +86,11 @@ tools = [
                 },
             },
             "required": [
-                "detalle_cobertura",
-                "total_valores_asegurados",
-                "riesgos",
                 "prima_sin_iva",
-                # "iva",
-                # "prima_con_iva",
                 "tasa",
                 "asegurado",
+                "detalle_cobertura",
+                "total_valores_asegurados",
             ],
         },
     },
@@ -396,6 +328,96 @@ tools = [
                 "responsabilidad_civil",
                 "amparos",
             ],
+        },
+    },
+    {
+        "prompt": """
+            Analiza el documento y extrae todos los riesgos asegurados, generando un listado en el campo `riesgos`.
+
+            Para cada riesgo, incluye:
+            - `ubicacion`: dirección completa tal como aparece en el documento (opcional).
+            - `detalle_cobertura`: lista de objetos con:
+                * `interes_asegurado`: descripción del interés asegurado (ej. 'Edificio', 'Maquinaria', 'Equipos').
+                * `valor_asegurado`: valor monetario asegurado correspondiente al interés.
+                * `tipo`: lista de tipos de amparo aplicables. Incluye todos los que correspondan y explica brevemente cada uno:
+
+                    - "Incendio": cubre daños materiales ocasionados por fuego.
+                    - "Sustracción": cubre robo o hurto de bienes asegurados.
+                    - "Equipo Electronico": cubre equipos electrónicos y tecnológicos.
+                    - "Rotura de Maquinaria": cubre fallos o daños de maquinaria.
+                    - "Transporte de Valores": cubre dinero y objetos de valor durante transporte.
+                    - "Manejo de Dinero": cubre custodia, manipulación y transporte interno de dinero.
+                    - "Responsabilidad Civil": cubre daños a terceros derivados de la operación del negocio.
+
+            Importante: si el documento menciona explícitamente alguno de los siguientes intereses asegurados, deben incluirse obligatoriamente en el resultado:
+            - Edificio
+            - Muebles y enseres
+            - Maquinaria y equipo
+            - Dineros
+            - Equipo electrónico
+            - Manejo de Dinero
+            - Responsabilidad Civil (RC)
+            - Transporte de Valores
+
+            El resultado debe seguir estrictamente el schema JSON proporcionado.
+            """,
+        "data": {
+            "type": "OBJECT",
+            "properties": {
+                "riesgos": {
+                    "type": "ARRAY",
+                    "description": "Listado de riesgos asegurados, identificado por su calle y con los valores asegurados por tipo de interés.",
+                    "items": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "ubicacion": {
+                                "type": "STRING",
+                                "description": "Dirección completa tal cual aparece en el documento (opcional).",
+                            },
+                            "detalle_cobertura": {
+                                "type": "ARRAY",
+                                "description": "Intereses asegurados y valores asociados para este riesgo específico.",
+                                "items": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "interes_asegurado": {
+                                            "type": "STRING",
+                                            "description": "Descripción del interés asegurado (ej.: 'Edificio', 'Maquinaria', 'Equipos').",
+                                        },
+                                        "valor_asegurado": {
+                                            "type": "NUMBER",
+                                            "description": "Valor monetario asegurado correspondiente al interés.",
+                                        },
+                                        "tipo": {
+                                            "type": "ARRAY",
+                                            "description": "Tipos de amparo: categorías del amparo según su cobertura. Opciones disponibles: 'Incendio', 'Sustracción', 'Equipo y Maquinaria', 'Transporte de Valores', 'Manejo de Dinero', 'Responsabilidad Civil'.",
+                                            "items": {
+                                                "type": "STRING",
+                                                "enum": [
+                                                    "Incendio",
+                                                    "Sustracción",
+                                                    "Equipo Electronico",
+                                                    "Rotura de Maquinaria",
+                                                    "Transporte de Valores",
+                                                    "Manejo de Dinero",
+                                                    "Responsabilidad Civil",
+                                                ],
+                                            },
+                                        },
+                                    },
+                                    "required": [
+                                        "interes_asegurado",
+                                        "valor_asegurado",
+                                        "tipo",
+                                    ],
+                                },
+                            },
+                        },
+                        "required": ["ubicacion", "detalle_cobertura"],
+                    },
+                },
+            },
+            "required": ["riesgos"],
         },
     },
 ]

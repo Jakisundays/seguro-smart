@@ -7,17 +7,17 @@ tools = [
             - Nombre del asegurado (`asegurado`): nombre completo del asegurado tal como aparece en la póliza o documento oficial.
             - Tasa (`tasa`): porcentaje de la tasa aplicado en la póliza, que indica el costo del riesgo asumido por la aseguradora.
 
-            - Amparos (`amparos`): listado de todos los amparos incluidos en la póliza. Para cada amparo, extrae:
-                - `amparo`: nombre del amparo o interés asegurado.
-                - `deducible`: porcentaje o valor mínimo que debe asumir el asegurado en caso de pérdida o siniestro, expresado como porcentaje del valor de la pérdida o con monto mínimo en SMLMV.
-                - `tipo`: lista de categorías aplicables al amparo según su cobertura. Los posibles valores son:
-                    - "Incendio": cobertura de daños por fuego o explosiones.
-                    - "Sustracción": protección contra robo, hurto o sustracción de bienes asegurados.
-                    - "Equipo Electronico": daños a equipos electrónicos.
-                    - "Rotura de Maquinaria": daños a maquinaria por fallas o roturas.
-                    - "Transporte de Valores": protección durante traslado de dinero o bienes de alto valor.
-                    - "Manejo de Dinero": cobertura relacionada con la custodia o manejo de dinero dentro de la empresa, incluyendo errores o pérdidas.
-                    - "Responsabilidad Civil": cobertura por daños a terceros ocasionados por el asegurado.
+            - Amparos incluidos en la póliza, con su deducible y tipo correspondiente.
+            - Solo genera líneas para amparos que tengan información válida.  
+            - Si un amparo no tiene datos, o su valor es "no especificado", "no encontrado" o "no aplica", **no lo incluyas en el resultado**.  
+            - Asigna cada amparo a un `tipo` según estas definiciones:
+                - 'Incendio': daños causados por fuego, explosiones o elementos relacionados.
+                - 'Sustracción': robo, hurto o sustracción de bienes asegurados.
+                - 'Equipo Electrónico': daños a equipos electrónicos de la empresa.
+                - 'Rotura de Maquinaria': daños a maquinaria por fallas o roturas.
+                - 'Transporte de Valores': protección durante el traslado de dinero, valores o bienes de alto riesgo.
+                - 'Manejo de Dinero': custodia o manejo de dinero dentro de la empresa, incluyendo errores o pérdidas.
+                - 'Responsabilidad Civil': daños a terceros por acciones u omisiones de la empresa o asegurado.
 
             No inventes información ni agregues explicaciones adicionales.  
             Devuelve únicamente los campos `prima_sin_iva`, `iva`, `prima_con_iva`, `tasa` y `amparos` en un JSON que respete el formato indicado, usando números para primas e IVA y strings para amparos y deducibles.
@@ -29,14 +29,6 @@ tools = [
                     "type": "NUMBER",
                     "description": "Valor de la prima sin aplicar IVA.",
                 },
-                # "iva": {
-                #     "type": "NUMBER",
-                #     "description": "Monto correspondiente al IVA.",
-                # },
-                # "prima_con_iva": {
-                #     "type": "NUMBER",
-                #     "description": "Valor de la prima final con IVA incluido.",
-                # },
                 "asegurado": {
                     "type": "STRING",
                     "description": "Nombre completo del asegurado tal como aparece en la póliza o documento oficial. Ejemplo: 'Juan Pérez S.A.', 'Compañía XYZ Ltda.', 'María Gómez'.",
@@ -82,8 +74,6 @@ tools = [
             },
             "required": [
                 "prima_sin_iva",
-                # "iva",
-                # "prima_con_iva",
                 "asegurado",
                 "tasa",
                 "amparos",
