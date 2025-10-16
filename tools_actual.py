@@ -329,27 +329,35 @@ tools = [
     },
     {
         "prompt": """
-        Analiza el documento y extrae todos los riesgos asegurados, generando un listado en el campo `riesgos`.
+            Analiza el documento y extrae todos los riesgos asegurados, generando un listado en el campo `riesgos`.
 
-        Para cada riesgo, incluye:
-        - `ubicacion`: dirección completa tal como aparece en el documento (opcional).
-        - `detalle_cobertura`: lista de objetos con:
-            * `interes_asegurado`: descripción del interés asegurado (ej. 'Edificio', 'Maquinaria', 'Equipos').
-            * `valor_asegurado`: valor monetario asegurado correspondiente al interés.
-            * `tipo`: lista de tipos de amparo aplicables. Incluye todos los que correspondan y explica brevemente cada uno:
+            Para cada riesgo, incluye:
+            - `ubicacion`: dirección completa tal como aparece en el documento (opcional).
+            - `detalle_cobertura`: lista de objetos con:
+                * `interes_asegurado`: descripción del interés asegurado (ej. 'Edificio', 'Maquinaria', 'Equipos').
+                * `valor_asegurado`: valor monetario asegurado correspondiente al interés.
+                * `tipo`: lista de tipos de amparo aplicables. Incluye todos los que correspondan y explica brevemente cada uno:
 
-                - "Incendio": cubre daños materiales ocasionados por fuego.
-                - "Sustracción": cubre robo o hurto de bienes asegurados.
-                - "Equipo Electronico": cubre equipos electrónicos y tecnológicos.
-                - "Rotura de Maquinaria": cubre fallos o daños de maquinaria.
-                - "Transporte de Valores": cubre dinero y objetos de valor durante transporte.
-                - "Manejo de Dinero": cubre custodia, manipulación y transporte interno de dinero.
-                - "Responsabilidad Civil": cubre daños a terceros derivados de la operación del negocio.
+                    - "Incendio": cubre daños materiales ocasionados por fuego.
+                    - "Sustracción": cubre robo o hurto de bienes asegurados.
+                    - "Equipo Electronico": cubre equipos electrónicos y tecnológicos.
+                    - "Rotura de Maquinaria": cubre fallos o daños de maquinaria.
+                    - "Transporte de Valores": cubre dinero y objetos de valor durante transporte.
+                    - "Manejo de Dinero": cubre custodia, manipulación y transporte interno de dinero.
+                    - "Responsabilidad Civil": cubre daños a terceros derivados de la operación del negocio.
 
-        Si el documento menciona "Transporte de Valores", "Manejo de Dinero" o "Responsabilidad Civil", asegúrate de incluirlas explícitamente.
+            Importante: si el documento menciona explícitamente alguno de los siguientes intereses asegurados, deben incluirse obligatoriamente en el resultado:
+            - Edificio
+            - Muebles y enseres
+            - Maquinaria y equipo
+            - Dineros
+            - Equipo electrónico
+            - Manejo de Dinero
+            - Responsabilidad Civil (RC)
+            - Transporte de Valores
 
-        El resultado debe seguir estrictamente el schema JSON proporcionado.
-        """,
+            El resultado debe seguir estrictamente el schema JSON proporcionado.
+            """,
         "data": {
             "type": "OBJECT",
             "properties": {
