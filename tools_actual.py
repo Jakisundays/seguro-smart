@@ -100,7 +100,8 @@ tools = [
 
             - Amparos incluidos en la póliza, con su deducible y tipo correspondiente.
             - Solo genera líneas para amparos que tengan información válida.  
-            - Si un amparo no tiene datos, o su valor es "no especificado", "no encontrado" o "no aplica", NO LO INCLUYAS EN EL RESULTADO.  
+            - Si un amparo no tiene datos, o su valor es "no especificado", "no encontrado" o "no aplica", NO LO INCLUYAS EN EL RESULTADO. 
+            - Excluye de la categoría 'Incendio' cualquier amparo relacionado con honorarios, gastos de preservación, reproducción de información, demostración de pérdida o extinción del siniestro. 
             - Asigna cada amparo a un `tipo` según estas definiciones:
                 - 'Incendio': daños causados por fuego, explosiones o elementos relacionados.
                 - 'Sustracción': robo, hurto o sustracción de bienes asegurados.
