@@ -23,14 +23,13 @@ from dotenv import load_dotenv
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 import tempfile
-import copy
 
 load_dotenv()
 
 # Local imports
-# from polizas_tools import tools as tools_standard
 from tools_actual import tools as tools_actuales
 from tools_adicionales import tools as tools_adicionales
+import json, pathlib
 from rc import (
     clasificar_por_tipo,
     generar_tabla_excel_rc,
@@ -87,6 +86,32 @@ class Amparo(TypedDict):
 class AmparosDict(TypedDict):
     archivo: str
     amparos: List[Amparo]
+
+
+def flatten_detalle_cobertura(data):
+    """
+    Aplana una lista de riesgos con 'ubicacion' y 'detalle_cobertura'
+    en una sola lista de intereses asegurados.
+
+    Args:
+        data (list): Lista de objetos con 'ubicacion' y 'detalle_cobertura'.
+
+    Returns:
+        list: Lista plana de objetos con 'interes_asegurado', 'valor_asegurado',
+              'tipo' y 'ubicacion'.
+    """
+    flat_list = []
+    for item in data:
+        # ubicacion = item.get("ubicacion")
+        for detalle in item.get("detalle_cobertura", []):
+            new_item = {
+                "interes_asegurado": detalle.get("interes_asegurado"),
+                "valor_asegurado": detalle.get("valor_asegurado"),
+                "tipo": detalle.get("tipo", []),
+                # "ubicacion": ubicacion,
+            }
+            flat_list.append(new_item)
+    return flat_list
 
 
 def mostrar_poliza(res):
@@ -730,7 +755,8 @@ def generar_excel_analisis_polizas(
                     for det in r.get("detalle_cobertura", []):
                         k = normalizar_interes(det.get("interes_asegurado", ""))
                         if k in agregados[ubic]:
-                            agregados[ubic][k] += det.get("valor_asegurado", 0)
+                            valor_asegurado = det.get("valor_asegurado", 0)
+                            agregados[ubic][k] += valor_asegurado
 
                 filas = []
                 for ubic, valores in agregados.items():
@@ -744,6 +770,9 @@ def generar_excel_analisis_polizas(
                     tot[col] = sum(f[col] for f in filas)
                 filas.append(tot)
                 return pd.DataFrame(filas, columns=["Ubicación"] + intereses_cols)
+
+            out_dir = pathlib.Path(__file__).parent / "riesgos_json"
+            out_dir.mkdir(exist_ok=True)
 
             df_actual = pivot_riesgos(riesgos_actuales)
             df_renov = pivot_riesgos(riesgos_renovacion)
@@ -1466,6 +1495,16 @@ async def main():
             with st.expander("Excel name"):
                 st.write(excel_name)
 
+        riesgos_actuales = poliza_actual.get("data", []).get("riesgos", [])
+        riesgos_renovacion = poliza_renovacion.get("data", []).get("riesgos", [])
+
+        poliza_actual["data"]["detalle_cobertura"] = flatten_detalle_cobertura(
+            riesgos_actuales
+        )
+        poliza_renovacion["data"]["detalle_cobertura"] = flatten_detalle_cobertura(
+            riesgos_renovacion
+        )
+
         # Crear excel y poder descargalo.
         if poliza_actual or poliza_renovacion or documentos_adicionales:
             st.subheader("📥 Descargar Resultados")
@@ -1480,10 +1519,6 @@ async def main():
             )
             summary_excel_path = summary_excel_file.name
             summary_excel_file.close()
-
-            # riesgos_actuales = poliza_actual["riesgos"] if poliza_actual else []
-            riesgos_actuales = poliza_actual.get("data", []).get("riesgos", [])
-            riesgos_renovacion = poliza_renovacion.get("data", []).get("riesgos", [])
 
             amparos_actuales = {
                 "archivo": poliza_actual.get("file_name"),
@@ -1502,6 +1537,7 @@ async def main():
             amparos_renovacion_por_tipo = clasificar_por_tipo(
                 poliza_renovacion.get("data", {}).get("amparos", {})
             )
+
             clasificacion_actual = clasificar_por_tipo(
                 poliza_actual.get("data", {}).get("detalle_cobertura", {})
             )

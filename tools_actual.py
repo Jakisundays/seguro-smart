@@ -7,18 +7,6 @@ tools = [
             - Tasa (`tasa`): porcentaje aplicado en la póliza.
             - Nombre del asegurado (`asegurado`): nombre completo del asegurado tal como aparece en la póliza o documento oficial.
 
-            - Detalle de cobertura (`detalle_cobertura`): listado de intereses asegurados con:
-                - Nombre (`interes_asegurado`)
-                - Valor asegurado (`valor_asegurado`)
-                - Tipo (`tipo`) según las siguientes opciones:
-                    - 'Incendio': daños por fuego o explosiones.
-                    - 'Sustracción': robo o hurto de bienes asegurados.
-                    - 'Equipo Electrónico': daños a equipos electrónicos.
-                    - 'Rotura de Maquinaria': fallas o roturas en maquinaria asegurada.
-                    - 'Transporte de Valores': protección durante traslado de dinero o bienes de alto valor.
-                    - 'Manejo de Dinero': pérdidas o errores en la custodia y manejo de dinero.
-                    - 'Responsabilidad Civil': daños ocasionados a terceros por el asegurado.
-
             - Total de valores asegurados (`total_valores_asegurados`): suma total de todos los valores asegurados listados en el detalle.
 
             Devuelve únicamente los campos:  
@@ -34,40 +22,6 @@ tools = [
         "data": {
             "type": "OBJECT",
             "properties": {
-                "detalle_cobertura": {
-                    "type": "ARRAY",
-                    "description": "Listado de intereses asegurados y sus valores asegurados correspondientes.",
-                    "items": {
-                        "type": "OBJECT",
-                        "properties": {
-                            "interes_asegurado": {
-                                "type": "STRING",
-                                "description": "Descripción del interés asegurado (ejemplo: 'Edificio', 'Maquinaria', 'Vehículos').",
-                            },
-                            "valor_asegurado": {
-                                "type": "NUMBER",
-                                "description": "Valor monetario asegurado correspondiente al interés.",
-                            },
-                            "tipo": {
-                                "type": "ARRAY",
-                                "description": "Tipos de cobertura aplicables al interés asegurado. Opciones disponibles: 'Incendio', 'Sustracción', 'Equipo Electronico', 'Rotura de Maquinaria', 'Transporte de Valores', 'Manejo de Dinero', 'Responsabilidad Civil'.",
-                                "items": {
-                                    "type": "STRING",
-                                    "enum": [
-                                        "Incendio",
-                                        "Sustracción",
-                                        "Equipo Electronico",
-                                        "Rotura de Maquinaria",
-                                        "Transporte de Valores",
-                                        "Manejo de Dinero",
-                                        "Responsabilidad Civil",
-                                    ],
-                                },
-                            },
-                        },
-                        "required": ["interes_asegurado", "valor_asegurado", "tipo"],
-                    },
-                },
                 "total_valores_asegurados": {
                     "type": "STRING",
                     "description": "Suma total de todos los valores asegurados listados en el detalle.",
@@ -89,7 +43,6 @@ tools = [
                 "prima_sin_iva",
                 "tasa",
                 "asegurado",
-                "detalle_cobertura",
                 "total_valores_asegurados",
             ],
         },
@@ -341,7 +294,6 @@ tools = [
                 * `interes_asegurado`: descripción del interés asegurado (ej. 'Edificio', 'Maquinaria', 'Equipos').
                 * `valor_asegurado`: valor monetario asegurado correspondiente al interés.
                 * `tipo`: lista de tipos de amparo aplicables. Incluye todos los que correspondan y explica brevemente cada uno:
-
                     - "Incendio": cubre daños materiales ocasionados por fuego.
                     - "Sustracción": cubre robo o hurto de bienes asegurados.
                     - "Equipo Electronico": cubre equipos electrónicos y tecnológicos.
@@ -357,8 +309,20 @@ tools = [
             - Dineros
             - Equipo electrónico
             - Manejo de Dinero
-            - Responsabilidad Civil (RC)
+            - Responsabilidad Civil
             - Transporte de Valores
+
+            Nota: Para **todos los intereses asegurados mencionados arriba**, el campo `interes_asegurado` debe **normalizarse** a uno de los valores estándar listados, independientemente de cómo aparezca en el documento. Por ejemplo:
+            - "Edificio", aunque el documento diga "Edificios", "edificio principal", etc.
+            - "Muebles y enseres", aunque aparezca como "muebles", "enseres", etc.
+            - "Maquinaria y equipo", aunque aparezca como "maquinaria" o "equipo".
+            - "Dineros", aunque aparezca como "dinero", "fondos", etc.
+            - "Equipo electrónico", aunque aparezca como "equipos electrónicos", "equipo electrónico", etc.
+            - "Manejo de Dinero", aunque aparezca como "manejo de dinero interno", "custodia de dinero", etc.
+            - "Responsabilidad Civil", aunque aparezca como "Responsabilidad Civil Extracontractual", "Responsabilidad Civil Contractual", etc.
+            - "Transporte de Valores", aunque aparezca como "transporte de dinero", "valores en tránsito", etc.
+
+            Además, **para Responsabilidad Civil**, el tipo específico (por ejemplo: Extracontractual, Contractual, Producto, Profesional, etc.) deberá incluirse en el campo `tipo`.
 
             El resultado debe seguir estrictamente el schema JSON proporcionado.
             """,
