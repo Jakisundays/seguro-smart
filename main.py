@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import List, Optional, TypedDict, Dict, Literal
 from dataclasses import dataclass, field
 from streamlit.runtime.uploaded_file_manager import UploadedFile  # si usas Streamlit
+import unicodedata
 
 # Third party imports
 import aiohttp
@@ -394,22 +395,46 @@ def generar_excel_analisis_polizas(
                 for t in tipos_amp:
                     amparos_por_tipo.setdefault(t, []).append(amp)
 
-            # Consolidadores de deducibles para evitar pérdida de información
+            def _normalize(text: str) -> str:
+                """Convierte a minúsculas y elimina acentos/espacios extra para comparar strings."""
+                if not text:
+                    return ""
+                return (
+                    "".join(
+                        c
+                        for c in unicodedata.normalize("NFD", text)
+                        if unicodedata.category(c) != "Mn"
+                    )
+                    .lower()
+                    .strip()
+                )
+
             def _consolidar_deducibles(lista_amparos, nombre_amparo: str) -> str:
-                """Une deducibles de amparos duplicados del mismo nombre, sin repetir, conservando orden."""
+                """
+                Une deducibles de amparos duplicados del mismo nombre (ignorando tildes y mayúsculas),
+                sin repetir valores, conservando el orden original.
+                """
                 vals = [
                     (a.get("deducible") or "").strip()
                     for a in lista_amparos
-                    if a.get("amparo") == nombre_amparo
+                    if isinstance(a, dict) and (
+                        a.get("amparo") == nombre_amparo
+                        or _normalize(a.get("amparo")) == _normalize(nombre_amparo)
+                    )
                 ]
+
+                # Eliminar deducibles vacíos
                 vals = [v for v in vals if v]
-                seen = set()
-                uniq = []
+
+                # Quitar duplicados manteniendo orden
+                seen, uniq = set(), []
                 for v in vals:
                     if v not in seen:
                         seen.add(v)
                         uniq.append(v)
+
                 return "\n".join(uniq)
+
 
             def _consolidar_deducibles_doc(doc: dict, nombre_amparo: str) -> str:
                 """Une deducibles de un documento adicional para un amparo, sin repetir."""
