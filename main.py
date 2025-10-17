@@ -417,7 +417,8 @@ def generar_excel_analisis_polizas(
                 vals = [
                     (a.get("deducible") or "").strip()
                     for a in lista_amparos
-                    if isinstance(a, dict) and (
+                    if isinstance(a, dict)
+                    and (
                         a.get("amparo") == nombre_amparo
                         or _normalize(a.get("amparo")) == _normalize(nombre_amparo)
                     )
@@ -434,7 +435,6 @@ def generar_excel_analisis_polizas(
                         uniq.append(v)
 
                 return "\n".join(uniq)
-
 
             def _consolidar_deducibles_doc(doc: dict, nombre_amparo: str) -> str:
                 """Une deducibles de un documento adicional para un amparo, sin repetir."""
@@ -1510,26 +1510,27 @@ async def main():
                 poliza_renovacion.get("data", {}).get("detalle_cobertura", {})
             )
 
-            # with st.expander("Riesgos actuales"):
-            #     st.write(riesgos_actuales)
+            if debug:
+                with st.expander("Riesgos actuales"):
+                    st.write(riesgos_actuales)
 
-            # with st.expander("Riesgos renovacion"):
-            #     st.write(riesgos_renovacion)
+                with st.expander("Riesgos renovacion"):
+                    st.write(riesgos_renovacion)
 
-            # with st.expander("clasificacion_actual"):
-            #     st.write(clasificacion_actual)
+                with st.expander("clasificacion_actual"):
+                    st.write(clasificacion_actual)
 
-            # with st.expander("clasificacion_renovacion"):
-            #     st.write(clasificacion_renovacion)
+                with st.expander("clasificacion_renovacion"):
+                    st.write(clasificacion_renovacion)
 
-            # with st.expander("documentos_adicionales"):
-            #     st.write(documentos_adicionales)
+                with st.expander("documentos_adicionales"):
+                    st.write(documentos_adicionales)
 
-            # with st.expander("Poliza actual"):
-            #     st.write(poliza_actual)
+                with st.expander("Poliza actual"):
+                    st.write(poliza_actual)
 
-            # with st.expander("Poliza renovacion"):
-            #     st.write(poliza_renovacion)
+                with st.expander("Poliza renovacion"):
+                    st.write(poliza_renovacion)
 
             docs_adicionales_data = [
                 {
@@ -1554,8 +1555,9 @@ async def main():
                 for doc in documentos_adicionales
             ]
 
-            # with st.expander("docs_adicionales_data"):
-            #     st.write(docs_adicionales_data)
+            if debug:
+                with st.expander("docs_adicionales_data"):
+                    st.write(docs_adicionales_data)
 
             try:
                 main_output_path = generar_excel_analisis_polizas(
@@ -1572,11 +1574,12 @@ async def main():
                     clasificacion_actual, clasificacion_renovacion
                 )
 
-                # with st.expander("actual_u"):
-                #     st.write(actual_u)
+                if debug:
+                    with st.expander("actual_u"):
+                        st.write(actual_u)
 
-                # with st.expander("renovacion_u"):
-                #     st.write(renovacion_u)
+                    with st.expander("renovacion_u"):
+                        st.write(renovacion_u)
 
                 summary_output_path = generar_tabla_excel_rc(
                     amparos_actuales=amparos_actuales_por_tipo,
