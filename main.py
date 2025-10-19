@@ -730,10 +730,16 @@ def generar_excel_analisis_polizas(
                     "equipo movil": "Equipo Móvil",
                     "equipo móvil": "Equipo Móvil",
                     "obras de arte": "Obras de Arte",
+                    "responsabilidad civil extracontractual": "Responsabilidad Civil",  # caso fijo
                 }
                 # caso combinado en renovación
                 if "+" in t and "muebles" in t and "obras" in t:
                     return "Muebles y Enseres"  # asignamos al rubro principal
+
+                # regla general: todo lo que empiece con "responsabilidad civil"
+                if t.startswith("responsabilidad civil"):
+                    return "Responsabilidad Civil"
+
                 return reemplazos.get(t, texto)
 
             # 2) Definir columnas a partir de riesgos_actuales (L36-375)
@@ -916,7 +922,7 @@ class InvoiceOrchestrator:
                         elif response.status in [429, 529, 503]:
                             sleep_time = 15 * (i + 1)  # Espera incremental en segundos
                             app_logger.warning(
-                                f"API request failed with status {response.status}. Retrying in {sleep_time} seconds..."
+                                f"API request failed with status {response.status}. Retrying in {sleep_time} seconds... res: {response}"
                             )
                             await asyncio.sleep(sleep_time)
                         else:

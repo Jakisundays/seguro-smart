@@ -312,7 +312,7 @@ tools = [
             - Responsabilidad Civil
             - Transporte de Valores
 
-            Nota: Para **todos los intereses asegurados mencionados arriba**, el campo `interes_asegurado` debe **normalizarse** a uno de los valores estándar listados, independientemente de cómo aparezca en el documento. Por ejemplo:
+            Nota: Para todos los intereses asegurados mencionados arriba, el campo `interes_asegurado` debe normalizarse a uno de los valores estándar listados, independientemente de cómo aparezca en el documento. Por ejemplo:
             - "Edificio", aunque el documento diga "Edificios", "edificio principal", etc.
             - "Muebles y enseres", aunque aparezca como "muebles", "enseres", etc.
             - "Maquinaria y equipo", aunque aparezca como "maquinaria" o "equipo".
@@ -322,7 +322,7 @@ tools = [
             - "Responsabilidad Civil", aunque aparezca como "Responsabilidad Civil Extracontractual", "Responsabilidad Civil Contractual", etc.
             - "Transporte de Valores", aunque aparezca como "transporte de dinero", "valores en tránsito", etc.
 
-            Además, **para Responsabilidad Civil**, el tipo específico (por ejemplo: Extracontractual, Contractual, Producto, Profesional, etc.) deberá incluirse en el campo `tipo`.
+            Además, para Responsabilidad Civil, el tipo específico (por ejemplo: Extracontractual, Contractual, Producto, Profesional, etc.) deberá incluirse en el campo `tipo`.
 
             El resultado debe seguir estrictamente el schema JSON proporcionado.
             """,
