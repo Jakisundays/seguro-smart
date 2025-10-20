@@ -1,28 +1,16 @@
 version: '3.8'
 
 services:
-  # Aplicación principal (app.py)
+  # Aplicación principal (main.py)
   main_app:
     build: .
     ports:
       - "8010:8010"
     volumes:
-      - .:/app
-    command: streamlit run app.py --server.port=8010 --server.address=0.0.0.0
+      - .:/main
+    command: streamlit run main.py --server.port=8010 --server.address=0.0.0.0
     restart: unless-stopped
     environment:
       - STREAMLIT_SERVER_PORT=8010
       - STREAMLIT_SERVER_ADDRESS=0.0.0.0
 
-  # Aplicación de comparación de seguros (bueno_compare.py)
-  compare_app:
-    build: .
-    ports:
-      - "8011:8011"
-    volumes:
-      - .:/app
-    command: streamlit run bueno_compare.py --server.port=8011 --server.address=0.0.0.0
-    restart: unless-stopped
-    environment:
-      - STREAMLIT_SERVER_PORT=8011
-      - STREAMLIT_SERVER_ADDRESS=0.0.0.0
