@@ -244,9 +244,9 @@ def generar_tabla_excel_rc(
                 )
                 val = _to_number(it.get("valor_asegurado", 0))
                 if es_actual:
-                    entry["actual"] += val
+                    entry["actual"] = val
                 else:
-                    entry["renovacion"] += val
+                    entry["renovacion"] = val
 
     acumular_intereses(clasificacion_actual, es_actual=True)
     acumular_intereses(clasificacion_renovacion, es_actual=False)
