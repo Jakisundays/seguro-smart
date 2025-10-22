@@ -896,6 +896,41 @@ def generar_excel_analisis_polizas(
     return output_path
 
 
+def calcular_totales_riesgos(riesgos):
+    """
+    Calcula el total de 'valor_asegurado' por cada 'interes_asegurado'
+    a partir de una lista de ubicaciones con sus 'detalle_cobertura'.
+
+    Args:
+        riesgos (list[dict]): Estructura con ubicaciones y detalle_cobertura.
+
+    Returns:
+        dict: {interes_asegurado: total_valor_asegurado, ..., 'TOTAL_GENERAL': total}
+    """
+    totales = {}
+
+    for r in riesgos:
+        for detalle in r.get("detalle_cobertura", []):
+            interes = detalle.get("interes_asegurado")
+            valor = detalle.get("valor_asegurado", 0) or 0
+            if interes:
+                totales[interes] = totales.get(interes, 0) + valor
+
+    return totales
+
+
+def actualizar_todos_los_valores(data, totales):
+    """
+    Recorre todo el JSON y reemplaza 'valor_asegurado' según el 'interes_asegurado'.
+    """
+    for _, items in data.items():
+        for item in items:
+            interes = item.get("interes_asegurado", "").upper()
+            if interes in totales:
+                item["valor_asegurado"] = totales[interes]
+    return data
+
+
 class InvoiceOrchestrator:
     def __init__(
         self,
@@ -1616,21 +1651,26 @@ async def main():
                     clasificacion_actual, clasificacion_renovacion
                 )
 
-                if debug:
-                    with st.expander("actual_u"):
-                        st.write(actual_u)
+                totales_actuales = calcular_totales_riesgos(riesgos_actuales)
+                totales_renovacion = calcular_totales_riesgos(riesgos_renovacion)
 
-                    with st.expander("renovacion_u"):
-                        st.write(renovacion_u)
+                actual_u_actualizado = actualizar_todos_los_valores(
+                    actual_u, totales_actuales
+                )
+                renovacion_u_actualizado = actualizar_todos_los_valores(
+                    renovacion_u, totales_renovacion
+                )
 
                 summary_output_path = generar_tabla_excel_rc(
                     amparos_actuales=amparos_actuales_por_tipo,
                     amparos_renovacion=amparos_renovacion_por_tipo,
-                    clasificacion_actual=actual_u,
-                    clasificacion_renovacion=renovacion_u,
+                    clasificacion_actual=actual_u_actualizado,
+                    clasificacion_renovacion=renovacion_u_actualizado,
                     docs_adicionales_data=docs_adicionales_data,
                     poliza_actual=poliza_actual.get("data", {}),
                     poliza_renovacion=poliza_renovacion.get("data", {}),
+                    totales_actual=totales_actuales,
+                    totales_renovacion=totales_renovacion,
                     titulo_excel=excel_name,
                     output_path=summary_excel_path,
                 )

@@ -6,8 +6,6 @@ import datetime
 from copy import copy as _copy
 from typing import List, Dict, Any, Optional
 
-# 2) Ciencia de datos
-import pandas as pd
 
 # 3) openpyxl – manipulación de Excel
 from openpyxl import Workbook, load_workbook
@@ -142,6 +140,73 @@ def unificar_y_reportar(actual, renovacion):
     return actual, renovacion, reporte
 
 
+def calcular_totales_riesgos(riesgos):
+    """
+    Calcula el total de 'valor_asegurado' por cada 'interes_asegurado'
+    a partir de una lista de ubicaciones con sus 'detalle_cobertura'.
+
+    Args:
+        riesgos (list[dict]): Estructura con ubicaciones y detalle_cobertura.
+
+    Returns:
+        dict: {interes_asegurado: total_valor_asegurado, ..., 'TOTAL_GENERAL': total}
+    """
+    totales = {}
+
+    for r in riesgos:
+        for detalle in r.get("detalle_cobertura", []):
+            interes = detalle.get("interes_asegurado")
+            valor = detalle.get("valor_asegurado", 0) or 0
+            if interes:
+                totales[interes] = totales.get(interes, 0) + valor
+
+    return totales
+
+
+def actualizar_todos_los_valores(data, totales):
+    """
+    Recorre todo el JSON y reemplaza 'valor_asegurado' según el 'interes_asegurado'.
+    """
+    for _, items in data.items():
+        for item in items:
+            interes = item.get("interes_asegurado", "").upper()
+            if interes in totales:
+                item["valor_asegurado"] = totales[interes]
+    return data
+
+
+def actualizar_intereses_por_tipo(
+    intereses_por_tipo, totales_actual, totales_renovacion=None
+):
+    """
+    Actualiza los valores 'actual' y 'renovacion' de cada interés dentro de intereses_por_tipo
+    según los diccionarios de totales proporcionados.
+
+    Args:
+        intereses_por_tipo (dict): Estructura principal.
+        totales_actual (dict): Totales por interés asegurado (para campo 'actual').
+        totales_renovacion (dict | None): Totales para 'renovacion' (opcional).
+
+    Returns:
+        dict: La estructura actualizada.
+    """
+    for tipo, intereses in intereses_por_tipo.items():
+        for key, data in intereses.items():
+            nombre = data.get("nombre", "").strip().upper()
+
+            # Buscar en totales_actual
+            for k, v in totales_actual.items():
+                if nombre in k.upper() or k.upper() in nombre:
+                    data["actual"] = float(v)
+
+            # Buscar en totales_renovacion (si se pasó)
+            if totales_renovacion:
+                for k, v in totales_renovacion.items():
+                    if nombre in k.upper() or k.upper() in nombre:
+                        data["renovacion"] = float(v)
+    return intereses_por_tipo
+
+
 def generar_tabla_excel_rc(
     amparos_actuales: Dict[str, List[Dict[str, Any]]],
     amparos_renovacion: Dict[str, List[Dict[str, Any]]],
@@ -150,6 +215,8 @@ def generar_tabla_excel_rc(
     docs_adicionales_data: Optional[List[Dict[str, Any]]] = None,
     poliza_actual: Optional[Dict[str, Any]] = None,
     poliza_renovacion: Optional[Dict[str, Any]] = None,
+    totales_actual: Dict = {},
+    totales_renovacion: Dict = {},
     titulo_excel: Optional[str] = None,
     output_path: str = "Resumen_RC.xlsx",
 ) -> str:
@@ -223,6 +290,10 @@ def generar_tabla_excel_rc(
     # 2) Intereses por tipo (combinando Actual/Renovación y sus valores)
     intereses_por_tipo: Dict[str, Dict[str, Dict[str, Any]]] = {}
 
+    intereses_por_tipo = actualizar_intereses_por_tipo(
+        intereses_por_tipo, totales_actual, totales_renovacion
+    )
+
     def acumular_intereses(
         fuente: Dict[str, List[Dict[str, Any]]], es_actual: bool
     ) -> None:
@@ -251,6 +322,16 @@ def generar_tabla_excel_rc(
     acumular_intereses(clasificacion_actual, es_actual=True)
     acumular_intereses(clasificacion_renovacion, es_actual=False)
 
+    # with open("intereses_por_tipo_og.json", "w", encoding="utf-8") as f:
+    #     json.dump(intereses_por_tipo, f, ensure_ascii=False, indent=2)
+        
+    intereses_por_tipo = actualizar_intereses_por_tipo(
+        intereses_por_tipo, totales_actual, totales_renovacion
+    )
+    
+    # with open("intereses_por_tipo.json", "w", encoding="utf-8") as f:
+    #     json.dump(intereses_por_tipo, f, ensure_ascii=False, indent=2)
+
     if not cob_por_tipo and not intereses_por_tipo:
         raise ValueError("No hay información suficiente para generar el Excel.")
 
@@ -273,7 +354,6 @@ def generar_tabla_excel_rc(
     wb = Workbook()
     ws = wb.active
     ws.title = "Resumen"
-    
 
     # Título general del reporte (fila superior)
     num_docs_for_title = len(docs_adicionales_data or [])
@@ -2665,6 +2745,41 @@ docs_adicionales_data = [
 ]
 
 
+def calcular_totales_riesgos(riesgos):
+    """
+    Calcula el total de 'valor_asegurado' por cada 'interes_asegurado'
+    a partir de una lista de ubicaciones con sus 'detalle_cobertura'.
+
+    Args:
+        riesgos (list[dict]): Estructura con ubicaciones y detalle_cobertura.
+
+    Returns:
+        dict: {interes_asegurado: total_valor_asegurado, ..., 'TOTAL_GENERAL': total}
+    """
+    totales = {}
+
+    for r in riesgos:
+        for detalle in r.get("detalle_cobertura", []):
+            interes = detalle.get("interes_asegurado")
+            valor = detalle.get("valor_asegurado", 0) or 0
+            if interes:
+                totales[interes] = totales.get(interes, 0) + valor
+
+    return totales
+
+
+def actualizar_todos_los_valores(data, totales):
+    """
+    Recorre todo el JSON y reemplaza 'valor_asegurado' según el 'interes_asegurado'.
+    """
+    for cobertura, items in data.items():
+        for item in items:
+            interes = item.get("interes_asegurado", "").upper()
+            if interes in totales:
+                item["valor_asegurado"] = totales[interes]
+    return data
+
+
 if __name__ == "__main__":
     amparos_actuales = clasificar_por_tipo(poliza_actual["amparos"])
     amparos_renovacion = clasificar_por_tipo(poliza_renovacion["amparos"])
@@ -2679,25 +2794,28 @@ if __name__ == "__main__":
         clasificacion_actual, clasificacion_renovacion
     )
 
-    print("Reporte de cambios:")
-    for interes, cambios in reporte.items():
-        print(interes, cambios)
+    riesgos_actuales = poliza_actual.get("riesgos")
+    riesgos_renovacion = poliza_renovacion.get("riesgos")
 
-    # with open("clasificacion_actual_unificada.json", "w", encoding="utf-8") as f:
-    #     json.dump(actual_u, f, ensure_ascii=False, indent=2)
+    totales_actuales = calcular_totales_riesgos(riesgos_actuales)
+    totales_renovacion = calcular_totales_riesgos(riesgos_renovacion)
 
-    # with open("clasificacion_renovacion_unificada.json", "w", encoding="utf-8") as f:
-    #     json.dump(renovacion_u, f, ensure_ascii=False, indent=2)
+    actual_u_actualizado = actualizar_todos_los_valores(actual_u, totales_actuales)
+    renovacion_u_actualizado = actualizar_todos_los_valores(
+        renovacion_u, totales_renovacion
+    )
 
     try:
         ruta_excel = generar_tabla_excel_rc(
-            amparos_actuales,
-            amparos_renovacion,
-            clasificacion_actual,
-            clasificacion_renovacion,
-            docs_adicionales_data,
-            poliza_actual,
-            poliza_renovacion,
+            amparos_actuales=amparos_actuales,
+            amparos_renovacion=amparos_renovacion,
+            clasificacion_actual=actual_u_actualizado,
+            clasificacion_renovacion=renovacion_u_actualizado,
+            docs_adicionales_data=docs_adicionales_data,
+            poliza_actual=poliza_actual,
+            poliza_renovacion=poliza_renovacion,
+            totales_actual=totales_actuales,
+            totales_renovacion=totales_renovacion,
             titulo_excel="JACOOOB",
             output_path="Resumen_RC.xlsx",
         )
