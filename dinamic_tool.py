@@ -1002,40 +1002,16 @@ response_schema = {
                 "type": "STRING",
                 "description": "Deducible que aplicará al renovar la póliza para este amparo.",
             },
-            "tipo": {
-                "type": "ARRAY",
-                "description": (
-                    "Tipos de amparo: categorías del amparo según su cobertura. "
-                    "Opciones disponibles: 'Incendio', 'Sustracción', 'Equipo Electrónico', "
-                    "'Rotura de Maquinaria', 'Transporte de Valores', 'Manejo de Dinero', "
-                    "'Responsabilidad Civil'."
-                ),
-                "items": {
-                    "type": "STRING",
-                    "enum": [
-                        "Incendio",
-                        "Sustracción",
-                        "Equipo Electronico",
-                        "Rotura de Maquinaria",
-                        "Transporte de Valores",
-                        "Manejo de Dinero",
-                        "Responsabilidad Civil",
-                    ],
-                    "description": "Categoría específica del amparo.",
-                },
-            },
         },
         "required": [
             "amparo",
             "deducible_actual",
             "deducible_renovacion",
-            "tipo",
         ],
         "propertyOrdering": [
             "amparo",
             "deducible_actual",
             "deducible_renovacion",
-            "tipo",
         ],
         "description": "Objeto que representa un amparo de la póliza con sus deducibles y categorías.",
     },
