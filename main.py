@@ -1449,6 +1449,7 @@ async def main():
             type=["pdf", "docx", "txt", "jpg", "png"],
             key="poliza_actual",
             help="Sube el archivo de tu póliza actual para extraer sus datos",
+            accept_multiple_files=True,
         )
 
         st.markdown("---")
@@ -1460,6 +1461,7 @@ async def main():
             type=["pdf", "docx", "txt", "jpg", "png"],
             key="poliza_renovacion",
             help="Sube el archivo de la póliza de renovación para comparar",
+            accept_multiple_files=True,
         )
 
         st.markdown("---")
@@ -1521,33 +1523,76 @@ async def main():
         help="Haz clic para iniciar el procesamiento de todos los archivos cargados",
     ):
         tasks = []
+        archivos_conjuntos_actuales_renovacion = []
+        poliza_actual_item = None
+        poliza_renovacion_item = None
         if archivo_poliza_actual:
-            poliza_actual_item = QueueItem(
-                file_name=archivo_poliza_actual.name,
-                file_extension=archivo_poliza_actual.type.split("/")[-1],
-                b64_str=orchestrator.uploaded_file_to_base64(archivo_poliza_actual),
-                media_type=archivo_poliza_actual.type,
-                process_id=uuid.uuid4().hex,
-                doc_type="actual",
-            )
-            poliza_actual_process = orchestrator.execute_toolset(
-                item=poliza_actual_item, tools=tools_actuales
-            )
-            tasks.append(poliza_actual_process)
+            if len(archivo_poliza_actual) > 1:
+                archivos_conjuntos_actuales_renovacion.append(
+                    QueueItem(
+                        file_name=orchestrator.obtener_nombres_archivos(
+                            archivo_poliza_actual
+                        ),
+                        file_extension="pdf",
+                        b64_str=[
+                            orchestrator.uploaded_file_to_base64(archivo)
+                            for archivo in archivo_poliza_actual
+                        ],
+                        media_type="application/pdf",
+                        process_id=uuid.uuid4().hex,
+                        doc_type="actual",
+                    )
+                )
+            else:
+                archivo_poliza_actual_unico = archivo_poliza_actual[0]
+                poliza_actual_item = QueueItem(
+                    file_name=archivo_poliza_actual_unico.name,
+                    file_extension=archivo_poliza_actual_unico.type.split("/")[-1],
+                    b64_str=orchestrator.uploaded_file_to_base64(
+                        archivo_poliza_actual_unico
+                    ),
+                    media_type=archivo_poliza_actual_unico.type,
+                    process_id=uuid.uuid4().hex,
+                    doc_type="actual",
+                )
+                poliza_actual_process = orchestrator.execute_toolset(
+                    item=poliza_actual_item, tools=tools_actuales
+                )
+                tasks.append(poliza_actual_process)
 
         if archivo_poliza_renovacion:
-            poliza_renovacion_item = QueueItem(
-                file_name=archivo_poliza_renovacion.name,
-                file_extension=archivo_poliza_renovacion.type.split("/")[-1],
-                b64_str=orchestrator.uploaded_file_to_base64(archivo_poliza_renovacion),
-                media_type=archivo_poliza_renovacion.type,
-                process_id=uuid.uuid4().hex,
-                doc_type="renovacion",
-            )
-            poliza_renovacion_process = orchestrator.execute_toolset(
-                item=poliza_renovacion_item, tools=tools_actuales
-            )
-            tasks.append(poliza_renovacion_process)
+            if len(archivo_poliza_renovacion) > 1:
+                archivos_conjuntos_actuales_renovacion.append(
+                    QueueItem(
+                        file_name=orchestrator.obtener_nombres_archivos(
+                            archivo_poliza_renovacion
+                        ),
+                        file_extension="pdf",
+                        b64_str=[
+                            orchestrator.uploaded_file_to_base64(archivo)
+                            for archivo in archivo_poliza_renovacion
+                        ],
+                        media_type="application/pdf",
+                        process_id=uuid.uuid4().hex,
+                        doc_type="renovacion",
+                    )
+                )
+            else:
+                archivo_poliza_renovacion_unico = archivo_poliza_renovacion[0]
+                poliza_renovacion_item = QueueItem(
+                    file_name=archivo_poliza_renovacion_unico.name,
+                    file_extension=archivo_poliza_renovacion_unico.type.split("/")[-1],
+                    b64_str=orchestrator.uploaded_file_to_base64(
+                        archivo_poliza_renovacion_unico
+                    ),
+                    media_type=archivo_poliza_renovacion_unico.type,
+                    process_id=uuid.uuid4().hex,
+                    doc_type="renovacion",
+                )
+                poliza_renovacion_process = orchestrator.execute_toolset(
+                    item=poliza_renovacion_item, tools=tools_actuales
+                )
+                tasks.append(poliza_renovacion_process)
 
         documentos_adicionales_items = []
         if archivos_multiples:
@@ -1563,7 +1608,6 @@ async def main():
                         doc_type="adicional",
                     )
                 )
-
         archivos_conjuntos_items = []
         if archivos_conjuntos_1:
             archivos_conjuntos_items.append(
@@ -1618,14 +1662,16 @@ async def main():
 
         # Crear lista con todos los archivos cargados
         all_items = []
-        if archivo_poliza_actual:
+        if archivo_poliza_actual and poliza_actual_item:
             all_items.append(poliza_actual_item)
-        if archivo_poliza_renovacion:
+        if archivo_poliza_renovacion and poliza_renovacion_item:
             all_items.append(poliza_renovacion_item)
         if documentos_adicionales_items:
             all_items.extend(documentos_adicionales_items)
         if archivos_conjuntos_items:
             all_items.extend(archivos_conjuntos_items)
+        if archivos_conjuntos_actuales_renovacion:
+            all_items.extend(archivos_conjuntos_actuales_renovacion)
 
         # Mostrar DataFrame minimalista
         if all_items:
@@ -1645,6 +1691,10 @@ async def main():
         if archivos_conjuntos_items:
             for item in archivos_conjuntos_items:
                 tasks.append(orchestrator.execute_multiple(item, tools_adicionales))
+
+        if archivos_conjuntos_actuales_renovacion:
+            for item in archivos_conjuntos_actuales_renovacion:
+                tasks.append(orchestrator.execute_multiple(item, tools_actuales))
 
         results = await asyncio.gather(*tasks)
 
