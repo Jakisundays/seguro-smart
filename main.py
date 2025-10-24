@@ -1094,6 +1094,41 @@ def extraer_adicionales(data, max_adicionales=3):
     return [arr for arr in arrays_adicionales if arr]
 
 
+def limpiar_dineros(data):
+    """
+    Elimina los registros con 'Dineros' de todos los campos no permitidos
+    y los mueve automáticamente a 'Transporte de Valores' y 'Manejo de Dinero'.
+    Si esos campos no existen, los crea.
+    """
+    campos_permitidos = {"Transporte de Valores", "Manejo de Dinero"}
+    nuevo_data = {}
+    dinerios_a_mover = []
+
+    # Paso 1: eliminar 'Dineros' de los campos no permitidos y guardarlos aparte
+    for tipo, items in data.items():
+        if tipo in campos_permitidos:
+            nuevo_data[tipo] = list(items)  # copiamos los registros
+        else:
+            nuevo_data[tipo] = []
+            for item in items:
+                if item.get("interes_asegurado") == "Dineros":
+                    dinerios_a_mover.append(item)  # guardar para mover
+                else:
+                    nuevo_data[tipo].append(item)
+
+    # Paso 2: aseguramos que los campos permitidos existan
+    for campo in campos_permitidos:
+        if campo not in nuevo_data:
+            nuevo_data[campo] = []
+
+    # Paso 3: agregar los registros de 'Dineros' a los campos permitidos
+    for item in dinerios_a_mover:
+        for campo in campos_permitidos:
+            nuevo_data[campo].append(item)
+
+    return nuevo_data
+
+
 class InvoiceOrchestrator:
     def __init__(
         self,
@@ -2147,8 +2182,8 @@ async def main():
                 with st.expander("Schema"):
                     st.write(incendio_response_schema)
 
-                with st.expander("Amparos sin incendio"):
-                    st.write(amparos_sin_incendio)
+                # with st.expander("Amparos sin incendio"):
+                #     st.write(amparos_sin_incendio)
 
                 with st.expander("incendio_data"):
                     st.write(incendio_data)
@@ -2181,11 +2216,17 @@ async def main():
                     renovacion_u, totales_renovacion
                 )
 
+                if debug:
+                    with st.expander("actual_u_actualizado"):
+                        st.write(actual_u_actualizado)
+                    with st.expander("renovacion_u_actualizado"):
+                        st.write(renovacion_u_actualizado)
+
                 summary_output_path = generar_tabla_excel_rc(
                     amparos_actuales=amparos_actuales_por_tipo,
                     amparos_renovacion=amparos_renovacion_por_tipo,
-                    clasificacion_actual=actual_u_actualizado,
-                    clasificacion_renovacion=renovacion_u_actualizado,
+                    clasificacion_actual=limpiar_dineros(actual_u_actualizado),
+                    clasificacion_renovacion=limpiar_dineros(renovacion_u_actualizado),
                     docs_adicionales_data=docs_adicionales_data,
                     poliza_actual=poliza_actual.get("data", {}),
                     poliza_renovacion=poliza_renovacion.get("data", {}),
