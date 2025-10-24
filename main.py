@@ -12,6 +12,9 @@ from typing import List, Optional, TypedDict, Dict, Literal
 from dataclasses import dataclass, field
 from streamlit.runtime.uploaded_file_manager import UploadedFile  # si usas Streamlit
 import unicodedata
+import re
+from copy import deepcopy
+
 
 # Third party imports
 import aiohttp
@@ -112,6 +115,36 @@ def flatten_detalle_cobertura(data):
             }
             flat_list.append(new_item)
     return flat_list
+
+
+def transformar_amparos(data):
+    """
+    Convierte un JSON de archivos con amparos en un array por archivo,
+    con formato normalizado para cada amparo.
+
+    Args:
+        data (list): Lista de archivos con sus amparos, formato original.
+
+    Returns:
+        list: Lista de listas de amparos normalizados por archivo.
+    """
+    resultado = []
+
+    for idx, file in enumerate(data, start=1):
+        file_array = []
+        for amparo in file.get("amparos", []):
+            file_array.append(
+                {
+                    "Archivo": "adicional",
+                    "Amparo": amparo.get("amparo", ""),
+                    "Deducible": amparo.get("deducible", ""),
+                    "Tipo": ", ".join(amparo.get("tipo", [])),
+                    "file_name": f"amparos_adicional_{idx}.pdf",
+                }
+            )
+        resultado.append(file_array)
+
+    return resultado
 
 
 def mostrar_poliza(res):
@@ -896,6 +929,123 @@ def generar_excel_analisis_polizas(
     return output_path
 
 
+def generar_prompt_unico(grouped_data):
+    """
+    Genera un único prompt que incluya actual, renovacion y todos los adicionales.
+    """
+    prompt = """
+        Tengo varias listas de amparos de tipo Incendio de una póliza de seguros.
+
+        Tu tarea es depurar, validar y consolidar los nombres de los amparos según las siguientes reglas:
+
+        1. Verifica pertenencia al tipo 'Incendio':
+        - Analiza el contexto y el nombre de cada amparo.
+        - Si consideras que un amparo no pertenece realmente al tipo 'Incendio', no lo incluyas en el resultado final.
+        - El objetivo es obtener solo coberturas que estén claramente relacionadas con riesgos de incendio, daños por fuego, calor, explosión o causas directamente derivadas de éstos.
+
+        2. Agrupación por sinónimos o similitud semántica:
+        - Identifica amparos que representen el mismo concepto, aunque estén redactados de forma distinta.
+        - Agrúpalos bajo un nombre común que los represente claramente (por ejemplo, “Incendio y Rayo” o “Explosión”).
+
+        3. Comparación entre listas:
+        - Compara los amparos entre las listas (actual, renovación y adicionales).
+        - Determina cuáles son equivalentes o semánticamente similares.
+        - Unifica esos términos en grupos con un nombre representativo.
+
+        4. Resultado esperado:
+        - Devuelve una lista consolidada de amparos válidos del tipo Incendio.
+        - Cada entrada debe incluir su deducible correspondiente.
+        - No incluyas amparos de otros tipos como “Sustracción”, “Rotura de Maquinaria”, “Responsabilidad Civil”, etc.
+        - Si no encuentras ningún amparo válido, devuelve una cadena vacía.
+        
+        Aquí están las listas de amparos (solo relacionadas con 'Incendio'):
+        """
+
+    # Actual
+    if "actual" in grouped_data:
+        prompt += f"\namparos_actuales = {grouped_data['actual']}\n"
+
+    # Renovacion
+    if "renovacion" in grouped_data:
+        prompt += f"\namparos_renovacion = {grouped_data['renovacion']}\n"
+
+    # Adicionales: cada subarray separado
+    if "adicional" in grouped_data:
+        for idx, subarray in enumerate(grouped_data["adicional"], start=1):
+            prompt += f"\namparos_adicional_{idx} = {subarray}\n"
+
+    return prompt
+
+
+def _sanitize_key(name: str) -> str:
+    # quitar extensión y normalizar a formato seguro para keys
+    base = re.sub(r"\.pdf$", "", name, flags=re.IGNORECASE)
+    base = re.sub(r"[^\w]+", "_", base)  # reemplaza cualquier char no alfanum por _
+    base = base.strip("_").lower()
+    return f"deducible_{base}" if base else "deducible_adicional"
+
+
+def agregar_deducibles_adicionales(response_schema: dict, data: dict) -> dict:
+    """
+    Agrega propiedades deducible_<file_name_sanitizado> por cada file_name
+    presente en items de 'adicional'. Las marca como required y
+    las inserta justo después de 'deducible_renovacion' en propertyOrdering.
+    """
+    schema = deepcopy(response_schema)
+    items = schema.setdefault("items", {})
+    properties = items.setdefault("properties", {})
+    prop_order = items.setdefault("propertyOrdering", [])
+    required = items.setdefault("required", [])
+
+    # Recorrer todos los amparos en 'adicional' (que es una lista de listas)
+    vistos = []
+    for sublist in data.get("adicional", []):
+        for d in sublist:
+            if "file_name" in d:
+                fn = d["file_name"]
+                if fn not in vistos:
+                    vistos.append(fn)
+
+    if not vistos:
+        return schema  # no hay adicionales, devolver schema tal cual
+
+    # posición base: justo después de 'deducible_renovacion' si existe, si no, al final antes de 'tipo' si existe
+    try:
+        base_index = prop_order.index("deducible_renovacion") + 1
+    except ValueError:
+        try:
+            tipo_idx = prop_order.index("tipo")
+            base_index = tipo_idx
+        except ValueError:
+            base_index = len(prop_order)
+
+    # insertar cada nuevo campo manteniendo orden relativo
+    for i, file_name in enumerate(vistos):
+        key = _sanitize_key(file_name)
+        if key in properties:
+            if key not in required:
+                required.append(key)
+            if key not in prop_order:
+                prop_order.insert(base_index + i, key)
+            continue
+
+        properties[key] = {
+            "type": "STRING",
+            "description": f"Deducible que aplica para el documento adicional '{file_name}'.",
+        }
+
+        if key not in required:
+            required.append(key)
+
+        insert_pos = base_index + i
+        if insert_pos > len(prop_order):
+            prop_order.append(key)
+        else:
+            prop_order.insert(insert_pos, key)
+
+    return schema
+
+
 def calcular_totales_riesgos(riesgos):
     """
     Calcula el total de 'valor_asegurado' por cada 'interes_asegurado'
@@ -929,6 +1079,36 @@ def actualizar_todos_los_valores(data, totales):
             if interes in totales:
                 item["valor_asegurado"] = totales[interes]
     return data
+
+
+def extraer_adicionales(data, max_adicionales=3):
+    """
+    Devuelve los deducibles adicionales agrupados en arrays por cada deducible_amparos_adicional.
+
+    Args:
+        data (list): Lista de diccionarios de amparos.
+        max_adicionales (int): Número máximo de deducibles adicionales a revisar por amparo.
+
+    Returns:
+        list: Lista de arrays, uno por cada deducible adicional.
+    """
+    # Creamos un array vacío por cada deducible adicional
+    arrays_adicionales = [[] for _ in range(max_adicionales)]
+
+    for a in data:
+        for i in range(1, max_adicionales + 1):
+            key = f"deducible_amparos_adicional_{i}"
+            if key in a and a[key].lower() != "no aplica":
+                arrays_adicionales[i - 1].append(
+                    {
+                        "amparo": a["amparo"],
+                        "deducible": a[key],
+                        "tipo": a.get("tipo", []),
+                    }
+                )
+
+    # Eliminamos los arrays vacíos si no hay deducibles para ese índice
+    return [arr for arr in arrays_adicionales if arr]
 
 
 class InvoiceOrchestrator:
@@ -1635,6 +1815,170 @@ async def main():
             if debug:
                 with st.expander("docs_adicionales_data"):
                     st.write(docs_adicionales_data)
+                with st.expander("amparos actuales"):
+                    st.write(amparos_actuales)
+                with st.expander("amparos renovacion"):
+                    st.write(amparos_renovacion)
+                with st.expander("amparos_adicionales"):
+                    st.write(amparos_adicionales)
+                with st.expander("Amparos actuales por tipo"):
+                    st.write(amparos_actuales_por_tipo)
+                with st.expander("Amapros renovacion por tipo"):
+                    st.write(amparos_renovacion_por_tipo)
+
+            todos_amparos_incendio = {
+                "actual": [
+                    {
+                        "Archivo": "actual",
+                        "Amparo": a["amparo"],
+                        "Deducible": a["deducible"],
+                        "Tipo": "Incendio",
+                        "file_name": amparos_actuales.get("archivo"),
+                    }
+                    for a in amparos_actuales_por_tipo.get("Incendio", [])
+                ],
+                "renovacion": [
+                    {
+                        "Archivo": "renovacion",
+                        "Amparo": a["amparo"],
+                        "Deducible": a["deducible"],
+                        "Tipo": "Incendio",
+                        "file_name": amparos_renovacion.get("archivo"),
+                    }
+                    for a in amparos_renovacion_por_tipo.get("Incendio", [])
+                ],
+                "adicional": transformar_amparos(amparos_adicionales),
+            }
+
+            incendio_response_schema = agregar_deducibles_adicionales(
+                {
+                    "type": "ARRAY",
+                    "items": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "amparo": {
+                                "type": "STRING",
+                                "description": "Nombre del amparo o cobertura del seguro, por ejemplo 'Incendio y/o Impacto Directo de Rayo'.",
+                            },
+                            "deducible_actual": {
+                                "type": "STRING",
+                                "description": "Deducible que aplica actualmente para este amparo en la póliza vigente.",
+                            },
+                            "deducible_renovacion": {
+                                "type": "STRING",
+                                "description": "Deducible que aplicará al renovar la póliza para este amparo.",
+                            },
+                        },
+                        "required": [
+                            "amparo",
+                            "deducible_actual",
+                            "deducible_renovacion",
+                        ],
+                        "propertyOrdering": [
+                            "amparo",
+                            "deducible_actual",
+                            "deducible_renovacion",
+                        ],
+                        "description": "Objeto que representa un amparo de la póliza con sus deducibles y categorías.",
+                    },
+                    "description": "Lista de amparos que contiene información sobre deducibles actuales, de renovación y categorías.",
+                },
+                todos_amparos_incendio,
+            )
+
+            prompt_incendio = generar_prompt_unico(todos_amparos_incendio)
+
+            response_incedio = await orchestrator.action_item_tool(
+                prompt_incendio, incendio_response_schema
+            )
+
+            incendio_raw_text = response_incedio["candidates"][0]["content"]["parts"][
+                0
+            ]["text"]
+
+            incendio_data = json.loads(incendio_raw_text)
+
+            amparos_actuales_incedio = [
+                {
+                    "amparo": a["amparo"],
+                    "deducible": a["deducible_actual"],
+                    "tipo": ["Incendio"],
+                }
+                for a in incendio_data
+            ]
+            amparos_renovacion_incedio = [
+                {
+                    "amparo": a["amparo"],
+                    "deducible": a["deducible_renovacion"],
+                    "tipo": ["Incendio"],
+                }
+                for a in incendio_data
+            ]
+
+            amparos_adicionales_incedio = extraer_adicionales(
+                incendio_data, max_adicionales=len(amparos_adicionales)
+            )
+
+            amparos_actuales_sin_incendio = [
+                a
+                for a in amparos_actuales["amparos"]
+                if "Incendio" not in a.get("tipo", [])
+            ]
+
+            amparos_renovacion_sin_incendio = [
+                a
+                for a in amparos_renovacion["amparos"]
+                if "Incendio" not in a.get("tipo", [])
+            ]
+
+            amparos_actuales["amparos"] = (
+                amparos_actuales_sin_incendio + amparos_actuales_incedio
+            )
+
+            amparos_renovacion["amparos"] = (
+                amparos_renovacion_sin_incendio + amparos_renovacion_incedio
+            )
+
+            for i in range(len(amparos_adicionales_incedio)):
+                # Iterar sobre la lista de amparos, no sobre el dict del archivo
+                amparos_sin_incendio = []
+                for a in amparos_adicionales[i]["amparos"]:
+                    tipos = a.get("tipo", [])
+                    # Normalizar si por error 'tipo' viene como string
+                    if isinstance(tipos, str):
+                        tipos = [t.strip() for t in tipos.split(",") if t.strip()]
+                    if "Incendio" not in tipos:
+                        amparos_sin_incendio.append(a)
+
+                # Reemplazar por amparos sin 'Incendio' + los incendios normalizados
+                amparos_adicionales[i]["amparos"] = (
+                    amparos_sin_incendio + amparos_adicionales_incedio[i]
+                )
+
+            if debug:
+                with st.expander("amparos_actuales_sin_incendio"):
+                    st.write(amparos_actuales_sin_incendio)
+
+                with st.expander("amparos_renovacion_sin_incendio"):
+                    st.write(amparos_renovacion_sin_incendio)
+
+                with st.expander("amparos_actuales_incedio"):
+                    st.write(amparos_actuales_incedio)
+
+                with st.expander("amparos_renovacion_incedio"):
+                    st.write(amparos_renovacion_incedio)
+
+                with st.expander("todos_amparos_incendio"):
+                    st.write(todos_amparos_incendio)
+
+                with st.expander("amparos_actuales- despues"):
+                    st.write(amparos_actuales)
+
+                with st.expander("amparos_renovacion- despues"):
+                    st.write(amparos_renovacion)
+
+                with st.expander("amparos_adicionales - despues"):
+                    st.write(amparos_adicionales)
 
             try:
                 main_output_path = generar_excel_analisis_polizas(

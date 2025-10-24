@@ -168,6 +168,67 @@ def agregar_deducibles_adicionales(response_schema: dict, data: list) -> dict:
     return schema
 
 
+def agregar_deducibles_adicionales_v2(response_schema: dict, data: dict) -> dict:
+    """
+    Agrega propiedades deducible_<file_name_sanitizado> por cada file_name
+    presente en items de 'adicional'. Las marca como required y
+    las inserta justo después de 'deducible_renovacion' en propertyOrdering.
+    """
+    schema = deepcopy(response_schema)
+    items = schema.setdefault("items", {})
+    properties = items.setdefault("properties", {})
+    prop_order = items.setdefault("propertyOrdering", [])
+    required = items.setdefault("required", [])
+
+    # Recorrer todos los amparos en 'adicional' (que es una lista de listas)
+    vistos = []
+    for sublist in data.get("adicional", []):
+        for d in sublist:
+            if "file_name" in d:
+                fn = d["file_name"]
+                if fn not in vistos:
+                    vistos.append(fn)
+
+    if not vistos:
+        return schema  # no hay adicionales, devolver schema tal cual
+
+    # posición base: justo después de 'deducible_renovacion' si existe, si no, al final antes de 'tipo' si existe
+    try:
+        base_index = prop_order.index("deducible_renovacion") + 1
+    except ValueError:
+        try:
+            tipo_idx = prop_order.index("tipo")
+            base_index = tipo_idx
+        except ValueError:
+            base_index = len(prop_order)
+
+    # insertar cada nuevo campo manteniendo orden relativo
+    for i, file_name in enumerate(vistos):
+        key = _sanitize_key(file_name)
+        if key in properties:
+            if key not in required:
+                required.append(key)
+            if key not in prop_order:
+                prop_order.insert(base_index + i, key)
+            continue
+
+        properties[key] = {
+            "type": "STRING",
+            "description": f"Deducible que aplica para el documento adicional '{file_name}'.",
+        }
+
+        if key not in required:
+            required.append(key)
+
+        insert_pos = base_index + i
+        if insert_pos > len(prop_order):
+            prop_order.append(key)
+        else:
+            prop_order.insert(insert_pos, key)
+
+    return schema
+
+
 def mostrar_tabla_amparos(amparos):
     """
     Muestra una tabla en Streamlit con los datos de amparos.
@@ -188,6 +249,34 @@ def mostrar_tabla_amparos(amparos):
 
     # Mostramos la tabla
     st.dataframe(df, use_container_width=True)
+
+
+def extraer_adicionales(data, max_adicionales=3):
+    """
+    Devuelve los deducibles adicionales agrupados en arrays por cada deducible_amparos_adicional.
+
+    Args:
+        data (list): Lista de diccionarios de amparos.
+        max_adicionales (int): Número máximo de deducibles adicionales a revisar por amparo.
+
+    Returns:
+        list: Lista de arrays, uno por cada deducible adicional.
+    """
+    # Creamos un array vacío por cada deducible adicional
+    arrays_adicionales = [[] for _ in range(max_adicionales)]
+
+    for a in data:
+        for i in range(1, max_adicionales + 1):
+            key = f"deducible_amparos_adicional_{i}"
+            if key in a and a[key].lower() != "no aplica":
+                arrays_adicionales[i-1].append({
+                    "amparo": a["amparo"],
+                    "deducible": a[key],
+                    "tipo": a.get("tipo", [])
+                })
+
+    # Eliminamos los arrays vacíos si no hay deducibles para ese índice
+    return [arr for arr in arrays_adicionales if arr]
 
 
 amparos_actuales = [
@@ -1097,6 +1186,7 @@ orchestrator = InvoiceOrchestrator(
 async def main():
     nueva_response_schema = agregar_deducibles_adicionales(response_schema, amparos)
     data = separar_por_archivo(amparos)
+    nueva_response_schema_v2 = agregar_deducibles_adicionales_v2(response_schema, data)
     prompt = generar_prompt_unico(data)
 
     with st.expander("Amparos"):
@@ -1104,6 +1194,9 @@ async def main():
 
     with st.expander("Response Schema"):
         st.write(nueva_response_schema)
+
+    with st.expander("Response Schema V2"):
+        st.write(nueva_response_schema_v2)
 
     with st.expander("Prompt"):
         st.write(prompt)
@@ -1267,6 +1360,40 @@ async def main():
                 "tipo": ["Incendio"],
             },
         ]
+
+        amparos_actuales_incedio = [
+            {
+                "amparo": a["amparo"],
+                "deducible": a["deducible_actual"],
+                "tipo": ["Incendio"],
+            }
+            for a in amparos_debug
+        ]
+        amparos_renovacion_incedio = [
+            {
+                "amparo": a["amparo"],
+                "deducible": a["deducible_renovacion"],
+                "tipo": ["Incendio"],
+            }
+            for a in amparos_debug
+        ]
+
+        nombres = ["a.pdf", "b.pdf"]
+
+        adicionales = extraer_adicionales(amparos_debug, max_adicionales=len(nombres))
+
+        with st.expander("amparos_actuales_incedio"):
+            st.write(amparos_actuales_incedio)
+
+        with st.expander("amparos_renovacion_incedio"):
+            st.write(amparos_renovacion_incedio)
+
+        with st.expander("adicionales"):
+            st.write(adicionales)
+            
+
+        with st.expander("Amparos"):
+            st.write(amparos_debug)
         st.title("📋 Tabla de Amparos")
         mostrar_tabla_amparos(amparos_debug)
 
