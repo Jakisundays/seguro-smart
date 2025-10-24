@@ -117,13 +117,14 @@ def flatten_detalle_cobertura(data):
     return flat_list
 
 
-def transformar_amparos(data):
+def transformar_amparos(data, tipo_filtro=None):
     """
     Convierte un JSON de archivos con amparos en un array por archivo,
-    con formato normalizado para cada amparo.
+    con formato normalizado para cada amparo, permitiendo filtrar por tipo.
 
     Args:
         data (list): Lista de archivos con sus amparos, formato original.
+        tipo_filtro (str, optional): Tipo de amparo a filtrar (ej: "Incendio" o "Responsabilidad Civil").
 
     Returns:
         list: Lista de listas de amparos normalizados por archivo.
@@ -133,16 +134,25 @@ def transformar_amparos(data):
     for idx, file in enumerate(data, start=1):
         file_array = []
         for amparo in file.get("amparos", []):
+            tipos = amparo.get("tipo", [])
+
+            # Si hay filtro, solo incluir los que contengan ese tipo
+            if tipo_filtro and tipo_filtro not in tipos:
+                continue
+
             file_array.append(
                 {
                     "Archivo": "adicional",
                     "Amparo": amparo.get("amparo", ""),
                     "Deducible": amparo.get("deducible", ""),
-                    "Tipo": ", ".join(amparo.get("tipo", [])),
+                    "Tipo": ", ".join(tipos),
                     "file_name": f"amparos_adicional_{idx}.pdf",
                 }
             )
-        resultado.append(file_array)
+
+        # Solo agregar si hay resultados para este archivo
+        if file_array:
+            resultado.append(file_array)
 
     return resultado
 
@@ -929,37 +939,10 @@ def generar_excel_analisis_polizas(
     return output_path
 
 
-def generar_prompt_unico(grouped_data):
+def generar_prompt_unico(prompt, grouped_data):
     """
     Genera un único prompt que incluya actual, renovacion y todos los adicionales.
     """
-    prompt = """
-        Tengo varias listas de amparos de tipo Incendio de una póliza de seguros.
-
-        Tu tarea es depurar, validar y consolidar los nombres de los amparos según las siguientes reglas:
-
-        1. Verifica pertenencia al tipo 'Incendio':
-        - Analiza el contexto y el nombre de cada amparo.
-        - Si consideras que un amparo no pertenece realmente al tipo 'Incendio', no lo incluyas en el resultado final.
-        - El objetivo es obtener solo coberturas que estén claramente relacionadas con riesgos de incendio, daños por fuego, calor, explosión o causas directamente derivadas de éstos.
-
-        2. Agrupación por sinónimos o similitud semántica:
-        - Identifica amparos que representen el mismo concepto, aunque estén redactados de forma distinta.
-        - Agrúpalos bajo un nombre común que los represente claramente (por ejemplo, “Incendio y Rayo” o “Explosión”).
-
-        3. Comparación entre listas:
-        - Compara los amparos entre las listas (actual, renovación y adicionales).
-        - Determina cuáles son equivalentes o semánticamente similares.
-        - Unifica esos términos en grupos con un nombre representativo.
-
-        4. Resultado esperado:
-        - Devuelve una lista consolidada de amparos válidos del tipo Incendio.
-        - Cada entrada debe incluir su deducible correspondiente.
-        - No incluyas amparos de otros tipos como “Sustracción”, “Rotura de Maquinaria”, “Responsabilidad Civil”, etc.
-        - Si no encuentras ningún amparo válido, devuelve una cadena vacía.
-        
-        Aquí están las listas de amparos (solo relacionadas con 'Incendio'):
-        """
 
     # Actual
     if "actual" in grouped_data:
@@ -1031,7 +1014,7 @@ def agregar_deducibles_adicionales(response_schema: dict, data: dict) -> dict:
 
         properties[key] = {
             "type": "STRING",
-            "description": f"Deducible que aplica para el documento adicional '{file_name}'.",
+            "description": f"Deducible que aplica para el documento adicional '{file_name}'. Si no se encuentra ningún amparo válido, devuelve una cadena vacía.",
         }
 
         if key not in required:
@@ -1897,7 +1880,35 @@ async def main():
                     }
                     for a in amparos_renovacion_por_tipo.get("Incendio", [])
                 ],
-                "adicional": transformar_amparos(amparos_adicionales),
+                "adicional": transformar_amparos(amparos_adicionales, "Incendio"),
+            }
+
+            todos_amparos_rc = {
+                "actual": [
+                    {
+                        "Archivo": "actual",
+                        "Amparo": a["amparo"],
+                        "Deducible": a["deducible"],
+                        "Tipo": "Responsabilidad Civil",
+                        "file_name": amparos_actuales.get("archivo"),
+                    }
+                    for a in amparos_actuales_por_tipo.get("Responsabilidad Civil", [])
+                ],
+                "renovacion": [
+                    {
+                        "Archivo": "renovacion",
+                        "Amparo": a["amparo"],
+                        "Deducible": a["deducible"],
+                        "Tipo": "Responsabilidad Civil",
+                        "file_name": amparos_renovacion.get("archivo"),
+                    }
+                    for a in amparos_renovacion_por_tipo.get(
+                        "Responsabilidad Civil", []
+                    )
+                ],
+                "adicional": transformar_amparos(
+                    amparos_adicionales, "Responsabilidad Civil"
+                ),
             }
 
             incendio_response_schema = agregar_deducibles_adicionales(
@@ -1936,17 +1947,84 @@ async def main():
                 todos_amparos_incendio,
             )
 
-            prompt_incendio = generar_prompt_unico(todos_amparos_incendio)
+            prompt_incendio = generar_prompt_unico(
+                """
+                Tengo varias listas de amparos de tipo Incendio de una póliza de seguros.
+
+                Tu tarea es depurar, validar y consolidar los nombres de los amparos según las siguientes reglas:
+
+                1. Verifica pertenencia al tipo 'Incendio':
+                - Analiza el contexto y el nombre de cada amparo.
+                - Si consideras que un amparo no pertenece realmente al tipo 'Incendio', no lo incluyas en el resultado final.
+                - El objetivo es obtener solo coberturas que estén claramente relacionadas con riesgos de incendio, daños por fuego, calor, explosión o causas directamente derivadas de éstos.
+
+                2. Agrupación por sinónimos o similitud semántica:
+                - Identifica amparos que representen el mismo concepto, aunque estén redactados de forma distinta.
+                - Agrúpalos bajo un nombre común que los represente claramente (por ejemplo, “Incendio y Rayo” o “Explosión”).
+
+                3. Comparación entre listas:
+                - Compara los amparos entre las listas (actual, renovación y adicionales).
+                - Determina cuáles son equivalentes o semánticamente similares.
+                - Unifica esos términos en grupos con un nombre representativo.
+
+                4. Resultado esperado:
+                - Devuelve una lista consolidada de amparos válidos del tipo Incendio.
+                - Cada entrada debe incluir su deducible correspondiente.
+                - No incluyas amparos de otros tipos como “Sustracción”, “Rotura de Maquinaria”, “Responsabilidad Civil”, etc.
+                - Si no encuentras ningún amparo válido, devuelve una cadena vacía.
+                
+                Aquí están las listas de amparos (solo relacionadas con 'Incendio'):
+            """,
+                todos_amparos_incendio,
+            )
+
+            prompt_rc = generar_prompt_unico(
+                """
+                Tengo varias listas de amparos de tipo Responsabilidad Civil de una póliza de seguros.
+
+                Tu tarea es depurar, validar y consolidar los nombres de los amparos según las siguientes reglas:
+
+                1. Verifica pertenencia al tipo 'Responsabilidad Civil':
+                - Analiza el contexto y el nombre de cada amparo.
+                - Si consideras que un amparo no pertenece realmente al tipo 'Responsabilidad Civil', no lo incluyas en el resultado final.
+                - El objetivo es obtener solo coberturas claramente relacionadas con la responsabilidad civil del asegurado frente a terceros por daños materiales, lesiones personales o perjuicios consecuenciales.
+
+                2. Agrupación por sinónimos o similitud semántica:
+                - Identifica amparos que representen el mismo concepto, aunque estén redactados de forma distinta.
+                - Agrúpalos bajo un nombre común que los represente claramente (por ejemplo, “Responsabilidad Civil Extracontractual” o “Responsabilidad Civil Cruzada”).
+
+                3. Comparación entre listas:
+                - Compara los amparos entre las listas (actual, renovación y adicionales).
+                - Determina cuáles son equivalentes o semánticamente similares.
+                - Unifica esos términos en grupos con un nombre representativo.
+
+                4. Resultado esperado:
+                - Devuelve una lista consolidada de amparos válidos del tipo Responsabilidad Civil.
+                - Cada entrada debe incluir su deducible correspondiente.
+                - No incluyas amparos de otros tipos como “Incendio”, “Sustracción”, “Rotura de Maquinaria”, etc.
+                - Si no encuentras ningún amparo válido, devuelve una cadena vacía.
+                                
+                Aquí están las listas de amparos (solo relacionadas con 'Responsabilidad Civil'):
+                """,
+                todos_amparos_rc,
+            )
 
             response_incedio = await orchestrator.action_item_tool(
                 prompt_incendio, incendio_response_schema
+            )
+
+            response_rc = await orchestrator.action_item_tool(
+                prompt_rc, incendio_response_schema
             )
 
             incendio_raw_text = response_incedio["candidates"][0]["content"]["parts"][
                 0
             ]["text"]
 
+            rc_raw_text = response_rc["candidates"][0]["content"]["parts"][0]["text"]
+
             incendio_data = json.loads(incendio_raw_text)
+            rc_data = json.loads(rc_raw_text)
 
             amparos_actuales_incedio = [
                 {
@@ -1965,28 +2043,54 @@ async def main():
                 for a in incendio_data
             ]
 
+            amparos_actuales_rc = [
+                {
+                    "amparo": a["amparo"],
+                    "deducible": a["deducible_actual"],
+                    "tipo": ["Responsabilidad Civil"],
+                }
+                for a in rc_data
+            ]
+            amparos_renovacion_rc = [
+                {
+                    "amparo": a["amparo"],
+                    "deducible": a["deducible_renovacion"],
+                    "tipo": ["Responsabilidad Civil"],
+                }
+                for a in rc_data
+            ]
+
             amparos_adicionales_incedio = extraer_adicionales(
                 incendio_data, max_adicionales=len(amparos_adicionales)
             )
+            amparos_adicionales_rc = extraer_adicionales(
+                rc_data, max_adicionales=len(amparos_adicionales)
+            )
 
-            amparos_actuales_sin_incendio = [
+            amparos_actuales_sin_incendio_rc = [
                 a
                 for a in amparos_actuales["amparos"]
                 if "Incendio" not in a.get("tipo", [])
+                and "Responsabilidad Civil" not in a.get("tipo", [])
             ]
 
-            amparos_renovacion_sin_incendio = [
+            amparos_renovacion_sin_incendio_rc = [
                 a
                 for a in amparos_renovacion["amparos"]
                 if "Incendio" not in a.get("tipo", [])
+                and "Responsabilidad Civil" not in a.get("tipo", [])
             ]
 
             amparos_actuales["amparos"] = (
-                amparos_actuales_sin_incendio + amparos_actuales_incedio
+                amparos_actuales_sin_incendio_rc
+                + amparos_actuales_incedio
+                + amparos_actuales_rc
             )
 
             amparos_renovacion["amparos"] = (
-                amparos_renovacion_sin_incendio + amparos_renovacion_incedio
+                amparos_renovacion_sin_incendio_rc
+                + amparos_renovacion_incedio
+                + amparos_renovacion_rc
             )
 
             for i in range(len(amparos_adicionales_incedio)):
@@ -1997,7 +2101,7 @@ async def main():
                     # Normalizar si por error 'tipo' viene como string
                     if isinstance(tipos, str):
                         tipos = [t.strip() for t in tipos.split(",") if t.strip()]
-                    if "Incendio" not in tipos:
+                    if "Incendio" not in tipos and "Responsabilidad Civil" not in tipos:
                         amparos_sin_incendio.append(a)
 
                 # Reemplazar por amparos sin 'Incendio' + los incendios normalizados
@@ -2005,12 +2109,22 @@ async def main():
                     amparos_sin_incendio + amparos_adicionales_incedio[i]
                 )
 
+            for i in range(len(amparos_adicionales_rc)):
+                # Iterar sobre la lista de amparos, no sobre el dict del archivo
+                for a in amparos_adicionales[i]["amparos"]:
+                    tipos = a.get("tipo", [])
+                    # Normalizar si por error 'tipo' viene como string
+                    if isinstance(tipos, str):
+                        tipos = [t.strip() for t in tipos.split(",") if t.strip()]
+
+                amparos_adicionales[i]["amparos"] += amparos_adicionales_rc[i]
+
             if debug:
                 with st.expander("amparos_actuales_sin_incendio"):
-                    st.write(amparos_actuales_sin_incendio)
+                    st.write(amparos_actuales_sin_incendio_rc)
 
                 with st.expander("amparos_renovacion_sin_incendio"):
-                    st.write(amparos_renovacion_sin_incendio)
+                    st.write(amparos_renovacion_sin_incendio_rc)
 
                 with st.expander("amparos_actuales_incedio"):
                     st.write(amparos_actuales_incedio)
@@ -2029,6 +2143,18 @@ async def main():
 
                 with st.expander("amparos_adicionales - despues"):
                     st.write(amparos_adicionales)
+
+                with st.expander("Schema"):
+                    st.write(incendio_response_schema)
+
+                with st.expander("Amparos sin incendio"):
+                    st.write(amparos_sin_incendio)
+
+                with st.expander("incendio_data"):
+                    st.write(incendio_data)
+
+                with st.expander("rc_data"):
+                    st.write(rc_data)
 
             try:
                 main_output_path = generar_excel_analisis_polizas(
