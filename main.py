@@ -1778,7 +1778,7 @@ async def main():
 
         # Crear excel y poder descargalo.
         if poliza_actual or poliza_renovacion or documentos_adicionales:
-            st.subheader("📥 Descargar Resultados")
+            # st.subheader("📥 Descargar Resultados")
             # Archivo Excel principal
             main_excel_file = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
             main_excel_path = main_excel_file.name
