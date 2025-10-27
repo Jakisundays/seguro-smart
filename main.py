@@ -1097,10 +1097,10 @@ def extraer_adicionales(data, max_adicionales=3):
 def limpiar_dineros(data):
     """
     Elimina los registros con 'Dineros' de todos los campos no permitidos
-    y los mueve automáticamente a 'Transporte de Valores' y 'Manejo de Dinero'.
+    y los mueve automáticamente a 'Incendio' y "Sustracción".
     Si esos campos no existen, los crea.
     """
-    campos_permitidos = {"Transporte de Valores", "Manejo de Dinero"}
+    campos_permitidos = {"Incendio", "Sustracción"}
     nuevo_data = {}
     dinerios_a_mover = []
 
