@@ -612,9 +612,7 @@ def generar_tabla_excel_rc(
         blank_rows_section: List[int] = []
 
         # Datos de la sección
-        cob_list = sorted(
-            list((cob_por_tipo.get(tipo) or {}).values()), key=lambda s: s.lower()
-        )
+        cob_list = list((cob_por_tipo.get(tipo) or {}).values())
         interes_map = intereses_por_tipo.get(tipo) or {}
         interes_list = sorted(
             [
