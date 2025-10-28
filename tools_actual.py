@@ -240,47 +240,47 @@ tools = [
                         "patronal",
                     ],
                 },
-                "amparos": {
-                    "type": "ARRAY",
-                    "description": "Listado de amparos incluidos en la póliza, con su límite por vigencia.",
-                    "items": {
-                        "type": "OBJECT",
-                        "properties": {
-                            "amparo": {
-                                "type": "STRING",
-                                "description": "Nombre del amparo o interés a cubrir.",
-                            },
-                            "deducible": {
-                                "type": "STRING",
-                                "description": "Porcentaje o valor mínimo que debe asumir el asegurado en caso de una pérdida o siniestro cubierto antes de que la aseguradora realice el pago correspondiente. Generalmente expresado como un porcentaje del valor de la pérdida con un monto mínimo en SMLMV.",
-                            },
-                            "tipo": {
-                                "type": "ARRAY",
-                                "description": "Tipos de amparo: categorías del amparo según su cobertura. Opciones disponibles: 'Incendio', 'Sustracción', 'Equipo y Maquinaria', 'Transporte de Valores', 'Manejo de Dinero', 'Responsabilidad Civil'.",
-                                "items": {
-                                    "type": "STRING",
-                                    "enum": [
-                                        "Incendio",
-                                        "Sustracción",
-                                        "Equipo Electronico",
-                                        "Rotura de Maquinaria",
-                                        "Transporte de Valores",
-                                        "Manejo de Dinero",
-                                        "Responsabilidad Civil",
-                                    ],
-                                },
-                            },
-                        },
-                        "required": ["amparo", "deducible", "tipo"],
-                    },
-                },
+                # "amparos": {
+                #     "type": "ARRAY",
+                #     "description": "Listado de amparos incluidos en la póliza, con su límite por vigencia.",
+                #     "items": {
+                #         "type": "OBJECT",
+                #         "properties": {
+                #             "amparo": {
+                #                 "type": "STRING",
+                #                 "description": "Nombre del amparo o interés a cubrir.",
+                #             },
+                #             "deducible": {
+                #                 "type": "STRING",
+                #                 "description": "Porcentaje o valor mínimo que debe asumir el asegurado en caso de una pérdida o siniestro cubierto antes de que la aseguradora realice el pago correspondiente. Generalmente expresado como un porcentaje del valor de la pérdida con un monto mínimo en SMLMV.",
+                #             },
+                #             "tipo": {
+                #                 "type": "ARRAY",
+                #                 "description": "Tipos de amparo: categorías del amparo según su cobertura. Opciones disponibles: 'Incendio', 'Sustracción', 'Equipo y Maquinaria', 'Transporte de Valores', 'Manejo de Dinero', 'Responsabilidad Civil'.",
+                #                 "items": {
+                #                     "type": "STRING",
+                #                     "enum": [
+                #                         "Incendio",
+                #                         "Sustracción",
+                #                         "Equipo Electronico",
+                #                         "Rotura de Maquinaria",
+                #                         "Transporte de Valores",
+                #                         "Manejo de Dinero",
+                #                         "Responsabilidad Civil",
+                #                     ],
+                #                 },
+                #             },
+                #         },
+                #         "required": ["amparo", "deducible", "tipo"],
+                #     },
+                # },
             },
             "required": [
                 "danos_materiales",
                 "manejo_global_comercial",
                 "transporte_valores",
                 "responsabilidad_civil",
-                "amparos",
+                # "amparos",
             ],
         },
     },
@@ -383,6 +383,195 @@ tools = [
                 },
             },
             "required": ["riesgos"],
+        },
+    },
+    {
+        "prompt": """
+        Analiza el siguiente texto de una póliza de seguros y extrae únicamente los **deducibles** de cada amparo o subcobertura, organizándolos en las categorías especificadas.
+
+        Cada categoría representa un tipo de riesgo asegurado (por ejemplo, INCENDIO, MANEJO, RESPONSABILIDAD CIVIL, etc.).  
+        Solo incluye los deducibles que se mencionen en el texto. Si un amparo no tiene deducible expresamente indicado, **no incluyas ningún valor** para ese campo.
+
+        Sigue estas reglas:
+        1. No inventes deducibles.
+        2. Mantén los nombres de los amparos tal como aparecen en el schema.
+        3. No incluyas campos vacíos si no hay deducible.
+        4. No traduzcas el contenido: conserva los nombres y texto originales.
+    """,
+        "data": {
+            "type": "object",
+            "properties": {
+                "incendio": {
+                    "type": "object",
+                    "description": "Solo los deducibles de coberturas relacionadas con pérdidas o daños causados por fuego y eventos asociados.",
+                    "properties": {
+                        "amparo_basico_incendio_y_o_rayo": {
+                            "type": "string",
+                            "description": "Deducible del amparo por daños materiales directos por incendio o impacto de rayo.",
+                        },
+                        "terremoto": {
+                            "type": "string",
+                            "description": "Deducible del amparo por pérdidas o daños materiales causados por movimientos sísmicos.",
+                        },
+                        "anti_terrorismo": {
+                            "type": "string",
+                            "description": "Deducible del amparo por daños materiales derivados de actos terroristas o sabotajes.",
+                        },
+                        "demas_eventos": {
+                            "type": "string",
+                            "description": "Deducible de otros eventos cubiertos relacionados con el riesgo de incendio.",
+                        },
+                    },
+                    "required": ["amparo_basico_incendio_y_o_rayo"],
+                },
+                "sustraccion": {
+                    "type": "object",
+                    "description": "Solo deducibles frente a pérdidas derivadas de hurto o robo calificado.",
+                    "properties": {
+                        "hurto_calificado": {
+                            "type": "string",
+                            "description": "Deducible por pérdidas materiales ocasionadas por hurto con violencia o fuerza.",
+                        }
+                    },
+                    "required": ["hurto_calificado"],
+                },
+                "equipo_electronico": {
+                    "type": "object",
+                    "description": "Solo deducibles de daños o pérdidas en equipos electrónicos.",
+                    "properties": {
+                        "hurto_calificado": {
+                            "type": "string",
+                            "description": "Deducible por robo violento de equipos electrónicos.",
+                        },
+                        "terremoto": {
+                            "type": "string",
+                            "description": "Deducible por daños a equipos electrónicos ocasionados por movimientos sísmicos.",
+                        },
+                        "variacion_de_voltaje": {
+                            "type": "string",
+                            "description": "Deducible por daños eléctricos causados por variaciones de voltaje.",
+                        },
+                        "equipo_movil_y_portatil": {
+                            "type": "string",
+                            "description": "Deducible específico para equipos electrónicos móviles o portátiles.",
+                        },
+                    },
+                    "required": ["hurto_calificado", "variacion_de_voltaje"],
+                },
+                "rotura_de_maquinaria": {
+                    "type": "object",
+                    "description": "Solo deducibles ante daños internos o fallas mecánicas en maquinaria asegurada.",
+                    "properties": {
+                        "variaciones_de_voltaje_y_danos_internos": {
+                            "type": "string",
+                            "description": "Deducible por daños internos o eléctricos debidos a variaciones de voltaje o defectos mecánicos.",
+                        }
+                    },
+                    "required": ["variaciones_de_voltaje_y_danos_internos"],
+                },
+                "manejo": {
+                    "type": "object",
+                    "description": "Solo deducibles de pérdidas derivadas de actos deshonestos o fraudulentos por empleados o terceros.",
+                    "properties": {
+                        "amparo_basico": {
+                            "type": "string",
+                            "description": "Deducible del amparo básico frente a pérdidas por actos deshonestos de empleados.",
+                        },
+                        "empleados_no_identificados_de_firmas_especializadas_y_temporales": {
+                            "type": "string",
+                            "description": "Deducible por pérdidas causadas por empleados de empresas contratadas o temporales.",
+                        },
+                        "perdidas_por_personal_temporal": {
+                            "type": "string",
+                            "description": "Deducible por pérdidas causadas por empleados temporales identificados.",
+                        },
+                    },
+                    "required": ["amparo_basico"],
+                },
+                "responsabilidad_civil": {
+                    "type": "object",
+                    "description": "Solo deducibles de la responsabilidad legal del asegurado por daños a terceros.",
+                    "properties": {
+                        "basico_y_demas_amparos": {
+                            "type": "string",
+                            "description": "Deducible de la cobertura general de responsabilidad civil básica.",
+                        },
+                        "gastos_medicos": {
+                            "type": "string",
+                            "description": "Deducible por gastos médicos de terceros lesionados en un siniestro.",
+                        },
+                        "responsabilidad_civil_contratistas_y_subcontratistas": {
+                            "type": "string",
+                            "description": "Deducible por daños ocasionados por contratistas y subcontratistas durante sus labores.",
+                        },
+                        "rc_vehiculos_propios_y_no_propios": {
+                            "type": "string",
+                            "description": "Deducible por responsabilidad civil de vehículos propios o no propios.",
+                        },
+                        "rc_productos_y_trabajos_terminados": {
+                            "type": "string",
+                            "description": "Deducible por daños ocasionados por productos o trabajos terminados del asegurado.",
+                        },
+                        "rc_parqueaderos": {
+                            "type": "string",
+                            "description": "Deducible por daños o pérdidas a vehículos bajo custodia en parqueaderos.",
+                        },
+                        "bienes_bajo_cuidado_tenencia_y_control": {
+                            "type": "string",
+                            "description": "Deducible por daños a bienes de terceros bajo responsabilidad del asegurado.",
+                        },
+                        "responsabilidad_civil_patronal": {
+                            "type": "string",
+                            "description": "Deducible por reclamaciones de empleados por accidentes laborales.",
+                        },
+                    },
+                    "required": ["basico_y_demas_amparos"],
+                },
+                "transporte_de_valores": {
+                    "type": "object",
+                    "description": "Solo deducibles frente a pérdidas de dinero o valores durante su transporte.",
+                    "properties": {
+                        "para_toda_y_cada_perdida": {
+                            "type": "string",
+                            "description": "Deducible aplicable a cada pérdida durante el transporte de valores.",
+                        }
+                    },
+                    "required": ["para_toda_y_cada_perdida"],
+                },
+                "maquinaria_y_equipo_de_construccion": {
+                    "type": "object",
+                    "description": "Solo deducibles de daños a maquinaria pesada y equipos de construcción.",
+                    "properties": {
+                        "terremoto": {
+                            "type": "string",
+                            "description": "Deducible por daños por sismos a maquinaria de construcción.",
+                        },
+                        "anti_terrorismo": {
+                            "type": "string",
+                            "description": "Deducible por daños causados por actos terroristas.",
+                        },
+                        "hurto_calificado": {
+                            "type": "string",
+                            "description": "Deducible por robo con violencia o fuerza de maquinaria o equipos asegurados.",
+                        },
+                        "demas_eventos": {
+                            "type": "string",
+                            "description": "Deducible de otros riesgos aplicables a maquinaria y equipo de construcción.",
+                        },
+                    },
+                    "required": ["hurto_calificado"],
+                },
+            },
+            "required": [
+                "incendio",
+                "sustraccion",
+                "equipo_electronico",
+                "rotura_de_maquinaria",
+                "manejo",
+                "responsabilidad_civil",
+                "transporte_de_valores",
+                "maquinaria_y_equipo_de_construccion",
+            ],
         },
     },
 ]
