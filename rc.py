@@ -324,11 +324,11 @@ def generar_tabla_excel_rc(
 
     # with open("intereses_por_tipo_og.json", "w", encoding="utf-8") as f:
     #     json.dump(intereses_por_tipo, f, ensure_ascii=False, indent=2)
-        
+
     intereses_por_tipo = actualizar_intereses_por_tipo(
         intereses_por_tipo, totales_actual, totales_renovacion
     )
-    
+
     # with open("intereses_por_tipo.json", "w", encoding="utf-8") as f:
     #     json.dump(intereses_por_tipo, f, ensure_ascii=False, indent=2)
 
@@ -2780,9 +2780,119 @@ def actualizar_todos_los_valores(data, totales):
     return data
 
 
+amp = {
+    "Incendio": [
+        {"amparo": "Incendio y/o Rayo", "tipo": ["Incendio"]},
+        {"amparo": "Explosión", "tipo": ["Incendio"]},
+        {"amparo": "Terremoto, temblor", "tipo": ["Incendio"]},
+        {"amparo": "Asonada, motín, conm. Civil/popular huelga", "tipo": ["Incendio"]},
+        {"amparo": "Extensión de amparos", "tipo": ["Incendio"]},
+        {"amparo": "Daños por agua", "tipo": ["Incendio"]},
+        {"amparo": "Anegación", "tipo": ["Incendio"]},
+        {"amparo": "Daños a caldera y AP. Generadores vapor", "tipo": ["Incendio"]},
+        {"amparo": "Incendio y/o Rayo en aparatos electricos", "tipo": ["Incendio"]},
+        {"amparo": "Remoción de Escombros", "tipo": ["Incendio"]},
+        {"amparo": "Actos Terroristas", "tipo": ["Incendio"]},
+    ],
+    "Sustracción": [
+        {"amparo": "Hurto Calificado", "tipo": ["Sustracción"]},
+        {"amparo": "Asalto", "tipo": ["Sustracción"]},
+        {"amparo": "Atraco", "tipo": ["Sustracción"]},
+    ],
+    "Equipo Electrónico": [
+        {"amparo": "Pérdidas o daños accidentales", "tipo": ["Equipo Electronico"]},
+        {"amparo": "Terremoto- Temblor", "tipo": ["Equipo Electronico"]},
+        {
+            "amparo": "Asonada, motín, conm. Civil/popular huelga",
+            "tipo": ["Equipo Electronico"],
+        },
+        {
+            "amparo": "Actos mal intecionados de terceros",
+            "tipo": ["Equipo Electronico"],
+        },
+        {"amparo": "Hurto", "tipo": ["Equipo Electronico"]},
+    ],
+    "Rotura de Maquinaria": [
+        {"amparo": "Excesos de tension electrica", "tipo": ["Rotura de Maquinaria"]},
+        {
+            "amparo": "Impericia o Negligencia de los empleados",
+            "tipo": ["Rotura de Maquinaria"],
+        },
+        {
+            "amparo": "Actos mal intencionados de los empleados",
+            "tipo": ["Rotura de Maquinaria"],
+        },
+        {
+            "amparo": "Explosion quimica interna, incendio interno, Caida de rayo",
+            "tipo": ["Rotura de Maquinaria"],
+        },
+        {"amparo": "Obstrucciones Internas", "tipo": ["Rotura de Maquinaria"]},
+        {
+            "amparo": "Rotura debido a Fuerza centrifuga",
+            "tipo": ["Rotura de Maquinaria"],
+        },
+    ],
+    "Manejo de Dinero": [
+        {"amparo": "Hurto calificado", "tipo": ["Manejo de Dinero"]},
+        {"amparo": "Abuso de confianza", "tipo": ["Manejo de Dinero"]},
+        {"amparo": "Desfalco, Estafa, Falsificación", "tipo": ["Manejo de Dinero"]},
+        {
+            "amparo": "Pérdidas por personas no identificadas",
+            "tipo": ["Manejo de Dinero"],
+        },
+        {"amparo": "Perdidas por personal temporal", "tipo": ["Manejo de Dinero"]},
+    ],
+    "Responsabilidad Civil": [
+        {
+            "amparo": "Predio labores y operaciones, incluyendo Incendio y Explosión",
+            "tipo": ["Responsabilidad Civil"],
+        },
+        {"amparo": "Gastos Médicos", "tipo": ["Responsabilidad Civil"]},
+        {
+            "amparo": "R.C. Contratistas y Subcontratistas",
+            "tipo": ["Responsabilidad Civil"],
+        },
+        {
+            "amparo": "R.C. Vehiculos Propios y No Propios",
+            "tipo": ["Responsabilidad Civil"],
+        },
+        {
+            "amparo": "R.C. Productos y trabajos terminados",
+            "tipo": ["Responsabilidad Civil"],
+        },
+        {"amparo": "R.C. Parqueaderos", "tipo": ["Responsabilidad Civil"]},
+        {
+            "amparo": "Bienes bajo cuidado, tenencia y control",
+            "tipo": ["Responsabilidad Civil"],
+        },
+        {"amparo": "Responsabilidad Civil Patronal", "tipo": ["Responsabilidad Civil"]},
+    ],
+    "Transporte de Valores": [
+        {
+            "amparo": "Daños ocasionados a los titulos valores con ocasión de su transporte. Falta de Entrega (Hurto Total). Averia Particular. Saqueo (Hurto Parcial)",
+            "tipo": ["Transporte de Valores"],
+        },
+        {
+            "amparo": "Huelga (Terrorismo para los titulos valores movilizados dentro del país)",
+            "tipo": ["Transporte de Valores"],
+        },
+    ],
+    "Maquinaria y Equipo de Contratista": [
+        {
+            "amparo": "Minitractor Jhon Deere Golf & Turf modelo 2020",
+            "tipo": ["Maquinaria y Equipo de Contratista"],
+        },
+        {
+            "amparo": "Responsabilidad Civil",
+            "tipo": ["Maquinaria y Equipo de Contratista", "Responsabilidad Civil"],
+        },
+    ],
+}
+
 if __name__ == "__main__":
-    amparos_actuales = clasificar_por_tipo(poliza_actual["amparos"])
-    amparos_renovacion = clasificar_por_tipo(poliza_renovacion["amparos"])
+    # amparos_actuales = clasificar_por_tipo(poliza_actual["amparos"])
+
+    # amparos_renovacion = clasificar_por_tipo(poliza_renovacion["amparos"])
 
     clasificacion_actual = clasificar_por_tipo(poliza_actual["detalle_cobertura"])
 
@@ -2807,8 +2917,8 @@ if __name__ == "__main__":
 
     try:
         ruta_excel = generar_tabla_excel_rc(
-            amparos_actuales=amparos_actuales,
-            amparos_renovacion=amparos_renovacion,
+            amparos_actuales=amp,
+            amparos_renovacion=amp,
             clasificacion_actual=actual_u_actualizado,
             clasificacion_renovacion=renovacion_u_actualizado,
             docs_adicionales_data=docs_adicionales_data,

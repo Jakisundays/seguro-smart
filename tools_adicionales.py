@@ -38,46 +38,11 @@ tools = [
                     "type": "NUMBER",
                     "description": "Porcentaje de la tasa aplicado en la póliza.",
                 },
-                # "amparos": {
-                #     "type": "ARRAY",
-                #     "description": "Listado de amparos incluidos en la póliza, con su límite por vigencia.",
-                #     "items": {
-                #         "type": "OBJECT",
-                #         "properties": {
-                #             "amparo": {
-                #                 "type": "STRING",
-                #                 "description": "Nombre del amparo o interés a cubrir.",
-                #             },
-                #             "deducible": {
-                #                 "type": "STRING",
-                #                 "description": "Porcentaje o valor mínimo que debe asumir el asegurado en caso de una pérdida o siniestro cubierto antes de que la aseguradora realice el pago correspondiente. Generalmente expresado como un porcentaje del valor de la pérdida con un monto mínimo en SMLMV.",
-                #             },
-                #             "tipo": {
-                #                 "type": "ARRAY",
-                #                 "description": "Tipos de amparo: categorías del amparo según su cobertura. Opciones disponibles: 'Incendio', 'Sustracción', 'Equipo y Maquinaria', 'Transporte de Valores', 'Manejo de Dinero', 'Responsabilidad Civil'.",
-                #                 "items": {
-                #                     "type": "STRING",
-                #                     "enum": [
-                #                         "Incendio",
-                #                         "Sustracción",
-                #                         "Equipo Electronico",
-                #                         "Rotura de Maquinaria",
-                #                         "Transporte de Valores",
-                #                         "Manejo de Dinero",
-                #                         "Responsabilidad Civil",
-                #                     ],
-                #                 },
-                #             },
-                #         },
-                #         "required": ["amparo", "deducible", "tipo"],
-                #     },
-                # },
             },
             "required": [
                 "prima_sin_iva",
                 "asegurado",
                 "tasa",
-                # "amparos",
             ],
         },
     },
@@ -274,17 +239,17 @@ tools = [
     },
     {
         "prompt": """
-        Analiza el siguiente texto de una póliza de seguros y extrae únicamente los **deducibles** de cada amparo o subcobertura, organizándolos en las categorías especificadas.
+            Analiza el siguiente texto de una póliza de seguros y extrae únicamente los **deducibles** de cada amparo o subcobertura, organizándolos en las categorías especificadas.
 
-        Cada categoría representa un tipo de riesgo asegurado (por ejemplo, INCENDIO, MANEJO, RESPONSABILIDAD CIVIL, etc.).  
-        Solo incluye los deducibles que se mencionen en el texto. Si un amparo no tiene deducible expresamente indicado, **no incluyas ningún valor** para ese campo.
+            Cada categoría representa un tipo de riesgo asegurado (por ejemplo, INCENDIO, MANEJO, RESPONSABILIDAD CIVIL, etc.).  
+            Solo incluye los deducibles que se mencionen en el texto. Si un amparo no tiene deducible expresamente indicado, **no incluyas ningún valor** para ese campo.
 
-        Sigue estas reglas:
-        1. No inventes deducibles.
-        2. Mantén los nombres de los amparos tal como aparecen en el schema.
-        3. No incluyas campos vacíos si no hay deducible.
-        4. No traduzcas el contenido: conserva los nombres y texto originales.
-    """,
+            Sigue estas reglas:
+            1. No inventes deducibles.
+            2. Mantén los nombres de los amparos tal como aparecen en el schema.
+            3. No incluyas campos vacíos si no hay deducible.
+            4. No traduzcas el contenido: conserva los nombres y texto originales.
+          """,
         "data": {
             "type": "object",
             "properties": {
@@ -309,7 +274,12 @@ tools = [
                             "description": "Deducible de otros eventos cubiertos relacionados con el riesgo de incendio.",
                         },
                     },
-                    "required": ["amparo_basico_incendio_y_o_rayo"],
+                    "required": [
+                        "amparo_basico_incendio_y_o_rayo",
+                        "terremoto",
+                        "anti_terrorismo",
+                        "demas_eventos",
+                    ],
                 },
                 "sustraccion": {
                     "type": "object",
@@ -343,7 +313,12 @@ tools = [
                             "description": "Deducible específico para equipos electrónicos móviles o portátiles.",
                         },
                     },
-                    "required": ["hurto_calificado", "variacion_de_voltaje"],
+                    "required": [
+                        "hurto_calificado",
+                        "terremoto",
+                        "variacion_de_voltaje",
+                        "equipo_movil_y_portatil",
+                    ],
                 },
                 "rotura_de_maquinaria": {
                     "type": "object",
@@ -373,9 +348,13 @@ tools = [
                             "description": "Deducible por pérdidas causadas por empleados temporales identificados.",
                         },
                     },
-                    "required": ["amparo_basico"],
+                    "required": [
+                        "amparo_basico",
+                        "empleados_no_identificados_de_firmas_especializadas_y_temporales",
+                        "perdidas_por_personal_temporal",
+                    ],
                 },
-                "responsabilidad_civil": {
+                "responsabilidad_civil_amparo": {
                     "type": "object",
                     "description": "Solo deducibles de la responsabilidad legal del asegurado por daños a terceros.",
                     "properties": {
@@ -412,7 +391,16 @@ tools = [
                             "description": "Deducible por reclamaciones de empleados por accidentes laborales.",
                         },
                     },
-                    "required": ["basico_y_demas_amparos"],
+                    "required": [
+                        "basico_y_demas_amparos",
+                        "gastos_medicos",
+                        "responsabilidad_civil_contratistas_y_subcontratistas",
+                        "rc_vehiculos_propios_y_no_propios",
+                        "rc_productos_y_trabajos_terminados",
+                        "rc_parqueaderos",
+                        "bienes_bajo_cuidado_tenencia_y_control",
+                        "responsabilidad_civil_patronal",
+                    ],
                 },
                 "transporte_de_valores": {
                     "type": "object",
@@ -425,7 +413,7 @@ tools = [
                     },
                     "required": ["para_toda_y_cada_perdida"],
                 },
-                "maquinaria_y_equipo_de_construccion": {
+                "maquinaria_y_equipo": {
                     "type": "object",
                     "description": "Solo deducibles de daños a maquinaria pesada y equipos de construcción.",
                     "properties": {
@@ -446,7 +434,12 @@ tools = [
                             "description": "Deducible de otros riesgos aplicables a maquinaria y equipo de construcción.",
                         },
                     },
-                    "required": ["hurto_calificado"],
+                    "required": [
+                        "terremoto",
+                        "anti_terrorismo",
+                        "hurto_calificado",
+                        "demas_eventos",
+                    ],
                 },
             },
             "required": [
@@ -455,9 +448,9 @@ tools = [
                 "equipo_electronico",
                 "rotura_de_maquinaria",
                 "manejo",
-                "responsabilidad_civil",
+                "responsabilidad_civil_amparo",
                 "transporte_de_valores",
-                "maquinaria_y_equipo_de_construccion",
+                "maquinaria_y_equipo",
             ],
         },
     },
