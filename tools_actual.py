@@ -547,34 +547,34 @@ tools = [
                     },
                     "required": ["para_toda_y_cada_perdida"],
                 },
-                "maquinaria_y_equipo": {
-                    "type": "object",
-                    "description": "Solo deducibles de daños a maquinaria pesada y equipos de construcción.",
-                    "properties": {
-                        "terremoto": {
-                            "type": "string",
-                            "description": "Deducible por daños por sismos a maquinaria de construcción.",
-                        },
-                        "anti_terrorismo": {
-                            "type": "string",
-                            "description": "Deducible por daños causados por actos terroristas.",
-                        },
-                        "hurto_calificado": {
-                            "type": "string",
-                            "description": "Deducible por robo con violencia o fuerza de maquinaria o equipos asegurados.",
-                        },
-                        "demas_eventos": {
-                            "type": "string",
-                            "description": "Deducible de otros riesgos aplicables a maquinaria y equipo de construcción.",
-                        },
-                    },
-                    "required": [
-                        "terremoto",
-                        "anti_terrorismo",
-                        "hurto_calificado",
-                        "demas_eventos",
-                    ],
-                },
+                # "maquinaria_y_equipo": {
+                #     "type": "object",
+                #     "description": "Solo deducibles de daños a maquinaria pesada y equipos de construcción.",
+                #     "properties": {
+                #         "terremoto": {
+                #             "type": "string",
+                #             "description": "Deducible por daños por sismos a maquinaria de construcción.",
+                #         },
+                #         "anti_terrorismo": {
+                #             "type": "string",
+                #             "description": "Deducible por daños causados por actos terroristas.",
+                #         },
+                #         "hurto_calificado": {
+                #             "type": "string",
+                #             "description": "Deducible por robo con violencia o fuerza de maquinaria o equipos asegurados.",
+                #         },
+                #         "demas_eventos": {
+                #             "type": "string",
+                #             "description": "Deducible de otros riesgos aplicables a maquinaria y equipo de construcción.",
+                #         },
+                #     },
+                #     "required": [
+                #         "terremoto",
+                #         "anti_terrorismo",
+                #         "hurto_calificado",
+                #         "demas_eventos",
+                #     ],
+                # },
             },
             "required": [
                 "incendio",
@@ -584,7 +584,7 @@ tools = [
                 "manejo",
                 "responsabilidad_civil_amparo",
                 "transporte_de_valores",
-                "maquinaria_y_equipo",
+                # "maquinaria_y_equipo",
             ],
         },
     },

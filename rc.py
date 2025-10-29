@@ -2875,16 +2875,16 @@ amp = {
             "tipo": ["Transporte de Valores"],
         },
     ],
-    "Maquinaria y Equipo de Contratista": [
-        {
-            "amparo": "Minitractor Jhon Deere Golf & Turf modelo 2020",
-            "tipo": ["Maquinaria y Equipo de Contratista"],
-        },
-        {
-            "amparo": "Responsabilidad Civil",
-            "tipo": ["Maquinaria y Equipo de Contratista", "Responsabilidad Civil"],
-        },
-    ],
+    # "Maquinaria y Equipo de Contratista": [
+    #     {
+    #         "amparo": "Minitractor Jhon Deere Golf & Turf modelo 2020",
+    #         "tipo": ["Maquinaria y Equipo de Contratista"],
+    #     },
+    #     {
+    #         "amparo": "Responsabilidad Civil",
+    #         "tipo": ["Maquinaria y Equipo de Contratista", "Responsabilidad Civil"],
+    #     },
+    # ],
 }
 
 if __name__ == "__main__":
