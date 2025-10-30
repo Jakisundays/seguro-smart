@@ -696,7 +696,7 @@ def generar_excel_analisis_polizas(
             b2.value = "CONDICIONES ACTUALES"
             b2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
             b2.fill = PatternFill(
-                start_color="B7DEE8", end_color="B7DEE8", fill_type="solid"
+                start_color="1F4E78", end_color="1F4E78", fill_type="solid"
             )
             b2.alignment = Alignment(
                 horizontal="center", vertical="center", wrap_text=True
@@ -716,7 +716,7 @@ def generar_excel_analisis_polizas(
             c2.value = "CONDICIONES DE RENOVACIÓN"
             c2.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
             c2.fill = PatternFill(
-                start_color="B7DEE8", end_color="B7DEE8", fill_type="solid"
+                start_color="1F4E78", end_color="1F4E78", fill_type="solid"
             )
             c2.alignment = Alignment(
                 horizontal="center", vertical="center", wrap_text=True
@@ -762,14 +762,14 @@ def generar_excel_analisis_polizas(
                     name="Calibri",
                     size=11,
                     bold=True,
-                    color="000000" if col_num >= 4 else "FFFFFF",
+                    color="FFFFFF"
                 )
                 fill_map = {
                     1: "1F4E78",  # RAMO
-                    2: "B7DEE8",  # Actual
-                    3: "B7DEE8",  # Renovación
+                    2: "1F4E78",  # Actual
+                    3: "1F4E78",  # Renovación
                 }
-                color = fill_map.get(col_num, "D9D9D9")
+                color = fill_map.get(col_num, "1F4E78")
                 cell.fill = PatternFill(
                     start_color=color, end_color=color, fill_type="solid"
                 )
@@ -797,7 +797,7 @@ def generar_excel_analisis_polizas(
                             name="Calibri", size=11, bold=True, color="FFFFFF"
                         )
                         cell.fill = PatternFill(
-                            start_color="B7DEE8", end_color="B7DEE8", fill_type="solid"
+                            start_color="1F4E78", end_color="1F4E78", fill_type="solid"
                         )
                         cell.alignment = Alignment(
                             horizontal="center", vertical="center", wrap_text=True
