@@ -422,7 +422,12 @@ tools = [
                             "description": "Deducible de otros eventos cubiertos relacionados con el riesgo de incendio.",
                         },
                     },
-                    "required": ["amparo_basico_incendio_y_o_rayo", "terremoto", "anti_terrorismo", "demas_eventos"],
+                    "required": [
+                        "amparo_basico_incendio_y_o_rayo",
+                        "terremoto",
+                        "anti_terrorismo",
+                        "demas_eventos",
+                    ],
                 },
                 "sustraccion": {
                     "type": "object",
@@ -456,7 +461,12 @@ tools = [
                             "description": "Deducible específico para equipos electrónicos móviles o portátiles.",
                         },
                     },
-                    "required": ["hurto_calificado", "terremoto", "variacion_de_voltaje","equipo_movil_y_portatil"],
+                    "required": [
+                        "hurto_calificado",
+                        "terremoto",
+                        "variacion_de_voltaje",
+                        "equipo_movil_y_portatil",
+                    ],
                 },
                 "rotura_de_maquinaria": {
                     "type": "object",
@@ -486,7 +496,11 @@ tools = [
                             "description": "Deducible por pérdidas causadas por empleados temporales identificados.",
                         },
                     },
-                    "required": ["amparo_basico", "empleados_no_identificados_de_firmas_especializadas_y_temporales", "perdidas_por_personal_temporal"],
+                    "required": [
+                        "amparo_basico",
+                        "empleados_no_identificados_de_firmas_especializadas_y_temporales",
+                        "perdidas_por_personal_temporal",
+                    ],
                 },
                 "responsabilidad_civil_amparo": {
                     "type": "object",
@@ -577,6 +591,16 @@ tools = [
                 # },
             },
             "required": [
+                "incendio",
+                "sustraccion",
+                "equipo_electronico",
+                "rotura_de_maquinaria",
+                "manejo",
+                "responsabilidad_civil_amparo",
+                "transporte_de_valores",
+                # "maquinaria_y_equipo",
+            ],
+            "propertyOrdering": [
                 "incendio",
                 "sustraccion",
                 "equipo_electronico",

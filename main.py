@@ -431,7 +431,88 @@ def generar_excel_analisis_polizas(
                         tipos_encontrados.add(t)
 
             # Ordenar tipos para crear secciones consistentes
-            tipos_ordenados = sorted(tipos_encontrados)
+            # Normalización canónica y orden preferente
+            def _norm_basic(s: str) -> str:
+                import unicodedata
+                s2 = (
+                    "".join(
+                        c
+                        for c in unicodedata.normalize("NFD", s or "")
+                        if unicodedata.category(c) != "Mn"
+                    )
+                    .lower()
+                    .strip()
+                )
+                return s2
+
+            def _tipo_canon(s: str) -> str:
+                t = _norm_basic(s)
+                if t.startswith("responsabilidad civil"):
+                    return "responsabilidad_civil_amparo"
+                mapping = {
+                    "incendio": "incendio",
+                    "sustraccion": "sustraccion",
+                    "sustracción": "sustraccion",
+                    "equipo electronico": "equipo_electronico",
+                    "equipo electrónico": "equipo_electronico",
+                    "rotura de maquinaria": "rotura_de_maquinaria",
+                    "manejo de dinero": "manejo",
+                    "manejo": "manejo",
+                    "transporte de valores": "transporte_de_valores",
+                }
+                return mapping.get(t, t.replace(" ", "_"))
+
+            orden_preferente = [
+                "incendio",
+                "sustraccion",
+                "equipo_electronico",
+                "rotura_de_maquinaria",
+                "manejo",
+                "responsabilidad_civil_amparo",
+                "transporte_de_valores",
+            ]
+
+            # Mantener orden de detección original de tipos
+            tipos_detectados = []
+            vistos_tipos = set()
+            tipo_canon_map = {}
+
+            # Recorrer fuentes en el mismo orden de recopilación previa
+            for amp in amparos_actuales["amparos"]:
+                tipos = amp["tipo"] if isinstance(amp["tipo"], list) else [amp["tipo"]]
+                for t in tipos:
+                    if t not in vistos_tipos:
+                        vistos_tipos.add(t)
+                        tipos_detectados.append(t)
+                    tipo_canon_map[t] = _tipo_canon(t)
+
+            for amp in amparos_renovacion["amparos"]:
+                tipos = amp["tipo"] if isinstance(amp["tipo"], list) else [amp["tipo"]]
+                for t in tipos:
+                    if t not in vistos_tipos:
+                        vistos_tipos.add(t)
+                        tipos_detectados.append(t)
+                    tipo_canon_map[t] = _tipo_canon(t)
+
+            for doc in amparos_adicionales:
+                for amp in doc["amparos"]:
+                    tipos = amp["tipo"] if isinstance(amp["tipo"], list) else [amp["tipo"]]
+                    for t in tipos:
+                        if t not in vistos_tipos:
+                            vistos_tipos.add(t)
+                            tipos_detectados.append(t)
+                        tipo_canon_map[t] = _tipo_canon(t)
+
+            # Construir lista ordenada por la preferencia indicada
+            tipos_ordenados = []
+            for canon in orden_preferente:
+                for t in tipos_detectados:
+                    if tipo_canon_map.get(t) == canon and t not in tipos_ordenados:
+                        tipos_ordenados.append(t)
+            # Agregar cualquier tipo restante no contemplado en la preferencia
+            for t in tipos_detectados:
+                if t not in tipos_ordenados:
+                    tipos_ordenados.append(t)
 
             # Crear estructura basada en la imagen de referencia
             amparos_unicos = []
@@ -2069,6 +2150,7 @@ async def main():
                     st.write(amparos_renovacion_por_tipo)
 
             try:
+                
                 main_output_path = generar_excel_analisis_polizas(
                     riesgos_actuales=riesgos_actuales,
                     riesgos_renovacion=riesgos_renovacion,

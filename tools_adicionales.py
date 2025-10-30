@@ -452,6 +452,16 @@ tools = [
                 "transporte_de_valores",
                 # "maquinaria_y_equipo",
             ],
+            "propertyOrdering": [
+                "incendio",
+                "sustraccion",
+                "equipo_electronico",
+                "rotura_de_maquinaria",
+                "manejo",
+                "responsabilidad_civil_amparo",
+                "transporte_de_valores",
+                # "maquinaria_y_equipo",
+            ],
         },
     },
 ]
