@@ -268,15 +268,52 @@ def generar_tabla_excel_rc(
         except Exception:
             return str(v)
 
+    # ===============================================
+    # CAMBIO: Unificación de categorías de Equipo Electrónico
+    # Objetivo: Agrupar "equipo_electronico" y "equipos_moviles_portatiles"
+    # dentro del segmento único "Equipo Electrónico".
+    #
+    # - Mantiene el formato original del archivo y la estructura de salida.
+    # - Actualiza referencias de tipos de forma consistente al construir
+    #   los mapas por tipo (coberturas e intereses).
+    # - Evita duplicados al normalizar y unificar bajo una clave canónica
+    #   de presentación ("Equipo Electrónico").
+    # - Conserva la lógica asociada: en detalles de documentos ya se manejan
+    #   tanto "equipo_electronico" como "equipos_moviles_portatiles".
+    # - No afecta otras partes del sistema: sólo se alteran las claves
+    #   internas usadas en esta hoja.
+    # ===============================================
+
+    def _norm_basic(s: Any) -> str:
+        """Normaliza texto: sin acentos, en minúsculas, espacios homogéneos."""
+        import unicodedata
+        s0 = str(s or "")
+        s1 = "".join(
+            c for c in unicodedata.normalize("NFD", s0) if unicodedata.category(c) != "Mn"
+        )
+        return s1.lower().strip().replace("-", " ").replace("_", " ")
+
+    def _tipo_canon_display(raw_tipo: Any) -> str:
+        """Devuelve la etiqueta de segmento a mostrar, unificando equipos electrónicos.
+
+        Mapea cualquier variante de "equipo_electronico" y "equipos_moviles_portatiles"
+        al segmento visible "Equipo Electrónico". Para otros tipos, mantiene su
+        representación original.
+        """
+        nb = _norm_basic(raw_tipo)
+        if nb in ("equipo electronico", "equipos moviles portatiles"):
+            return "Equipo Electrónico"
+        return str(raw_tipo).strip()
+
     # 1) Coberturas únicas por tipo
     cob_por_tipo: Dict[str, Dict[str, str]] = {}
     for dataset in (amparos_actuales, amparos_renovacion):
         for tipo, items in (dataset or {}).items():
             if not isinstance(items, list):
                 continue
-            t = str(tipo)
-            cob_por_tipo.setdefault(t, {})
-            m = cob_por_tipo[t]
+            t_display = _tipo_canon_display(tipo)
+            cob_por_tipo.setdefault(t_display, {})
+            m = cob_por_tipo[t_display]
             for it in items:
                 if not isinstance(it, dict):
                     continue
@@ -300,9 +337,9 @@ def generar_tabla_excel_rc(
         for tipo, items in (fuente or {}).items():
             if not isinstance(items, list):
                 continue
-            t = str(tipo)
-            intereses_por_tipo.setdefault(t, {})
-            mapa = intereses_por_tipo[t]
+            t_display = _tipo_canon_display(tipo)
+            intereses_por_tipo.setdefault(t_display, {})
+            mapa = intereses_por_tipo[t_display]
             for it in items:
                 if not isinstance(it, dict):
                     continue
@@ -638,7 +675,9 @@ def generar_tabla_excel_rc(
             fila += 1
 
         # Insertar detalles en columnas dinámicas (I en adelante) usando filas de la sección
+        # Usar normalización básica para coincidencias robustas (acentos/snake-case)
         tipo_norm = str(tipo).strip().lower()
+        tipo_norm_basic = _norm_basic(tipo)
         docs = docs_adicionales_data or []
         for j, doc in enumerate(docs):
             tasa_col = 9 + (j * 2)
@@ -652,7 +691,8 @@ def generar_tabla_excel_rc(
             #         ("Terrorismo Máximo", dm.get("terrorismo_maximo")),
             #     ]
             #     details = [f"{label}: {val}" for (label, val) in pairs if val]
-            if tipo_norm == "equipo electronico":
+            # Equipa electrónicamente: agrupa equipo electrónico y equipos móviles/portátiles
+            if tipo_norm_basic in ("equipo electronico", "equipos moviles portatiles"):
                 dm = doc.get("danos_materiales", {}) or {}
                 pairs = [
                     ("Equipo electrónico", dm.get("equipo_electronico")),

@@ -434,6 +434,7 @@ def generar_excel_analisis_polizas(
             # Normalización canónica y orden preferente
             def _norm_basic(s: str) -> str:
                 import unicodedata
+
                 s2 = (
                     "".join(
                         c
@@ -496,7 +497,9 @@ def generar_excel_analisis_polizas(
 
             for doc in amparos_adicionales:
                 for amp in doc["amparos"]:
-                    tipos = amp["tipo"] if isinstance(amp["tipo"], list) else [amp["tipo"]]
+                    tipos = (
+                        amp["tipo"] if isinstance(amp["tipo"], list) else [amp["tipo"]]
+                    )
                     for t in tipos:
                         if t not in vistos_tipos:
                             vistos_tipos.add(t)
@@ -758,12 +761,7 @@ def generar_excel_analisis_polizas(
             # 4. Formatear subencabezados de columna (fila 3)
             for col_num in range(1, len(columnas) + 1):
                 cell = ws.cell(row=3, column=col_num)
-                cell.font = Font(
-                    name="Calibri",
-                    size=11,
-                    bold=True,
-                    color="FFFFFF"
-                )
+                cell.font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
                 fill_map = {
                     1: "1F4E78",  # RAMO
                     2: "1F4E78",  # Actual
@@ -1689,7 +1687,7 @@ coberturas_predeterminadas = {
 # Configuración de la página
 st.set_page_config(
     page_title="Análisis de pólizas",
-    page_icon="📊",
+    page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -2150,7 +2148,7 @@ async def main():
                     st.write(amparos_renovacion_por_tipo)
 
             try:
-                
+
                 main_output_path = generar_excel_analisis_polizas(
                     riesgos_actuales=riesgos_actuales,
                     riesgos_renovacion=riesgos_renovacion,
@@ -2180,6 +2178,23 @@ async def main():
                         st.write(actual_u_actualizado)
                     with st.expander("renovacion_u_actualizado"):
                         st.write(renovacion_u_actualizado)
+
+                if debug:
+                    st.write("Debugging")
+                    with st.expander("actual_u_actualizado"):
+                        st.write(limpiar_dineros(actual_u_actualizado))
+                    with st.expander("renovacion_u_actualizado"):
+                        st.write(limpiar_dineros(renovacion_u_actualizado))
+                    with st.expander("docs_adicionales_data"):
+                        st.write(docs_adicionales_data)
+                    with st.expander("poliza_actual"):
+                        st.write(poliza_actual.get("data", {}))
+                    with st.expander("poliza_renovacion"):
+                        st.write(poliza_renovacion.get("data", {}))
+                    with st.expander("totales_actuales"):
+                        st.write(totales_actuales)
+                    with st.expander("totales_renovacion"):
+                        st.write(totales_renovacion)
 
                 summary_output_path = generar_tabla_excel_rc(
                     amparos_actuales=coberturas_predeterminadas,
