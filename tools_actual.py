@@ -324,6 +324,9 @@ tools = [
 
             Además, para Responsabilidad Civil, el tipo específico (por ejemplo: Extracontractual, Contractual, Producto, Profesional, etc.) deberá incluirse en el campo `tipo`.
 
+            Si varias coberturas pertenecen a la misma dirección o ubicación, agrúpalas bajo un único objeto de riesgo con esa ubicacion.
+            No repitas la misma dirección más de una vez en el listado riesgos.
+
             El resultado debe seguir estrictamente el schema JSON proporcionado.
             """,
         "data": {
@@ -387,17 +390,18 @@ tools = [
     },
     {
         "prompt": """
-        Analiza el siguiente texto de una póliza de seguros y extrae únicamente los **deducibles** de cada amparo o subcobertura, organizándolos en las categorías especificadas.
+            Analiza el siguiente texto de una póliza de seguros y extrae únicamente los **deducibles** de cada amparo o subcobertura, organizándolos en las categorías especificadas.
 
-        Cada categoría representa un tipo de riesgo asegurado (por ejemplo, INCENDIO, MANEJO, RESPONSABILIDAD CIVIL, etc.).  
-        Solo incluye los deducibles que se mencionen en el texto. Si un amparo no tiene deducible expresamente indicado, **no incluyas ningún valor** para ese campo.
+            Cada categoría representa un tipo de riesgo asegurado (por ejemplo, INCENDIO, MANEJO, RESPONSABILIDAD CIVIL, etc.).  
+            Solo incluye los deducibles que se mencionen en el texto. Si un amparo no tiene deducible expresamente indicado, **no incluyas ningún valor** para ese campo.
 
-        Sigue estas reglas:
-        1. No inventes deducibles.
-        2. Mantén los nombres de los amparos tal como aparecen en el schema.
-        3. No incluyas campos vacíos si no hay deducible.
-        4. No traduzcas el contenido: conserva los nombres y texto originales.
-    """,
+            Sigue estas reglas:
+            1. No inventes deducibles.
+            2. Mantén los nombres de los amparos tal como aparecen en el schema.
+            3. No incluyas campos vacíos si no hay deducible.
+            4. No traduzcas el contenido: conserva los nombres y texto originales.
+            """
+        ,
         "data": {
             "type": "object",
             "properties": {
