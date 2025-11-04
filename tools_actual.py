@@ -326,6 +326,8 @@ tools = [
 
             Si varias coberturas pertenecen a la misma dirección o ubicación, agrúpalas bajo un único objeto de riesgo con esa ubicacion.
             No repitas la misma dirección más de una vez en el listado riesgos.
+            
+            Si la direccion esta en condiciones generales y condiciones particulares, tomar como valida esta ultima.
 
             El resultado debe seguir estrictamente el schema JSON proporcionado.
             """,
