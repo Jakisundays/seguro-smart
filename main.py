@@ -2206,7 +2206,11 @@ async def main():
             deducibles = extraer_deducibles(item)
             item["data"]["amparos"] = deducibles
             amparos_adicionales.append(
-                {"archivo": item.get("file_name"), "amparos": deducibles}
+                {
+                    "file_name": item.get("file_name"),
+                    "amparos": deducibles,
+                    "archivo": item.get("data").get("asegurado", ""),
+                }
             )
 
         if debug:
@@ -2318,6 +2322,10 @@ async def main():
                     st.write(amparos_actuales_por_tipo)
                 with st.expander("Amapros renovacion por tipo"):
                     st.write(amparos_renovacion_por_tipo)
+
+                amparos_actuales["archivo"] = poliza_actual["data"]["asegurado"]
+                amparos_renovacion["archivo"] = poliza_renovacion["data"]["asegurado"]
+                
 
             try:
 
