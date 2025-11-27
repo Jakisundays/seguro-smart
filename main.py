@@ -1265,6 +1265,8 @@ class InvoiceOrchestrator:
         if not nutrient_keys:
             raise ValueError("Debes pasar al menos 1 API key NUTRIENT.")
         self.nutrient_keys_cycle = cycle(nutrient_keys)
+        # Evitar toasts duplicados por el mismo proceso/archivo
+        self._empties_toasted: set[str] = set()
 
     # Hace requests a la API con reintentos
     async def make_api_request(
@@ -1302,10 +1304,13 @@ class InvoiceOrchestrator:
                                 and error_data.get("error").get("message")
                                 == "The document has no pages."
                             ):
-                                st.toast(
-                                    f"⚠️ El archivo {process_id} está vacío. No tiene páginas. Se omitirá.",
-                                    icon="⚠️",
-                                )
+                                # Mostrar toast solo una vez por process_id
+                                if process_id not in self._empties_toasted:
+                                    st.toast(
+                                        f"⚠️ El archivo {process_id} está vacío. No tiene páginas. Se omitirá.",
+                                        icon="⚠️",
+                                    )
+                                    self._empties_toasted.add(process_id)
                                 return
                             error_str = await response.text()
                             # app_logger.error(f"Error str: {error_str}")
@@ -1436,13 +1441,15 @@ class InvoiceOrchestrator:
         )
 
         merged = {}
-        for item in results:
+        for item_res in results:
+            if not item_res:
+                continue
             data = json.loads(
-                item.get("candidates")[0].get("content").get("parts")[0].get("text")
+                item_res.get("candidates")[0].get("content").get("parts")[0].get("text")
             )
             merged.update(data)
 
-        tokens = self.sumar_tokens_por_tipo(results)
+        tokens = self.sumar_tokens_por_tipo([r for r in results if r])
 
         return {
             "file_name": file_name,
@@ -1485,20 +1492,25 @@ class InvoiceOrchestrator:
         results = await asyncio.gather(
             *[
                 self.make_api_request(
-                    url=url, headers=headers, data=payload, process_id="Dinardi"
+                    url=url,
+                    headers=headers,
+                    data=payload,
+                    process_id=item.get("file_name", "Dinardi"),
                 )
                 for payload in payloads
             ]
         )
 
         merged = {}
-        for item in results:
+        for item_res in results:
+            if not item_res:
+                continue
             data = json.loads(
-                item.get("candidates")[0].get("content").get("parts")[0].get("text")
+                item_res.get("candidates")[0].get("content").get("parts")[0].get("text")
             )
             merged.update(data)
 
-        tokens = self.sumar_tokens_por_tipo(results)
+        tokens = self.sumar_tokens_por_tipo([r for r in results if r])
 
         return {
             "file_name": file_name,
@@ -1738,7 +1750,7 @@ class InvoiceOrchestrator:
 
 orchestrator = InvoiceOrchestrator(
     api_key=os.getenv("GEMINI_API_KEY"),
-    model="gemini-2.5-flash",
+    model="gemini-3-pro-preview",
     nutrient_keys=[os.getenv("NUTRIENT_KEY_1"), os.getenv("NUTRIENT_KEY_2")],
 )
 
