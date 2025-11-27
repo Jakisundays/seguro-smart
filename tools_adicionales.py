@@ -5,6 +5,7 @@ tools = [
 
             - Prima sin IVA (`prima_sin_iva`): valor numérico de la prima antes de aplicar el IVA.
             - Nombre del asegurado (`asegurado`): nombre completo del asegurado tal como aparece en la póliza o documento oficial.
+            - Proveedor de la póliza (`proveedor_poliza`): nombre de la compañía aseguradora que emite la póliza.
             - Tasa (`tasa`): porcentaje de la tasa aplicado en la póliza, que indica el costo del riesgo asumido por la aseguradora.
 
             - Amparos incluidos en la póliza, con su deducible y tipo correspondiente.
@@ -38,12 +39,12 @@ tools = [
                     "type": "NUMBER",
                     "description": "Porcentaje de la tasa aplicado en la póliza.",
                 },
+                "proveedor_poliza": {
+                    "type": "STRING",
+                    "description": "Nombre del proveedor o compañía aseguradora que emite la póliza. Ejemplo: 'MAPFRE', 'ASSA', 'SURA', 'Banistmo Seguros'.",
+                },
             },
-            "required": [
-                "prima_sin_iva",
-                "asegurado",
-                "tasa",
-            ],
+            "required": ["prima_sin_iva", "asegurado", "tasa", "proveedor_poliza"],
         },
     },
     {

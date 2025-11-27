@@ -1750,7 +1750,7 @@ class InvoiceOrchestrator:
 
 orchestrator = InvoiceOrchestrator(
     api_key=os.getenv("GEMINI_API_KEY"),
-    model="gemini-3-pro-preview",
+    model="gemini-2.5-flash",
     nutrient_keys=[os.getenv("NUTRIENT_KEY_1"), os.getenv("NUTRIENT_KEY_2")],
 )
 
@@ -2278,9 +2278,9 @@ async def main():
             item["data"]["amparos"] = deducibles
             amparos_adicionales.append(
                 {
-                    "file_name": item.get("file_name"),
+                    # "file_name": item.get("file_name"),
                     "amparos": deducibles,
-                    "archivo": item.get("data").get("asegurado", ""),
+                    "archivo": item.get("data", {}).get("proveedor_poliza") or item.get("file_name")
                 }
             )
 
@@ -2394,8 +2394,8 @@ async def main():
                 with st.expander("Amapros renovacion por tipo"):
                     st.write(amparos_renovacion_por_tipo)
 
-                amparos_actuales["archivo"] = poliza_actual["data"]["asegurado"]
-                amparos_renovacion["archivo"] = poliza_renovacion["data"]["asegurado"]
+                amparos_actuales["archivo"] = poliza_actual["data"]["proveedor_poliza"]
+                amparos_renovacion["archivo"] = poliza_renovacion["data"]["proveedor_poliza"]
 
             try:
 

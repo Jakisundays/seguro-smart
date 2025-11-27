@@ -6,6 +6,7 @@ tools = [
             - Prima sin IVA (`prima_sin_iva`): valor numérico de la prima antes de IVA.
             - Tasa (`tasa`): porcentaje aplicado en la póliza.
             - Nombre del asegurado (`asegurado`): nombre completo del asegurado tal como aparece en la póliza o documento oficial.
+            - Proveedor de la póliza (`proveedor_poliza`): nombre de la compañía aseguradora que emite la póliza.
 
             - Total de valores asegurados (`total_valores_asegurados`): suma total de todos los valores asegurados listados en el detalle.
 
@@ -38,12 +39,17 @@ tools = [
                     "type": "STRING",
                     "description": "Nombre completo del asegurado tal como aparece en la póliza o documento oficial. Ejemplo: 'Juan Pérez S.A.', 'Compañía XYZ Ltda.', 'María Gómez'.",
                 },
+                "proveedor_poliza": {
+                    "type": "STRING",
+                    "description": "Nombre del proveedor o compañía aseguradora que emite la póliza. Ejemplo: 'MAPFRE', 'ASSA', 'SURA', 'Banistmo Seguros'.",
+                },
             },
             "required": [
                 "prima_sin_iva",
                 "tasa",
                 "asegurado",
                 "total_valores_asegurados",
+                "proveedor_poliza",
             ],
         },
     },
@@ -402,8 +408,7 @@ tools = [
             2. Mantén los nombres de los amparos tal como aparecen en el schema.
             3. No incluyas campos vacíos si no hay deducible.
             4. No traduzcas el contenido: conserva los nombres y texto originales.
-            """
-        ,
+            """,
         "data": {
             "type": "object",
             "properties": {
