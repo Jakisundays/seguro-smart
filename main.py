@@ -1287,8 +1287,33 @@ class InvoiceOrchestrator:
                             )
                             await asyncio.sleep(sleep_time)
                         else:
+                            error_data = await response.json()
+                            app_logger.error(f"Error data: {error_data}")
+
                             app_logger.error(
-                                f"API request failed with status {response.status} - {await response.text()}"
+                                f"Error Code: {error_data.get("error").get('code')}"
+                            )
+                            app_logger.error(
+                                f"Error Message: {error_data.get("error").get('message')}"
+                            )
+
+                            if (
+                                error_data.get("error").get("code") == 400
+                                and error_data.get("error").get("message")
+                                == "The document has no pages."
+                            ):
+                                st.toast(
+                                    f"⚠️ El archivo {process_id} está vacío. No tiene páginas. Se omitirá.",
+                                    icon="⚠️",
+                                )
+                                return
+                            error_str = await response.text()
+                            # app_logger.error(f"Error str: {error_str}")
+                            app_logger.error(
+                                f"API request failed with status {response.status} - {error_str}"
+                            )
+                            app_logger.error(
+                                f"Headers: {headers}, url: {url}, process_id: {process_id}"
                             )
                             raise ValueError(
                                 f"Request failed with status {response.status}"
@@ -1328,7 +1353,7 @@ class InvoiceOrchestrator:
         }
 
         # Realizar la petición asíncrona a la API con reintentos incluidos
-        response = await self.make_api_request(url, headers, payload, uuid.uuid4().hex)
+        response = await self.make_api_request(url, headers, payload, item["file_name"])
 
         # Almacenar la respuesta de la API dentro del item bajo la clave "data"
         return response
@@ -1363,7 +1388,7 @@ class InvoiceOrchestrator:
         }
 
         response = await self.make_api_request(
-            url=url, headers=headers, data=payload, process_id="Dinardi"
+            url=url, headers=headers, data=payload, process_id=uuid.uuid4().hex
         )
 
         response["doc_type"] = input_files[0]["doc_type"]
@@ -1573,56 +1598,142 @@ class InvoiceOrchestrator:
     async def excel2pdf(
         self, input_file: str, output_folder: str, output_filename: str = None
     ):
-        api_key = next(self.nutrient_keys_cycle)
+        try:
+            api_key = next(self.nutrient_keys_cycle)
 
-        os.makedirs(output_folder, exist_ok=True)
+            os.makedirs(output_folder, exist_ok=True)
 
-        if output_filename is None:
-            base = os.path.splitext(os.path.basename(input_file))[0]
-            output_filename = f"{base}.pdf"
+            if output_filename is None:
+                base = os.path.splitext(os.path.basename(input_file))[0]
+                output_filename = f"{base}.pdf"
 
-        output_path = os.path.join(output_folder, output_filename)
+            output_path = os.path.join(output_folder, output_filename)
 
-        url = "https://api.nutrient.io/processor/convert_to_pdf"
+            url = "https://api.nutrient.io/processor/convert_to_pdf"
 
-        headers = {
-            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Authorization": f"Bearer {api_key}",
-        }
+            headers = {
+                "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "Authorization": f"Bearer {api_key}",
+            }
 
-        # Leer archivo
-        with open(input_file, "rb") as f:
-            file_bytes = f.read()
+            print(f"[DEBUG] Sending request to {url} with file {input_file}")
 
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, data=file_bytes) as res:
+            # Leer archivo
+            with open(input_file, "rb") as f:
+                file_bytes = f.read()
 
-                # Key sin créditos → probar siguiente
-                if res.status == 402:
-                    app_logger.error(
-                        f"[ERROR] Error {res.status}: No créditos disponibles para {api_key}"
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, headers=headers, data=file_bytes) as res:
+
+                    print(f"[DEBUG] Status {res.status} para {input_file}")
+
+                    # Key sin créditos → probar siguiente
+                    if res.status == 402:
+                        app_logger.error(
+                            f"[ERROR] Error {res.status}: No créditos disponibles para {api_key}"
+                        )
+                        return await self.excel2pdf(
+                            input_file, output_folder, output_filename
+                        )
+
+                    if res.status == 400:
+                        text = await res.text()
+                        app_logger.error(
+                            f"[ERROR] Error {res.status}: {text}, input_file: {input_file}"
+                        )
+                        raise Exception(f"Error {res.status}: {text}")
+
+                    if res.status != 200:
+                        text = await res.text()
+                        app_logger.error(
+                            f"[ERROR] Error {res.status}: {text}, input_file: {input_file}"
+                        )
+                        raise Exception(f"Error {res.status}: {text}")
+
+                    pdf_bytes = await res.read()
+
+            with open(output_path, "wb") as f:
+                f.write(pdf_bytes)
+
+            return output_path
+
+        except Exception as e:
+            app_logger.exception(
+                f"[EXCEPTION] Error en excel2pdf: {e}, input_file: {input_file}"
+            )
+            # return
+
+    # Helper: convertir UploadedFile .xlsx a PDF y devolver base64 del PDF
+    async def to_pdf_base64(self, uploaded_file: UploadedFile):
+        app_logger.info(
+            f"[DEBUG] Iniciando conversión para {uploaded_file.name}, mime: {uploaded_file.type}"
+        )
+        name_lower = uploaded_file.name.lower()
+        mime = getattr(uploaded_file, "type", "") or ""
+
+        is_xlsx = name_lower.endswith(".xlsx") or (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in mime
+        )
+
+        # Si no es Excel, convertir directamente a base64 con tu helper
+        if not is_xlsx:
+            app_logger.info(
+                f"[DEBUG] No es Excel, usando base64 directo para {uploaded_file.name}"
+            )
+            return orchestrator.uploaded_file_to_base64(uploaded_file)
+
+        temp_dir = None  # importante para poder borrarlo en el finally
+
+        try:
+            # Crear carpeta temporal única
+            temp_id = uuid.uuid4().hex
+            temp_dir = os.path.join("converted_pdfs", f"tmp_{temp_id}")
+            os.makedirs(temp_dir, exist_ok=True)
+
+            app_logger.info(
+                f"[DEBUG] Es Excel, convirtiendo {uploaded_file.name} a PDF"
+            )
+
+            # Guardar el .xlsx temporalmente
+            xlsx_path = os.path.join(temp_dir, uploaded_file.name)
+            with open(xlsx_path, "wb") as f:
+                f.write(uploaded_file.getvalue())
+
+            # Convertir XLSX → PDF
+            pdf_path = await orchestrator.excel2pdf(
+                input_file=xlsx_path, output_folder=temp_dir
+            )
+
+            app_logger.info(f"[DEBUG] PDF convertido: {pdf_path}")
+
+            # Leer PDF generado
+            with open(pdf_path, "rb") as f:
+                pdf_bytes = f.read()
+
+            app_logger.info(
+                f"[DEBUG] Es Excel, convirtiendo a PDF para {uploaded_file.name}"
+            )
+
+            # Base64 final
+            return base64.b64encode(pdf_bytes).decode("utf-8")
+
+        except Exception as e:
+            app_logger.error(
+                f"[DEBUG] Error en to_pdf_base64 para {uploaded_file.name}: {e}"
+            )
+            # Puedes loggear si quieres
+            app_logger.error(f"[ERROR] No se pudo convertir Excel a PDF: {e}")
+            # raise
+
+        finally:
+            # Borrar carpeta temporal si existe
+            if temp_dir and os.path.exists(temp_dir):
+                try:
+                    shutil.rmtree(temp_dir)
+                except Exception as cleanup_error:
+                    app_logger.warning(
+                        f"[WARN] No se pudo borrar carpeta temporal {temp_dir}: {cleanup_error}"
                     )
-                    return await self.excel2pdf(
-                        input_file, output_folder, output_filename
-                    )
-                # if res.status == 400:
-                #     text = await res.text()
-                #     app_logger.error(f"[ERROR] Error {res.status}: {text}")
-                #     raise Exception(f"Error {res.status}: {text}")
-
-                if res.status != 200:
-                    text = await res.text()
-                    app_logger.error(
-                        f"[ERROR] Error {res.status}: {text}, input_file: {input_file}"
-                    )
-                    raise Exception(f"Error {res.status}: {text}")
-
-                pdf_bytes = await res.read()
-
-        with open(output_path, "wb") as f:
-            f.write(pdf_bytes)
-
-        return output_path
 
 
 orchestrator = InvoiceOrchestrator(
@@ -1826,66 +1937,6 @@ async def main():
 
         debug = st.toggle("Debug Mode", value=False)
 
-    # Helper: convertir UploadedFile .xlsx a PDF y devolver base64 del PDF
-    async def to_pdf_base64(uploaded_file: UploadedFile) -> str:
-        name_lower = uploaded_file.name.lower()
-        mime = getattr(uploaded_file, "type", "") or ""
-
-        is_xlsx = name_lower.endswith(".xlsx") or (
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in mime
-        )
-
-        # Si no es Excel, convertir directamente a base64 con tu helper
-        if not is_xlsx:
-            app_logger.info(
-                f"[DEBUG] No es Excel, usando base64 directo para {uploaded_file.name}"
-            )
-            return orchestrator.uploaded_file_to_base64(uploaded_file)
-
-        temp_dir = None  # importante para poder borrarlo en el finally
-
-        try:
-            # Crear carpeta temporal única
-            temp_id = uuid.uuid4().hex
-            temp_dir = os.path.join("converted_pdfs", f"tmp_{temp_id}")
-            os.makedirs(temp_dir, exist_ok=True)
-
-            # Guardar el .xlsx temporalmente
-            xlsx_path = os.path.join(temp_dir, uploaded_file.name)
-            with open(xlsx_path, "wb") as f:
-                f.write(uploaded_file.getvalue())
-
-            # Convertir XLSX → PDF
-            pdf_path = await orchestrator.excel2pdf(
-                input_file=xlsx_path, output_folder=temp_dir
-            )
-
-            # Leer PDF generado
-            with open(pdf_path, "rb") as f:
-                pdf_bytes = f.read()
-
-            app_logger.info(
-                f"[DEBUG] Es Excel, convirtiendo a PDF para {uploaded_file.name}"
-            )
-
-            # Base64 final
-            return base64.b64encode(pdf_bytes).decode("utf-8")
-
-        except Exception as e:
-            # Puedes loggear si quieres
-            app_logger.error(f"[ERROR] No se pudo convertir Excel a PDF: {e}")
-            # raise
-
-        finally:
-            # Borrar carpeta temporal si existe
-            if temp_dir and os.path.exists(temp_dir):
-                try:
-                    shutil.rmtree(temp_dir)
-                except Exception as cleanup_error:
-                    app_logger.warning(
-                        f"[WARN] No se pudo borrar carpeta temporal {temp_dir}: {cleanup_error}"
-                    )
-
     # TODO: Hacer que si es xlsx, se convierta a pdf
     if st.sidebar.button(
         "🚀 Iniciar Proceso",
@@ -1901,7 +1952,8 @@ async def main():
             if len(archivo_poliza_actual) > 1:
                 # Convertir cada archivo a PDF base64 si es .xlsx, sino usar base64 directo
                 b64_list = [
-                    await to_pdf_base64(archivo) for archivo in archivo_poliza_actual
+                    await orchestrator.to_pdf_base64(archivo)
+                    for archivo in archivo_poliza_actual
                 ]
                 archivos_conjuntos_actuales_renovacion.append(
                     QueueItem(
@@ -1924,7 +1976,9 @@ async def main():
                     in archivo_poliza_actual_unico.type
                 )
                 if is_xlsx_actual:
-                    b64_pdf = await to_pdf_base64(archivo_poliza_actual_unico)
+                    b64_pdf = await orchestrator.to_pdf_base64(
+                        archivo_poliza_actual_unico
+                    )
                     poliza_actual_item = QueueItem(
                         file_name=archivo_poliza_actual_unico.name,
                         file_extension="pdf",
@@ -1952,7 +2006,7 @@ async def main():
         if archivo_poliza_renovacion:
             if len(archivo_poliza_renovacion) > 1:
                 b64_list = [
-                    await to_pdf_base64(archivo)
+                    await orchestrator.to_pdf_base64(archivo)
                     for archivo in archivo_poliza_renovacion
                 ]
                 archivos_conjuntos_actuales_renovacion.append(
@@ -1975,7 +2029,9 @@ async def main():
                     in archivo_poliza_renovacion_unico.type
                 )
                 if is_xlsx_renov:
-                    b64_pdf = await to_pdf_base64(archivo_poliza_renovacion_unico)
+                    b64_pdf = await orchestrator.to_pdf_base64(
+                        archivo_poliza_renovacion_unico
+                    )
                     poliza_renovacion_item = QueueItem(
                         file_name=archivo_poliza_renovacion_unico.name,
                         file_extension="pdf",
@@ -2012,7 +2068,7 @@ async def main():
                     in archivo.type
                 )
                 if is_xlsx_multi:
-                    b64_pdf = await to_pdf_base64(archivo)
+                    b64_pdf = await orchestrator.to_pdf_base64(archivo)
                     documentos_adicionales_items.append(
                         QueueItem(
                             file_name=archivo.name,
@@ -2037,7 +2093,8 @@ async def main():
         archivos_conjuntos_items = []
         if archivos_conjuntos_1:
             b64_list = [
-                await to_pdf_base64(archivo) for archivo in archivos_conjuntos_1
+                await orchestrator.to_pdf_base64(archivo)
+                for archivo in archivos_conjuntos_1
             ]
             archivos_conjuntos_items.append(
                 QueueItem(
@@ -2054,7 +2111,8 @@ async def main():
 
         if archivos_conjuntos_2:
             b64_list = [
-                await to_pdf_base64(archivo) for archivo in archivos_conjuntos_2
+                await orchestrator.to_pdf_base64(archivo)
+                for archivo in archivos_conjuntos_2
             ]
             archivos_conjuntos_items.append(
                 QueueItem(
@@ -2071,7 +2129,8 @@ async def main():
 
         if archivos_conjuntos_3:
             b64_list = [
-                await to_pdf_base64(archivo) for archivo in archivos_conjuntos_3
+                await orchestratorto_pdf_base64(archivo)
+                for archivo in archivos_conjuntos_3
             ]
             archivos_conjuntos_items.append(
                 QueueItem(
@@ -2325,7 +2384,6 @@ async def main():
 
                 amparos_actuales["archivo"] = poliza_actual["data"]["asegurado"]
                 amparos_renovacion["archivo"] = poliza_renovacion["data"]["asegurado"]
-                
 
             try:
 
