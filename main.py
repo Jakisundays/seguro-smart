@@ -6,6 +6,7 @@ import uuid
 import json
 import base64
 import logging
+import shutil
 from io import BytesIO
 from pathlib import Path
 from typing import List, Optional, TypedDict, Dict, Literal
@@ -14,6 +15,7 @@ from streamlit.runtime.uploaded_file_manager import UploadedFile  # si usas Stre
 import unicodedata
 import re
 from copy import deepcopy
+from itertools import cycle
 
 
 # Third party imports
@@ -1257,13 +1259,12 @@ def extraer_deducibles(data):
 
 
 class InvoiceOrchestrator:
-    def __init__(
-        self,
-        api_key: str,
-        model: str,
-    ):
+    def __init__(self, api_key: str, model: str, nutrient_keys: list[str]):
         self.api_key = api_key
         self.model = model
+        if not nutrient_keys:
+            raise ValueError("Debes pasar al menos 1 API key NUTRIENT.")
+        self.nutrient_keys_cycle = cycle(nutrient_keys)
 
     # Hace requests a la API con reintentos
     async def make_api_request(
@@ -1569,10 +1570,65 @@ class InvoiceOrchestrator:
         # Almacenar la respuesta de la API dentro del item bajo la clave "data"
         return response
 
+    async def excel2pdf(
+        self, input_file: str, output_folder: str, output_filename: str = None
+    ):
+        api_key = next(self.nutrient_keys_cycle)
+
+        os.makedirs(output_folder, exist_ok=True)
+
+        if output_filename is None:
+            base = os.path.splitext(os.path.basename(input_file))[0]
+            output_filename = f"{base}.pdf"
+
+        output_path = os.path.join(output_folder, output_filename)
+
+        url = "https://api.nutrient.io/processor/convert_to_pdf"
+
+        headers = {
+            "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Authorization": f"Bearer {api_key}",
+        }
+
+        # Leer archivo
+        with open(input_file, "rb") as f:
+            file_bytes = f.read()
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, data=file_bytes) as res:
+
+                # Key sin créditos → probar siguiente
+                if res.status == 402:
+                    app_logger.error(
+                        f"[ERROR] Error {res.status}: No créditos disponibles para {api_key}"
+                    )
+                    return await self.excel2pdf(
+                        input_file, output_folder, output_filename
+                    )
+                # if res.status == 400:
+                #     text = await res.text()
+                #     app_logger.error(f"[ERROR] Error {res.status}: {text}")
+                #     raise Exception(f"Error {res.status}: {text}")
+
+                if res.status != 200:
+                    text = await res.text()
+                    app_logger.error(
+                        f"[ERROR] Error {res.status}: {text}, input_file: {input_file}"
+                    )
+                    raise Exception(f"Error {res.status}: {text}")
+
+                pdf_bytes = await res.read()
+
+        with open(output_path, "wb") as f:
+            f.write(pdf_bytes)
+
+        return output_path
+
 
 orchestrator = InvoiceOrchestrator(
     api_key=os.getenv("GEMINI_API_KEY"),
     model="gemini-2.5-flash",
+    nutrient_keys=[os.getenv("NUTRIENT_KEY_1"), os.getenv("NUTRIENT_KEY_2")],
 )
 
 coberturas_predeterminadas = {
@@ -1700,7 +1756,7 @@ async def main():
         st.subheader("1️⃣ Póliza Actual")
         archivo_poliza_actual = st.file_uploader(
             "Cargar archivo de póliza actual",
-            type=["pdf", "docx", "txt", "jpg", "png"],
+            type=["pdf", "docx", "txt", "jpg", "png", "xlsx"],
             key="poliza_actual",
             help="Sube el archivo de tu póliza actual para extraer sus datos",
             accept_multiple_files=True,
@@ -1712,7 +1768,7 @@ async def main():
         st.subheader("2️⃣ Póliza de Renovación")
         archivo_poliza_renovacion = st.file_uploader(
             "Cargar archivo de póliza de renovación",
-            type=["pdf", "docx", "txt", "jpg", "png"],
+            type=["pdf", "docx", "txt", "jpg", "png", "xlsx"],
             key="poliza_renovacion",
             help="Sube el archivo de la póliza de renovación para comparar",
             accept_multiple_files=True,
@@ -1724,7 +1780,7 @@ async def main():
         st.subheader("3️⃣ Documentos Adicionales")
         archivos_multiples = st.file_uploader(
             "Cargar múltiples documentos",
-            type=["pdf", "docx", "txt", "jpg", "png"],
+            type=["pdf", "docx", "txt", "jpg", "png", "xlsx"],
             accept_multiple_files=True,
             key="documentos_multiples",
             help="Sube múltiples documentos para extraer las primas de cada uno",
@@ -1736,7 +1792,7 @@ async def main():
         st.subheader("4️⃣ Conjunto de Documentos adicionales")
         archivos_conjuntos_1 = st.file_uploader(
             "Cargar conjunto de documentos",
-            type=["pdf", "docx", "txt", "jpg", "png"],
+            type=["pdf", "docx", "txt", "jpg", "png", "xlsx"],
             accept_multiple_files=True,
             key="archivos_conjuntos",
             help="Sube un conjunto de documentos para extraer información de todos ellos",
@@ -1748,7 +1804,7 @@ async def main():
         st.subheader("5️⃣ Conjunto de Documentos adicionales")
         archivos_conjuntos_2 = st.file_uploader(
             "Cargar conjunto de documentos",
-            type=["pdf", "docx", "txt", "jpg", "png"],
+            type=["pdf", "docx", "txt", "jpg", "png", "xlsx"],
             accept_multiple_files=True,
             key="archivos_conjuntos_2",
             help="Sube un conjunto de documentos para extraer información de todos ellos",
@@ -1760,7 +1816,7 @@ async def main():
         st.subheader("6️⃣ Conjunto de Documentos adicionales")
         archivos_conjuntos_3 = st.file_uploader(
             "Cargar conjunto de documentos",
-            type=["pdf", "docx", "txt", "jpg", "png"],
+            type=["pdf", "docx", "txt", "jpg", "png", "xlsx"],
             accept_multiple_files=True,
             key="archivos_conjuntos_3",
             help="Sube un conjunto de documentos para extraer información de todos ellos",
@@ -1770,6 +1826,67 @@ async def main():
 
         debug = st.toggle("Debug Mode", value=False)
 
+    # Helper: convertir UploadedFile .xlsx a PDF y devolver base64 del PDF
+    async def to_pdf_base64(uploaded_file: UploadedFile) -> str:
+        name_lower = uploaded_file.name.lower()
+        mime = getattr(uploaded_file, "type", "") or ""
+
+        is_xlsx = name_lower.endswith(".xlsx") or (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in mime
+        )
+
+        # Si no es Excel, convertir directamente a base64 con tu helper
+        if not is_xlsx:
+            app_logger.info(
+                f"[DEBUG] No es Excel, usando base64 directo para {uploaded_file.name}"
+            )
+            return orchestrator.uploaded_file_to_base64(uploaded_file)
+
+        temp_dir = None  # importante para poder borrarlo en el finally
+
+        try:
+            # Crear carpeta temporal única
+            temp_id = uuid.uuid4().hex
+            temp_dir = os.path.join("converted_pdfs", f"tmp_{temp_id}")
+            os.makedirs(temp_dir, exist_ok=True)
+
+            # Guardar el .xlsx temporalmente
+            xlsx_path = os.path.join(temp_dir, uploaded_file.name)
+            with open(xlsx_path, "wb") as f:
+                f.write(uploaded_file.getvalue())
+
+            # Convertir XLSX → PDF
+            pdf_path = await orchestrator.excel2pdf(
+                input_file=xlsx_path, output_folder=temp_dir
+            )
+
+            # Leer PDF generado
+            with open(pdf_path, "rb") as f:
+                pdf_bytes = f.read()
+
+            app_logger.info(
+                f"[DEBUG] Es Excel, convirtiendo a PDF para {uploaded_file.name}"
+            )
+
+            # Base64 final
+            return base64.b64encode(pdf_bytes).decode("utf-8")
+
+        except Exception as e:
+            # Puedes loggear si quieres
+            app_logger.error(f"[ERROR] No se pudo convertir Excel a PDF: {e}")
+            # raise
+
+        finally:
+            # Borrar carpeta temporal si existe
+            if temp_dir and os.path.exists(temp_dir):
+                try:
+                    shutil.rmtree(temp_dir)
+                except Exception as cleanup_error:
+                    app_logger.warning(
+                        f"[WARN] No se pudo borrar carpeta temporal {temp_dir}: {cleanup_error}"
+                    )
+
+    # TODO: Hacer que si es xlsx, se convierta a pdf
     if st.sidebar.button(
         "🚀 Iniciar Proceso",
         type="primary",
@@ -1782,16 +1899,17 @@ async def main():
         poliza_renovacion_item = None
         if archivo_poliza_actual:
             if len(archivo_poliza_actual) > 1:
+                # Convertir cada archivo a PDF base64 si es .xlsx, sino usar base64 directo
+                b64_list = [
+                    await to_pdf_base64(archivo) for archivo in archivo_poliza_actual
+                ]
                 archivos_conjuntos_actuales_renovacion.append(
                     QueueItem(
                         file_name=orchestrator.obtener_nombres_archivos(
                             archivo_poliza_actual
                         ),
                         file_extension="pdf",
-                        b64_str=[
-                            orchestrator.uploaded_file_to_base64(archivo)
-                            for archivo in archivo_poliza_actual
-                        ],
+                        b64_str=b64_list,
                         media_type="application/pdf",
                         process_id=uuid.uuid4().hex,
                         doc_type="actual",
@@ -1799,16 +1917,33 @@ async def main():
                 )
             else:
                 archivo_poliza_actual_unico = archivo_poliza_actual[0]
-                poliza_actual_item = QueueItem(
-                    file_name=archivo_poliza_actual_unico.name,
-                    file_extension=archivo_poliza_actual_unico.type.split("/")[-1],
-                    b64_str=orchestrator.uploaded_file_to_base64(
-                        archivo_poliza_actual_unico
-                    ),
-                    media_type=archivo_poliza_actual_unico.type,
-                    process_id=uuid.uuid4().hex,
-                    doc_type="actual",
+                # Si es .xlsx convertir a PDF; de lo contrario usar base64 original
+                is_xlsx_actual = (
+                    archivo_poliza_actual_unico.name.lower().endswith(".xlsx")
+                    or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    in archivo_poliza_actual_unico.type
                 )
+                if is_xlsx_actual:
+                    b64_pdf = await to_pdf_base64(archivo_poliza_actual_unico)
+                    poliza_actual_item = QueueItem(
+                        file_name=archivo_poliza_actual_unico.name,
+                        file_extension="pdf",
+                        b64_str=b64_pdf,
+                        media_type="application/pdf",
+                        process_id=uuid.uuid4().hex,
+                        doc_type="actual",
+                    )
+                else:
+                    poliza_actual_item = QueueItem(
+                        file_name=archivo_poliza_actual_unico.name,
+                        file_extension=archivo_poliza_actual_unico.type.split("/")[-1],
+                        b64_str=orchestrator.uploaded_file_to_base64(
+                            archivo_poliza_actual_unico
+                        ),
+                        media_type=archivo_poliza_actual_unico.type,
+                        process_id=uuid.uuid4().hex,
+                        doc_type="actual",
+                    )
                 poliza_actual_process = orchestrator.execute_toolset(
                     item=poliza_actual_item, tools=tools_actuales
                 )
@@ -1816,16 +1951,17 @@ async def main():
 
         if archivo_poliza_renovacion:
             if len(archivo_poliza_renovacion) > 1:
+                b64_list = [
+                    await to_pdf_base64(archivo)
+                    for archivo in archivo_poliza_renovacion
+                ]
                 archivos_conjuntos_actuales_renovacion.append(
                     QueueItem(
                         file_name=orchestrator.obtener_nombres_archivos(
                             archivo_poliza_renovacion
                         ),
                         file_extension="pdf",
-                        b64_str=[
-                            orchestrator.uploaded_file_to_base64(archivo)
-                            for archivo in archivo_poliza_renovacion
-                        ],
+                        b64_str=b64_list,
                         media_type="application/pdf",
                         process_id=uuid.uuid4().hex,
                         doc_type="renovacion",
@@ -1833,16 +1969,34 @@ async def main():
                 )
             else:
                 archivo_poliza_renovacion_unico = archivo_poliza_renovacion[0]
-                poliza_renovacion_item = QueueItem(
-                    file_name=archivo_poliza_renovacion_unico.name,
-                    file_extension=archivo_poliza_renovacion_unico.type.split("/")[-1],
-                    b64_str=orchestrator.uploaded_file_to_base64(
-                        archivo_poliza_renovacion_unico
-                    ),
-                    media_type=archivo_poliza_renovacion_unico.type,
-                    process_id=uuid.uuid4().hex,
-                    doc_type="renovacion",
+                is_xlsx_renov = (
+                    archivo_poliza_renovacion_unico.name.lower().endswith(".xlsx")
+                    or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    in archivo_poliza_renovacion_unico.type
                 )
+                if is_xlsx_renov:
+                    b64_pdf = await to_pdf_base64(archivo_poliza_renovacion_unico)
+                    poliza_renovacion_item = QueueItem(
+                        file_name=archivo_poliza_renovacion_unico.name,
+                        file_extension="pdf",
+                        b64_str=b64_pdf,
+                        media_type="application/pdf",
+                        process_id=uuid.uuid4().hex,
+                        doc_type="renovacion",
+                    )
+                else:
+                    poliza_renovacion_item = QueueItem(
+                        file_name=archivo_poliza_renovacion_unico.name,
+                        file_extension=archivo_poliza_renovacion_unico.type.split("/")[
+                            -1
+                        ],
+                        b64_str=orchestrator.uploaded_file_to_base64(
+                            archivo_poliza_renovacion_unico
+                        ),
+                        media_type=archivo_poliza_renovacion_unico.type,
+                        process_id=uuid.uuid4().hex,
+                        doc_type="renovacion",
+                    )
                 poliza_renovacion_process = orchestrator.execute_toolset(
                     item=poliza_renovacion_item, tools=tools_actuales
                 )
@@ -1852,28 +2006,46 @@ async def main():
         if archivos_multiples:
             # Crear un QueueItem para cada archivo Multiple
             for archivo in archivos_multiples:
-                documentos_adicionales_items.append(
-                    QueueItem(
-                        file_name=archivo.name,
-                        file_extension=archivo.type.split("/")[-1],
-                        b64_str=orchestrator.uploaded_file_to_base64(archivo),
-                        media_type=archivo.type,
-                        process_id=uuid.uuid4().hex,
-                        doc_type="adicional",
-                    )
+                is_xlsx_multi = (
+                    archivo.name.lower().endswith(".xlsx")
+                    or "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    in archivo.type
                 )
+                if is_xlsx_multi:
+                    b64_pdf = await to_pdf_base64(archivo)
+                    documentos_adicionales_items.append(
+                        QueueItem(
+                            file_name=archivo.name,
+                            file_extension="pdf",
+                            b64_str=b64_pdf,
+                            media_type="application/pdf",
+                            process_id=uuid.uuid4().hex,
+                            doc_type="adicional",
+                        )
+                    )
+                else:
+                    documentos_adicionales_items.append(
+                        QueueItem(
+                            file_name=archivo.name,
+                            file_extension=archivo.type.split("/")[-1],
+                            b64_str=orchestrator.uploaded_file_to_base64(archivo),
+                            media_type=archivo.type,
+                            process_id=uuid.uuid4().hex,
+                            doc_type="adicional",
+                        )
+                    )
         archivos_conjuntos_items = []
         if archivos_conjuntos_1:
+            b64_list = [
+                await to_pdf_base64(archivo) for archivo in archivos_conjuntos_1
+            ]
             archivos_conjuntos_items.append(
                 QueueItem(
                     file_name=orchestrator.obtener_nombres_archivos(
                         archivos_conjuntos_1
                     ),
                     file_extension="pdf",
-                    b64_str=[
-                        orchestrator.uploaded_file_to_base64(archivo)
-                        for archivo in archivos_conjuntos_1
-                    ],
+                    b64_str=b64_list,
                     media_type="application/pdf",
                     process_id=uuid.uuid4().hex,
                     doc_type="conjunto",
@@ -1881,16 +2053,16 @@ async def main():
             )
 
         if archivos_conjuntos_2:
+            b64_list = [
+                await to_pdf_base64(archivo) for archivo in archivos_conjuntos_2
+            ]
             archivos_conjuntos_items.append(
                 QueueItem(
                     file_name=orchestrator.obtener_nombres_archivos(
                         archivos_conjuntos_2
                     ),
                     file_extension="pdf",
-                    b64_str=[
-                        orchestrator.uploaded_file_to_base64(archivo)
-                        for archivo in archivos_conjuntos_2
-                    ],
+                    b64_str=b64_list,
                     media_type="application/pdf",
                     process_id=uuid.uuid4().hex,
                     doc_type="conjunto",
@@ -1898,16 +2070,16 @@ async def main():
             )
 
         if archivos_conjuntos_3:
+            b64_list = [
+                await to_pdf_base64(archivo) for archivo in archivos_conjuntos_3
+            ]
             archivos_conjuntos_items.append(
                 QueueItem(
                     file_name=orchestrator.obtener_nombres_archivos(
                         archivos_conjuntos_3
                     ),
                     file_extension="pdf",
-                    b64_str=[
-                        orchestrator.uploaded_file_to_base64(archivo)
-                        for archivo in archivos_conjuntos_3
-                    ],
+                    b64_str=b64_list,
                     media_type="application/pdf",
                     process_id=uuid.uuid4().hex,
                     doc_type="conjunto",
