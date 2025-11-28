@@ -1293,7 +1293,7 @@ class InvoiceOrchestrator:
                             app_logger.error(f"Error data: {error_data}")
 
                             app_logger.error(
-                                f"Error Code: {error_data.get("error").get('code')}"
+                                f"Error Code: {error_data.get("error").get("code")}"
                             )
                             app_logger.error(
                                 f"Error Message: {error_data.get("error").get('message')}"
@@ -2280,7 +2280,8 @@ async def main():
                 {
                     # "file_name": item.get("file_name"),
                     "amparos": deducibles,
-                    "archivo": item.get("data", {}).get("proveedor_poliza") or item.get("file_name")
+                    "archivo": item.get("data", {}).get("proveedor_poliza")
+                    or item.get("file_name"),
                 }
             )
 
@@ -2395,7 +2396,9 @@ async def main():
                     st.write(amparos_renovacion_por_tipo)
 
                 amparos_actuales["archivo"] = poliza_actual["data"]["proveedor_poliza"]
-                amparos_renovacion["archivo"] = poliza_renovacion["data"]["proveedor_poliza"]
+                amparos_renovacion["archivo"] = poliza_renovacion["data"][
+                    "proveedor_poliza"
+                ]
 
             try:
 
