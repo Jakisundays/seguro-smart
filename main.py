@@ -1293,10 +1293,10 @@ class InvoiceOrchestrator:
                             app_logger.error(f"Error data: {error_data}")
 
                             app_logger.error(
-                                f"Error Code: {error_data.get("error").get("code")}"
+                                f"Error Code: {error_data.get('error', {}).get('code')}"
                             )
                             app_logger.error(
-                                f"Error Message: {error_data.get("error").get('message')}"
+                                f"Error Message: {error_data.get('error', {}).get('message')}"
                             )
 
                             if (
