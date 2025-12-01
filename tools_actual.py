@@ -307,6 +307,9 @@ tools = [
                     - "Transporte de Valores": cubre dinero y objetos de valor durante transporte.
                     - "Manejo de Dinero": cubre custodia, manipulación y transporte interno de dinero.
                     - "Responsabilidad Civil": cubre daños a terceros derivados de la operación del negocio.
+                    - "Responsabilidad Civil D&O": cubre decisiones, actos y responsabilidades de directores y oficiales (Directors & Officers).
+                    - "Cuotas de Administración": se refiere a costos, fees o gastos administrativos que estén cubiertos explícitamente.
+                    - "Manejo": cobertura de manejo general que no sea específicamente manejo de dinero.
 
             Importante: si el documento menciona explícitamente alguno de los siguientes intereses asegurados, deben incluirse obligatoriamente en el resultado:
             - Edificio
@@ -317,6 +320,10 @@ tools = [
             - Manejo de Dinero
             - Responsabilidad Civil
             - Transporte de Valores
+            - Responsabilidad Civil D&O
+            - Cuotas de Administración
+            - Manejo
+
 
             Nota: Para todos los intereses asegurados mencionados arriba, el campo `interes_asegurado` debe normalizarse a uno de los valores estándar listados, independientemente de cómo aparezca en el documento. Por ejemplo:
             - "Edificio", aunque el documento diga "Edificios", "edificio principal", etc.
@@ -327,6 +334,9 @@ tools = [
             - "Manejo de Dinero", aunque aparezca como "manejo de dinero interno", "custodia de dinero", etc.
             - "Responsabilidad Civil", aunque aparezca como "Responsabilidad Civil Extracontractual", "Responsabilidad Civil Contractual", etc.
             - "Transporte de Valores", aunque aparezca como "transporte de dinero", "valores en tránsito", etc.
+            - "Responsabilidad Civil D&O", aunque aparezca como "Responsabilidad Civil D&O Extracontractual", "Responsabilidad Civil D&O Contractual", etc.
+            - "Cuotas de Administración", aunque aparezca como "cuotas de administración", "fees de administración", etc.
+            - "Manejo", aunque aparezca como "manejo general", "manejo de dinero", etc.
 
             Además, para Responsabilidad Civil, el tipo específico (por ejemplo: Extracontractual, Contractual, Producto, Profesional, etc.) deberá incluirse en el campo `tipo`.
 
@@ -377,6 +387,10 @@ tools = [
                                                     "Transporte de Valores",
                                                     "Manejo de Dinero",
                                                     "Responsabilidad Civil",
+                                                    "Responsabilidad Civil D&O",
+                                                    "Cuotas de Administración",
+                                                    "Manejo",
+                                                    # TODO: PEDIR AQUI CUOTAS DE ADMINISTRACION, MANEJO Y DIVIDIR RC D&O
                                                 ],
                                             },
                                         },
