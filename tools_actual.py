@@ -306,7 +306,7 @@ tools = [
                     - "Rotura de Maquinaria": cubre fallos o daños de maquinaria.
                     - "Transporte de Valores": cubre dinero y objetos de valor durante transporte.
                     - "Manejo de Dinero": cubre custodia, manipulación y transporte interno de dinero.
-                    - "Responsabilidad Civil": cubre daños a terceros derivados de la operación del negocio.
+                    - "Responsabilidad Civil": cubre daños a terceros derivados de la operación del negocio. (No incluye conceptos como “bienes bajo cuidado, tenencia y control”)
                     - "Responsabilidad Civil D&O": cubre decisiones, actos y responsabilidades de directores y oficiales (Directors & Officers).
                     - "Cuotas de Administración": se refiere a costos, fees o gastos administrativos que estén cubiertos explícitamente.
                     - "Manejo": cobertura de manejo general que no sea específicamente manejo de dinero.
