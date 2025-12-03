@@ -1844,10 +1844,10 @@ coberturas_predeterminadas = {
             "tipo": ["Responsabilidad Civil"],
         },
         {"amparo": "R.C. Parqueaderos", "tipo": ["Responsabilidad Civil"]},
-        {
-            "amparo": "Bienes bajo cuidado, tenencia y control",
-            "tipo": ["Responsabilidad Civil"],
-        },
+        # {
+        #     "amparo": "Bienes bajo cuidado, tenencia y control",
+        #     "tipo": ["Responsabilidad Civil"],
+        # },
         {"amparo": "Responsabilidad Civil Patronal", "tipo": ["Responsabilidad Civil"]},
     ],
     "Transporte de Valores": [
