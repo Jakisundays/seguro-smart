@@ -1,5 +1,6 @@
 tools = [
     {
+        "model": "gemini-2.5-flash",
         "prompt": """
             Analiza el documento proporcionado y extrae la información relacionada con la prima y los amparos de la póliza. Para cada campo, se deben extraer los valores exactos que aparezcan en el documento, sin inventar datos. Los campos a extraer son:
 
@@ -48,6 +49,7 @@ tools = [
         },
     },
     {
+        "model": "gemini-2.5-flash",
         "prompt": """
             Analiza el documento proporcionado y extrae la información de las siguientes secciones de la póliza, detallando cada campo:
 
@@ -239,6 +241,7 @@ tools = [
         },
     },
     {
+        "model": "gemini-2.5-flash",
         "prompt": """
             Analiza el siguiente texto de una póliza de seguros y extrae únicamente los **deducibles** de cada amparo o subcobertura, organizándolos en las categorías especificadas.
 

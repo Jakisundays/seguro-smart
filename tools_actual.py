@@ -1,5 +1,6 @@
 tools = [
     {
+        "model": "gemini-2.5-flash",
         "prompt": """
             Analiza el documento proporcionado y extrae la siguiente información:
 
@@ -54,6 +55,7 @@ tools = [
         },
     },
     {
+        "model": "gemini-2.5-flash",
         "prompt": """
             Analiza el documento y extrae los siguientes datos:
 
@@ -291,13 +293,16 @@ tools = [
         },
     },
     {
+        "model": "gemini-2.5-pro",
         "prompt": """
-            Analiza el documento y extrae todos los riesgos asegurados, generando un listado en el campo `riesgos`.
+    Analiza el documento y extrae todos los riesgos asegurados, generando un listado en el campo `riesgos`.
+    
+    Ten en cuenta que Responsabilidad Civil debe separarse en DOS categorías distintas como `interes_asegurado` independientes: "Responsabilidad Civil Extracontractual" (cuando mencione vehículos, productos, operaciones, contratistas) y "Responsabilidad Civil Directores y Administradores" (cuando mencione D&O, directores, administradores, junta directiva). NUNCA las agrupes bajo "Responsabilidad Civil" genérico. Cada una debe ser un bloque completamente separado con su nombre completo.
 
             Para cada riesgo, incluye:
             - `ubicacion`: dirección completa tal como aparece en el documento (opcional).
             - `detalle_cobertura`: lista de objetos con:
-                * `interes_asegurado`: descripción del interés asegurado (ej. 'Edificio', 'Maquinaria', 'Equipos').
+                * `interes_asegurado`: descripción del interés asegurado (ej. 'Edificio', 'Maquinaria', 'Equipos'). Nota: Responsabilidad Civil debe dividirse en "Responsabilidad Civil Extracontractual" (vehículos, productos, operaciones, contratistas) y "Responsabilidad Civil Directores y Administradores" (D&O, directores, administradores, junta directiva); nunca uses "Responsabilidad Civil" genérico.
                 * `valor_asegurado`: valor monetario asegurado correspondiente al interés.
                 * `tipo`: lista de tipos de amparo aplicables. Incluye todos los que correspondan y explica brevemente cada uno:
                     - "Incendio": cubre daños materiales ocasionados por fuego.
@@ -307,22 +312,18 @@ tools = [
                     - "Transporte de Valores": cubre dinero y objetos de valor durante transporte.
                     - "Manejo de Dinero": cubre custodia, manipulación y transporte interno de dinero.
                     - "Responsabilidad Civil": cubre daños a terceros derivados de la operación del negocio. (No incluye conceptos como “bienes bajo cuidado, tenencia y control”)
-                    - "Responsabilidad Civil D&O": cubre decisiones, actos y responsabilidades de directores y oficiales (Directors & Officers).
-                    - "Cuotas de Administración": se refiere a costos, fees o gastos administrativos que estén cubiertos explícitamente.
-                    - "Manejo": cobertura de manejo general que no sea específicamente manejo de dinero.
 
             Importante: si el documento menciona explícitamente alguno de los siguientes intereses asegurados, deben incluirse obligatoriamente en el resultado:
+            - Responsabilidad Civil Directores y Administradores
             - Edificio
             - Muebles y enseres
             - Maquinaria y equipo
             - Dineros
             - Equipo electrónico
             - Manejo de Dinero
-            - Responsabilidad Civil
             - Transporte de Valores
-            - Responsabilidad Civil D&O
             - Cuotas de Administración
-            - Manejo
+            - Responsabilidad Civil Extracontractual
 
 
             Nota: Para todos los intereses asegurados mencionados arriba, el campo `interes_asegurado` debe normalizarse a uno de los valores estándar listados, independientemente de cómo aparezca en el documento. Por ejemplo:
@@ -332,21 +333,16 @@ tools = [
             - "Dineros", aunque aparezca como "dinero", "fondos", etc.
             - "Equipo electrónico", aunque aparezca como "equipos electrónicos", "equipo electrónico", etc.
             - "Manejo de Dinero", aunque aparezca como "manejo de dinero interno", "custodia de dinero", etc.
-            - "Responsabilidad Civil", aunque aparezca como "Responsabilidad Civil Extracontractual", "Responsabilidad Civil Contractual", etc.
             - "Transporte de Valores", aunque aparezca como "transporte de dinero", "valores en tránsito", etc.
-            - "Responsabilidad Civil D&O", aunque aparezca como "Responsabilidad Civil D&O Extracontractual", "Responsabilidad Civil D&O Contractual", etc.
-            - "Cuotas de Administración", aunque aparezca como "cuotas de administración", "fees de administración", etc.
-            - "Manejo", aunque aparezca como "manejo general", "manejo de dinero", etc.
-
-            Además, para Responsabilidad Civil, el tipo específico (por ejemplo: Extracontractual, Contractual, Producto, Profesional, etc.) deberá incluirse en el campo `tipo`.
-
+            
+            
             Si varias coberturas pertenecen a la misma dirección o ubicación, agrúpalas bajo un único objeto de riesgo con esa ubicacion.
             No repitas la misma dirección más de una vez en el listado riesgos.
             
             Si la direccion esta en condiciones generales y condiciones particulares, tomar como valida esta ultima.
 
             El resultado debe seguir estrictamente el schema JSON proporcionado.
-            """,
+    """,
         "data": {
             "type": "OBJECT",
             "properties": {
@@ -368,7 +364,12 @@ tools = [
                                     "properties": {
                                         "interes_asegurado": {
                                             "type": "STRING",
-                                            "description": "Descripción del interés asegurado (ej.: 'Edificio', 'Maquinaria', 'Equipos').",
+                                            "description": """
+                                            Descripción del interés asegurado normalizado (ej.: 'Edificio', 'Maquinaria y equipo', 'Equipo electrónico', 'Responsabilidad Civil Extracontractual' o 'Responsabilidad Civil Directores y Administradores').
+                                            
+                                            Ten en cuenta que Responsabilidad Civil debe separarse en DOS categorías distintas:
+                                            "Responsabilidad Civil Extracontractual" (cuando mencione vehículos, productos, operaciones, contratistas) y "Responsabilidad Civil Directores y Administradores" (cuando mencione D&O, directores, administradores, junta directiva). NUNCA las agrupes bajo "Responsabilidad Civil" genérico. Cada una debe ser un bloque completamente separado con su nombre completo.
+                                            """,
                                         },
                                         "valor_asegurado": {
                                             "type": "NUMBER",
@@ -387,10 +388,6 @@ tools = [
                                                     "Transporte de Valores",
                                                     "Manejo de Dinero",
                                                     "Responsabilidad Civil",
-                                                    "Responsabilidad Civil D&O",
-                                                    "Cuotas de Administración",
-                                                    "Manejo",
-                                                    # TODO: PEDIR AQUI CUOTAS DE ADMINISTRACION, MANEJO Y DIVIDIR RC D&O
                                                 ],
                                             },
                                         },
@@ -411,11 +408,12 @@ tools = [
         },
     },
     {
+        "model": "gemini-2.5-flash",
         "prompt": """
-            Analiza el siguiente texto de una póliza de seguros y extrae únicamente los **deducibles** de cada amparo o subcobertura, organizándolos en las categorías especificadas.
+            Analiza el siguiente texto de una póliza de seguros y extrae únicamente los deducibles de cada amparo o subcobertura, organizándolos en las categorías especificadas.
 
             Cada categoría representa un tipo de riesgo asegurado (por ejemplo, INCENDIO, MANEJO, RESPONSABILIDAD CIVIL, etc.).  
-            Solo incluye los deducibles que se mencionen en el texto. Si un amparo no tiene deducible expresamente indicado, **no incluyas ningún valor** para ese campo.
+            Solo incluye los deducibles que se mencionen en el texto. Si un amparo no tiene deducible expresamente indicado, no incluyas ningún valor para ese campo.
 
             Sigue estas reglas:
             1. No inventes deducibles.
@@ -586,34 +584,6 @@ tools = [
                     },
                     "required": ["para_toda_y_cada_perdida"],
                 },
-                # "maquinaria_y_equipo": {
-                #     "type": "object",
-                #     "description": "Solo deducibles de daños a maquinaria pesada y equipos de construcción.",
-                #     "properties": {
-                #         "terremoto": {
-                #             "type": "string",
-                #             "description": "Deducible por daños por sismos a maquinaria de construcción.",
-                #         },
-                #         "anti_terrorismo": {
-                #             "type": "string",
-                #             "description": "Deducible por daños causados por actos terroristas.",
-                #         },
-                #         "hurto_calificado": {
-                #             "type": "string",
-                #             "description": "Deducible por robo con violencia o fuerza de maquinaria o equipos asegurados.",
-                #         },
-                #         "demas_eventos": {
-                #             "type": "string",
-                #             "description": "Deducible de otros riesgos aplicables a maquinaria y equipo de construcción.",
-                #         },
-                #     },
-                #     "required": [
-                #         "terremoto",
-                #         "anti_terrorismo",
-                #         "hurto_calificado",
-                #         "demas_eventos",
-                #     ],
-                # },
             },
             "required": [
                 "incendio",
@@ -637,4 +607,13 @@ tools = [
             ],
         },
     },
+    # {
+    #     "model": "gemini-2.5-flash",
+    #     "prompt": "",
+    #     "data": {
+    #         "type": "object",
+    #         "properties": {},
+    #         "required": [],
+    #     },
+    # },
 ]

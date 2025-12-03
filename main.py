@@ -856,15 +856,15 @@ def generar_excel_analisis_polizas(
                     "equipo movil": "Equipo Móvil",
                     "equipo móvil": "Equipo Móvil",
                     "obras de arte": "Obras de Arte",
-                    "responsabilidad civil extracontractual": "Responsabilidad Civil",  # caso fijo
+                    # Mantener subcategorías distintas de RC
+                    "responsabilidad civil extracontractual": "Responsabilidad Civil Extracontractual",
+                    "responsabilidad civil directores y administradores": "Responsabilidad Civil Directores y Administradores",
                 }
                 # caso combinado en renovación
                 if "+" in t and "muebles" in t and "obras" in t:
                     return "Muebles y Enseres"  # asignamos al rubro principal
 
-                # regla general: todo lo que empiece con "responsabilidad civil"
-                if t.startswith("responsabilidad civil"):
-                    return "Responsabilidad Civil"
+                # No colapsar subtipos de RC en una sola categoría; usar reemplazos arriba
 
                 return reemplazos.get(t, texto)
 
@@ -1327,11 +1327,17 @@ class InvoiceOrchestrator:
                     raise ValueError(f"Request error: {str(e)}")
         raise ValueError("Max retries exceeded.")
 
-    async def handle_pdf(self, item: QueueItem, prompt: str, responseSchema: dict):
+    async def handle_pdf(
+        self,
+        item: QueueItem,
+        prompt: str,
+        responseSchema: dict,
+        model: str = "gemini-2.5-flash",
+    ):
         encoded_pdf = item["b64_str"]
 
         # URL del endpoint de la API de Gemini para generar contenido a partir del modelo especificado
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
         # Encabezados HTTP: autenticación con la clave de API y tipo de contenido JSON
         headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
@@ -1434,7 +1440,10 @@ class InvoiceOrchestrator:
         results = await asyncio.gather(
             *[
                 self.handle_pdf(
-                    item=item, prompt=tool["prompt"], responseSchema=tool["data"]
+                    item=item,
+                    prompt=tool["prompt"],
+                    responseSchema=tool["data"],
+                    model=tool["model"],
                 )
                 for tool in tools
             ]
