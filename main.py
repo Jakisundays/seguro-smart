@@ -1827,7 +1827,7 @@ coberturas_predeterminadas = {
     ],
     "Responsabilidad Civil": [
         {
-            "amparo": "Predio labores y operaciones, incluyendo Incendio y Explosión",
+            "amparo": "R.C. Vehiculos Propios y No Propios",
             "tipo": ["Responsabilidad Civil"],
         },
         {"amparo": "Gastos Médicos", "tipo": ["Responsabilidad Civil"]},
@@ -1835,19 +1835,15 @@ coberturas_predeterminadas = {
             "amparo": "R.C. Contratistas y Subcontratistas",
             "tipo": ["Responsabilidad Civil"],
         },
+        {"amparo": "R.C. Parqueaderos", "tipo": ["Responsabilidad Civil"]},
         {
-            "amparo": "R.C. Vehiculos Propios y No Propios",
+            "amparo": "Predio labores y operaciones, incluyendo Incendio y Explosión",
             "tipo": ["Responsabilidad Civil"],
         },
         {
             "amparo": "R.C. Productos y trabajos terminados",
             "tipo": ["Responsabilidad Civil"],
         },
-        {"amparo": "R.C. Parqueaderos", "tipo": ["Responsabilidad Civil"]},
-        # {
-        #     "amparo": "Bienes bajo cuidado, tenencia y control",
-        #     "tipo": ["Responsabilidad Civil"],
-        # },
         {"amparo": "Responsabilidad Civil Patronal", "tipo": ["Responsabilidad Civil"]},
     ],
     "Transporte de Valores": [
